@@ -202,10 +202,9 @@ def fit_ellipse(points):
     # plt.show()
 
 
-fit_ellipse(scattered_ellipse)
 
 
-
+# fit_ellipse(scattered_ellipse)
 # a:
 # [[-3.66860513e-01]
 #  [-3.88682954e-03]
@@ -214,4 +213,94 @@ fit_ellipse(scattered_ellipse)
 #  [ 2.03228556e+02]
 #  [-1.21953571e+04]]
 
+def make_blurry(image, blurr):
+    return cv2.medianBlur(image, blurr)
 
+
+def hsv_make_orange_to_green(hsv):
+    bgr_green = np.uint8([[[30,90,30]]])
+    hsv_green = cv2.cvtColor(bgr_green,cv2.COLOR_BGR2HSV)
+
+    lower_orange = np.array([8,128,64])
+    upper_orange = np.array([28,255,255])
+    mask = cv2.inRange(hsv, lower_orange, upper_orange)
+
+    # change the orange to green
+    imask = mask>0
+    orange_to_green = hsv.copy()
+    orange_to_green[imask] = hsv_green
+
+    return orange_to_green
+
+
+def hsv_find_green_mask(hsv):
+    bgr_green = np.uint8([[[30,90,30]]])
+    hsv_green = cv2.cvtColor(bgr_green,cv2.COLOR_BGR2HSV)
+
+    lower_green_h = 50
+    lower_green_s = 50 * 0.01*255
+    lower_green_v = 25 * 0.01*255
+
+    upper_green_h = 70
+    upper_green_s = 100 * 0.01*255
+    upper_green_v = 70 * 0.01*255
+
+    lower_green = np.array([lower_green_h,lower_green_s,lower_green_v])
+    upper_green = np.array([upper_green_h,upper_green_s,upper_green_v])
+    green_mask = cv2.inRange(hsv, lower_green, upper_green)
+  
+    # keep only the green
+    imask = green_mask>0
+    green = np.zeros_like(hsv, np.uint8)
+    green[imask] = hsv_green
+  
+    return green
+
+
+def hsv_make_grayscale(image):
+    bgr = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
+    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+    return gray
+
+
+def hsv_save_image(image, label='image', is_gray=False):
+    folder = 'image_processing/'
+    if is_gray:
+        cv2.imwrite(folder+label+".png", image)
+    else:
+        cv2.imwrite(folder+label+".png", cv2.cvtColor(image, cv2.COLOR_HSV2BGR))
+
+    return image
+
+
+def load_image():
+    filepath = 'image.jpg'
+
+    img = cv2.imread(filepath) # import as BGR
+
+    # winname = "image"
+    # cv2.namedWindow(winname)        # Create a named window
+    # cv2.moveWindow(winname, 40,500)  # Move it to (40,30)
+    # cv2.imshow(winname, img)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    hsv = hsv_save_image(hsv, '1_hsv')
+    # ### Preprocessing ###
+    hsv = hsv_save_image(hsv_make_orange_to_green(hsv), '2_orange to green')
+    hsv = make_blurry(hsv, 3)
+    hsv = make_blurry(hsv, 3)
+    hsv = make_blurry(hsv, 3)
+    hsv = hsv_save_image(make_blurry(hsv, 3), '3_make blurry')
+    hsv = hsv_save_image(hsv_find_green_mask(hsv), '4_green mask')
+    hsv = hsv_save_image(make_blurry(hsv, 9), '5_make blurry_2')
+    gray = hsv_save_image(hsv_make_grayscale(hsv), '6_make grayscale', is_gray=True)
+    gray = make_blurry(gray, 31)
+    gray = hsv_save_image(make_blurry(gray, 21), '7_make blurry_3', is_gray=True)
+
+
+
+
+
+load_image()
