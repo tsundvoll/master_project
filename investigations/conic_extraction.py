@@ -3,7 +3,10 @@ import cv2
 import numpy as np
 import random
 from math import pi
+from scipy import ndimage
 
+IMG_WIDTH = 640
+IMG_HEIGHT = 360
 
 def load_ellipse_from_file():
     filepath = 'ellipse.jpg'
@@ -80,7 +83,7 @@ scattered_ellipse2 = np.array(
 # plt.ylim((0,255))
 # plt.show()
 
-def fit_ellipse(points):
+def fit_ellipse_from_square_img(points):
     x = points[:,1]
     y = 255-points[:,0]
 
@@ -188,6 +191,136 @@ def fit_ellipse(points):
     plt.show()
 
 
+
+def fit_ellipse(points):
+    x = points[1]
+    y = IMG_HEIGHT-points[0]
+
+    print(x.shape)
+
+    print('x:', x)
+    print('y:', y)
+
+    # plt.figure(figsize=(8,8))
+    # plt.plot(x, y, 'go')
+    # plt.xlim((0,255))
+    # plt.ylim((0,255))
+    # plt.show()
+
+    D11 = np.square(x)
+    D12 = x*y
+    D13 = np.square(y)
+    D1 = np.array([D11, D12, D13]).T
+    print("D1:")
+    print(D1)
+    print
+
+    D2 = np.array([x, y, np.ones(x.shape[0])]).T
+    print("D2:")
+    print(D2)
+    print
+
+    S1 = np.dot(D1.T,D1)
+    print("S1:")
+    print(S1)
+    print
+
+    S2 = np.dot(D1.T,D2)
+    print("S2:")
+    print(S2)
+    print
+
+    S3 = np.dot(D2.T,D2)
+    print("S3:")
+    print(S3)
+    print
+
+    inv_S3 = np.linalg.inv(S3)
+    print("inv_S3:")
+    print(inv_S3)
+    print
+
+    T = - np.dot(inv_S3, S2.T) # for getting a2 from a1
+    print("T:")
+    print(T)
+    print
+
+    M = S1 + np.dot(S2, T)
+
+    C1 = np.array([
+        [0, 0, 0.5],
+        [0, -1, 0],
+        [0.5, 0, 0]
+    ])
+
+    M = np.dot(C1, M) # This premultiplication can possibly be made more efficient
+    print("M:")
+    print(M)
+    print
+
+    eigenvalues, eigenvectors = np.linalg.eig(M)
+    print("eigenvalues:")
+    print(eigenvalues)
+    print
+    print("eigenvectors:")
+    print(eigenvectors)
+    print
+
+    cond = 4*eigenvectors[0]*eigenvectors[2] - np.square(eigenvectors[0])
+    print("cond:")
+    print(cond)
+    print
+
+    a1 = eigenvectors[:,cond > 0]
+    print("a1:")
+    print(a1)
+    print
+
+    a = np.concatenate((a1, np.dot(T, a1)))
+    print("a:")
+    print(a)
+    print
+
+    # # Drawing the ellipse
+    # delta = 0.025
+    # xrange = np.arange(0, IMG_WIDTH, delta)
+    # yrange = np.arange(0, IMG_HEIGHT, delta)
+    # X, Y = np.meshgrid(xrange,yrange)
+
+    # # F is one side of the equation, G is the other
+    # F = a[0]*X*X + a[1]*X*Y + a[2]*Y*Y + a[3]*X + a[4]*Y + a[5]
+    # G = 0
+
+    mean_x = np.average(x)
+    mean_y = np.average(y)
+
+
+    M = np.array([[a[0][0], a[1][0]/2.0],
+        [a[1][0]/2.0, a[2][0]]])
+
+    print(M)
+    eigenvalues, eigenvectors = np.linalg.eig(M)
+    lambda_1 = eigenvalues[0]
+    lambda_2 = eigenvalues[1]
+    print(eigenvalues)
+    S = np.linalg.det(M)
+    print(S)
+
+    x_center = -S/()
+    
+
+    # plt.figure(figsize=(8.89,5))
+    background = plt.imread("image.jpg")
+    background = np.flipud(background)
+    plt.plot(mean_x, mean_y, 'go')
+    plt.imshow(background)
+    plt.xlim((0,IMG_WIDTH))
+    plt.ylim((0,IMG_HEIGHT))
+    # plt.contour(X, Y, (F - G), [0])
+    plt.show()
+
+
+
     # u=1.     #x-position of the center
     # v=0.5    #y-position of the center
     # a=2.     #radius on the x-axis
@@ -289,18 +422,47 @@ def load_image():
     hsv = hsv_save_image(hsv, '1_hsv')
     # ### Preprocessing ###
     hsv = hsv_save_image(hsv_make_orange_to_green(hsv), '2_orange to green')
-    hsv = make_blurry(hsv, 3)
-    hsv = make_blurry(hsv, 3)
-    hsv = make_blurry(hsv, 3)
+    hsv = make_blurry(hsv, 9)
     hsv = hsv_save_image(make_blurry(hsv, 3), '3_make blurry')
     hsv = hsv_save_image(hsv_find_green_mask(hsv), '4_green mask')
+    hsv = make_blurry(hsv, 9)
     hsv = hsv_save_image(make_blurry(hsv, 9), '5_make blurry_2')
     gray = hsv_save_image(hsv_make_grayscale(hsv), '6_make grayscale', is_gray=True)
     gray = make_blurry(gray, 31)
     gray = hsv_save_image(make_blurry(gray, 21), '7_make blurry_3', is_gray=True)
 
+    return gray
 
 
 
+img = load_image()
+edges = cv2.Canny(img,100,200)
+print(type(edges))
 
-load_image()
+
+unique, counts = np.unique(edges, return_counts=True)
+print(dict(zip(unique, counts)))
+
+result = np.where(edges == 255)
+print(result)
+
+fit_ellipse(result)
+
+x = result[1]
+y = IMG_HEIGHT - result[0]
+
+# print(x)
+
+plt.figure(figsize=(8.89,5))
+plt.plot(x, y, 'go')
+plt.xlim((0,IMG_WIDTH))
+plt.ylim((0,IMG_HEIGHT))
+plt.show()
+
+
+winname = 'edges'
+cv2.namedWindow(winname)        # Create a named window
+cv2.moveWindow(winname, 40,500)  # Move it to (40,30)
+cv2.imshow(winname, edges)
+cv2.waitKey(0)
+cv2.destroyAllWindows()
