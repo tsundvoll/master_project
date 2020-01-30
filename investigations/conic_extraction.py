@@ -5,6 +5,9 @@ import random
 import math
 from scipy import ndimage
 
+import pandas as pd
+
+
 IMG_WIDTH = 640
 IMG_HEIGHT = 360
 
@@ -82,6 +85,9 @@ scattered_ellipse2 = np.array(
 # plt.xlim((0,255))
 # plt.ylim((0,255))
 # plt.show()
+
+
+
 
 def fit_ellipse_from_square_img(points):
     x = points[:,1]
@@ -191,8 +197,9 @@ def fit_ellipse_from_square_img(points):
     plt.show()
 
 
+filename = "image_above.jpg"
 
-def fit_ellipse(points):
+def fit_ellipse(points, filename="image_above.jpg"):
     x = points[1]
     y = IMG_HEIGHT-points[0]
 
@@ -272,6 +279,17 @@ def fit_ellipse(points):
     print
 
     a1 = eigenvectors[:,cond > 0]
+
+    print("a1:")
+    print(a1)
+    print
+    print(a1.shape)
+    
+    # Choose the first if there are two eigenvectors with cond > 0
+    # NB! I am not sure if this is always correct
+    if a1.shape[1] > 1:
+        a1 = np.array([a1[:,0]]).T
+    print(a1.shape)
     print("a1:")
     print(a1)
     print
@@ -281,22 +299,21 @@ def fit_ellipse(points):
     print(a)
     print
 
-    # Drawing the ellipse
-    delta = 0.025
-    xrange = np.arange(0, IMG_WIDTH, delta)
-    yrange = np.arange(0, IMG_HEIGHT, delta)
-    X, Y = np.meshgrid(xrange,yrange)
+    # # Drawing the ellipse
+    # delta = 0.025
+    # xrange = np.arange(0, IMG_WIDTH, delta)
+    # yrange = np.arange(0, IMG_HEIGHT, delta)
+    # X, Y = np.meshgrid(xrange,yrange)
 
-    # F_ellipse is one side of the equation, G_ellipse is the other
-    F_ellipse = a[0]*X*X + a[1]*X*Y + a[2]*Y*Y + a[3]*X + a[4]*Y + a[5]
-    G_ellipse = 0
+    # # F_ellipse is one side of the equation, G_ellipse is the other
+    # F_ellipse = a[0]*X*X + a[1]*X*Y + a[2]*Y*Y + a[3]*X + a[4]*Y + a[5]
+    # G_ellipse = 0
 
-    mean_x = np.average(x)
-    mean_y = np.average(y)
+    # mean_x = np.average(x)
+    # mean_y = np.average(y)
 
 
-    M = np.array([[a[0][0], a[1][0]/2.0],
-        [a[1][0]/2.0, a[2][0]]])
+    
 
     A = a[0][0]
     B = a[1][0]
@@ -306,12 +323,12 @@ def fit_ellipse(points):
     F = a[5][0]
 
     print('\n')
-    print(A)
-    print(B)
-    print(C)
-    print(D)
-    print(E)
-    print(F)
+    print('a:', A)
+    print('b:', B)
+    print('c:', C)
+    print('d:', D)
+    print('e:', E)
+    print('f:', F)
     print('\n')
 
 
@@ -350,19 +367,25 @@ def fit_ellipse(points):
     print("theta:")
     print(theta)
 
-    
+    a_x = a*math.cos(theta)
+    a_y = a*math.sin(theta)
 
 
-    # print(M)
-    eigenvalues, eigenvectors = np.linalg.eig(M)
-    lambda_1 = eigenvalues[0]
-    lambda_2 = eigenvalues[1]
-    # print(eigenvalues)
-    S = np.linalg.det(M)
-    # print(S)
+    b_x = -b*math.sin(theta)
+    b_y = b*math.cos(theta)
 
-    a = -S/(lambda_1*lambda_1*lambda_2)
-    b = -S/(lambda_1*lambda_2*lambda_2)
+    # M = np.array([[a[0][0], a[1][0]/2.0],
+    #     [a[1][0]/2.0, a[2][0]]])
+    # # print(M)
+    # eigenvalues, eigenvectors = np.linalg.eig(M)
+    # lambda_1 = eigenvalues[0]
+    # lambda_2 = eigenvalues[1]
+    # # print(eigenvalues)
+    # S = np.linalg.det(M)
+    # # print(S)
+
+    # a = -S/(lambda_1*lambda_1*lambda_2)
+    # b = -S/(lambda_1*lambda_2*lambda_2)
 
     # print("a and b:")
     # print(a)
@@ -370,14 +393,25 @@ def fit_ellipse(points):
     
 
     # plt.figure(figsize=(8.89,5))
-    background = plt.imread("image_above.jpg")
+    background = plt.imread(filename)
     background = np.flipud(background)
     # plt.plot(mean_x, mean_y, 'go')
-    # plt.plot(x_0, y_0, 'bo')
     plt.imshow(background)
+    plt.plot(x_0, y_0, 'bo')
+
+    plt.plot(x_0+a_x, y_0+a_y, 'ro')
+    plt.plot(x_0-a_x, y_0-a_y, 'ro')
+
+    plt.plot(x_0+b_x, y_0+b_y, 'yo')
+    plt.plot(x_0-b_x, y_0-b_y, 'yo')
+
+    # plt.plot(x_0-j, y_0+b, 'yo')
+    # plt.plot(x_0+j, y_0-b, 'yo')
+
+
     plt.xlim((0,IMG_WIDTH))
     plt.ylim((0,IMG_HEIGHT))
-    plt.contour(X, Y, (F_ellipse - G_ellipse), [0])
+    # plt.contour(X, Y, (F_ellipse - G_ellipse), [0])
     plt.show()
 
 
@@ -488,10 +522,8 @@ def hsv_save_image(image, label='image', is_gray=False):
     return image
 
 
-def load_image():
-    filepath = 'image_above.jpg'
-
-    img = cv2.imread(filepath) # import as BGR
+def load_image(filename = 'image_above.jpg'):
+    img = cv2.imread(filename) # import as BGR
 
     # winname = "image"
     # cv2.namedWindow(winname)        # Create a named window
@@ -507,11 +539,12 @@ def load_image():
     hsv = make_blurry(hsv, 9)
     hsv = hsv_save_image(make_blurry(hsv, 3), '3_make_blurry')
     hsv = hsv_save_image(hsv_find_green_mask(hsv), '4_green_mask')
-    hsv = make_blurry(hsv, 9)
-    hsv = hsv_save_image(make_blurry(hsv, 9), '5_make_blurry_2')
-    gray = hsv_save_image(hsv_make_grayscale(hsv), '6_make_grayscale', is_gray=True)
-    gray = make_blurry(gray, 31)
-    gray = hsv_save_image(make_blurry(gray, 21), '7_make_blurry_3', is_gray=True)
+    # hsv = make_blurry(hsv, 9)
+    # hsv = hsv_save_image(make_blurry(hsv, 9), '5_make_blurry_2')
+    # gray = hsv_save_image(hsv_make_grayscale(hsv), '6_make_grayscale', is_gray=True)
+    gray = hsv
+    # gray = hsv_save_image(make_blurry(gray, 31), "6_make_blurry_3")
+    # gray = hsv_save_image(make_blurry(gray, 21), '7_make_blurry_3', is_gray=True)
 
     return gray
 
@@ -644,21 +677,94 @@ def ellipse_detection():
 # ellipse_detection()
 
 
-def flood_fill():
-    im = load_image()
-    h,w = im.shape
+def flood_fill(filename = "image_above.jpg"):
+    im = load_image(filename)
+    h,w,chn = im.shape
     seed = (w/2,h/2)
+    seed = (0,0)
+    # print(h, ", ", w)
 
-    mask = np.zeros((h+2,w+2),np.uint8)
+    mask = np.zeros((h+2,w+2),np.uint8) # Adding a padding of 1
 
-    floodflags = 4
+    floodflags = 8
+    # floodflags |= cv2.FLOODFILL_FIXED_RANGE
     floodflags |= cv2.FLOODFILL_MASK_ONLY
     floodflags |= (255 << 8)
 
     num,im,mask,rect = cv2.floodFill(im, mask, seed, (255,0,0), (10,)*3, (10,)*3, floodflags)
+    mask = mask[1:h+1,1:w+1] # Removing the padding
 
-    cv2.imwrite("flood_fill.png", mask)
+
+    hsv_save_image(mask, "flood_fill", is_gray=True)
+
+
+    print(mask)
+
+    # plt.imshow(im)
+    # plt.show()
+
+    # plt.imshow(mask)
+    # plt.show()
 
     return mask
 
-flood_fill()
+
+
+def make_dataset():
+    ellipses = np.array([
+        [0.1, 0.2, 0.1, 0.5, 0.1, 0.9],
+        [0.2, 0.4, -0.1, 0.4, 0.5, 0.2],
+        [0.5, 0.3, 0.5, -0.5, 0.3, 0.8]
+    ])
+
+    gt = np.array([
+        [-1.2, -0.9, -2.1],
+        [-1.0, -0.5, -2.0],
+        [-0.8, -0.7, -1.9]
+    ])
+
+    dataset = np.concatenate((ellipses, gt), axis=1)
+    print(dataset)
+
+    np.savetxt("foo.csv", dataset, delimiter=",")
+
+    # dataset = pd.DataFrame({'ellipses': ellipses, 'gt': gt})
+    # print(dataset)
+
+    # df = pd.read_csv('~/master_project/investigations/dataset.csv')
+
+
+
+make_dataset()
+
+# mask = flood_fill(filename)
+
+
+# edges = cv2.Canny(mask,100,200)
+# # print(type(edges))
+
+
+# unique, counts = np.unique(edges, return_counts=True)
+# print(dict(zip(unique, counts)))
+
+# result = np.where(edges == 255)
+# # print()
+# # print("Result:")
+# # print(result)
+
+
+# fit_ellipse(result, filename)
+
+# x = result[1]
+# y = IMG_HEIGHT - result[0]
+
+# print(x)
+
+# background = plt.imread(filename)
+# background = np.flipud(background)
+# plt.figure(figsize=(8.89,5))
+# plt.plot(x, y, 'ro')
+# plt.imshow(background)
+# plt.xlim((0,IMG_WIDTH))
+# plt.ylim((0,IMG_HEIGHT))
+# plt.show()

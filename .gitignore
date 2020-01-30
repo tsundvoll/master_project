@@ -1,2 +1,6 @@
 *.png
 *.jpg
+*.csv
+CMakeFiles/
+catkin_ws/build
+catkin_ws/devel
