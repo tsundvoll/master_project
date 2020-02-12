@@ -1,5 +1,9 @@
 *.png
 *.jpg
+*.eps
+*.pdf
+*.pgf
+*.svg
 *.csv
 CMakeFiles/
 catkin_ws/build

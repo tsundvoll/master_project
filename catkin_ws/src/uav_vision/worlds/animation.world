@@ -32,6 +32,7 @@
     </scene>
 
     <!-- Start place for the drone -->
+    <!--     
     <model name='ground_plane'>
       <static>1</static>
       <link name='link'>
@@ -79,7 +80,7 @@
         <kinematic>0</kinematic>
         <gravity>1</gravity>
       </link>
-    </model>
+    </model> -->
 
     <!-- Landing platform -->
     <!-- <model name='helipad_ar'>
@@ -166,6 +167,8 @@
       <pose>10 10 0 0 -0 0</pose>
     </model> -->
 
+
+
     <!-- Global light source -->
     <light type="directional" name="sun1">
       <pose>50 0 150 0 0 0</pose>
@@ -189,7 +192,6 @@
     <!-- Bounding box with sea surface -->
     <include>
       <uri>model://ocean</uri>
-      <pose>0 0 0 0 0 0</pose>
     </include>
 
 
@@ -218,6 +220,7 @@
 
 
       <model name='helipad_ar'>
+        <static>1</static>
         <pose>0 0 0.0 0 0 0</pose>
         <link name='link_01'>
           <pose>1 0 0.45 0 0 1.57</pose>
@@ -240,7 +243,7 @@
         </link>
       </model>
      
-      <plugin name="push_animate" filename="libanimated_ship.so"/>
+      <!-- <plugin name="push_animate" filename="libanimated_ship.so"/> -->
 
     </model>
 
