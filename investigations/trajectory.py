@@ -54,14 +54,33 @@ HELIPAD_POS_Z = 0.54
 # *                    0 -3 l /10
 # 0 -5 l/10            *
 
-min_height = 1.0
-max_height = 5.0
-height_step = 0.1
+speed = 2.0 # m/s
 
-length = 1.0 # in UAV's x direction
-width = 3.0 # in UAV's x direction
-length_increase_with_height = 0.1 # per meter
-width_increase_with_height = 0.1 # per meter
+min_height = 1.0
+max_height = 4.0
+height_step = 0.5
+
+# Settings for speed = 0.5
+# At 1m
+# length = 0.1 # in UAV's x direction
+# width = 0.7 # in UAV's y direction
+
+# At 3m
+# length = 1.0 # in UAV's x direction
+# width = 2.8 # in UAV's y direction
+
+# At 5m
+# length = 1.9 # in UAV's x direction
+# width = 4.9 # in UAV's y direction
+
+# At 7m
+# length = 2.8 # in UAV's x direction
+# width = 7.0 # in UAV's y direction
+
+
+
+length_increase_with_height = 0.0 # per meter
+width_increase_with_height = 0.0 # per meter
 
 
 # sign = 1 or sign = -1
@@ -83,8 +102,8 @@ height = min_height
 sign = 1
 while height < max_height:
 
-    l = length + length_increase_with_height*height
-    w = width + width_increase_with_height*height
+    l = max(-0.35 + 0.45*height, 0)
+    w = max(-0.35 + 1.05*height, 0)
 
     l_10 = l/10.0
     w_2 = w/2.0
@@ -98,6 +117,14 @@ while height < max_height:
     [-sign*3*l_10, -w_2, height],
     [-sign*5*l_10,  w_2, height],
     ])
+
+    # set_points_element = np.array([
+    # [0.0        , 0.0 , height],
+    # [0.0, w_2, height],
+    # [0.0, -w_2, height],
+    # # [5*l_10,  0.0, height],
+    # # [-5*l_10,  0.0, height],
+    # ])
 
     set_points = np.concatenate((set_points, set_points_element))
 
@@ -113,8 +140,8 @@ set_points = np.concatenate((set_points, final_set_point))
 print(set_points)
 
 # Running setting
-speed = 10.0 # m/s
-frequency = 100
+
+frequency = 10
 
 time_step = 1.0 / frequency
 
@@ -142,7 +169,7 @@ def get_next_set_point(uav_time):
     
         transition_duration = distance / speed # 1.41421 s
 
-        transition_steps = math.ceil(transition_duration / time_step)
+        transition_steps = max(1, math.ceil(transition_duration / time_step))
 
         step_vector = vector / transition_steps
         # rospy.loginfo("step_vector: " + str(step_vector))
@@ -168,6 +195,7 @@ def run():
 
     topic = 'visualization_marker_array'
     publisher = rospy.Publisher(topic, MarkerArray, queue_size=10)
+    set_point_pub = rospy.Publisher("/set_point", Point, queue_size=10)
 
     rospy.loginfo("Starting trajectory module")
 
@@ -209,6 +237,8 @@ def run():
     
     uav_time = 0.0
 
+    set_point_msg = Point()
+
     rate = rospy.Rate(frequency) # Hz
     while not rospy.is_shutdown():
 
@@ -236,6 +266,12 @@ def run():
 
         # Publish the MarkerArray
         publisher.publish(markerArray)
+
+        # Publish the setpoint
+        set_point_msg.x = uav_set_point[0]
+        set_point_msg.y = uav_set_point[1]
+        set_point_msg.z = uav_set_point[2]
+        set_point_pub.publish(set_point_msg)
 
         # if uav_time >= 3.0:
         #     break

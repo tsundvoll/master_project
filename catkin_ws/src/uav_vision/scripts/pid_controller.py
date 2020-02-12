@@ -3,6 +3,7 @@ import rospy
 import numpy as np
 from geometry_msgs.msg import Twist, Pose
 from sensor_msgs.msg import Image
+from geometry_msgs.msg import Point
 from std_msgs.msg import Empty
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Odometry
@@ -71,13 +72,19 @@ def prev_gt_callback(data):
     # Rotation of the body frame to landing frame wrt. the body frame
     r_2_1 = r_2_0
 
+    yaw = r_2_1.as_euler('xyz')[2]
+
+    r_2_1_yaw = R.from_euler('z', yaw)
+
     # Translation of the body frame to landing frame wrt. the body frame
-    d_2_1 = -r_2_1.apply(d_1_2)
+    d_2_1 = -r_2_1_yaw.apply(d_1_2)
 
 
     # Translation of the landing frame to body frame wrt. the body frame
     # This is more intuitive for the controller
     d_2_1_inv = -d_2_1
+
+
 
     relative_position = np.concatenate((d_2_1_inv, r_2_1.as_euler('xyz')))
     # rospy.loginfo("x: " + str(relative_position[0]))
@@ -102,6 +109,13 @@ actuation_saturation = cfg.actuation_saturation
 error_integral_limit = cfg.error_integral_limit
 
 
+def set_point_callback(data):
+    global desired_pose
+    desired_pose[0] = data.x + cfg.offset_setpoint_x
+    desired_pose[1] = data.y
+    desired_pose[2] = data.z
+
+
 def controller(state):
     global error_prev
     global error_integral
@@ -113,7 +127,7 @@ def controller(state):
     error_derivative = error - error_prev
     error_prev = error
 
-    # error_integral = np.clip(error_integral, -error_integral_limit, error_integral_limit)
+    error_integral = np.clip(error_integral, -error_integral_limit, error_integral_limit)
 
     actuation = (Kp*error + Kd*error_derivative + Ki*error_integral)
     
@@ -136,6 +150,8 @@ def main():
     rospy.init_node('pid_controller', anonymous=True)
 
     rospy.Subscriber('/ground_truth/state', Odometry, prev_gt_callback)
+
+    rospy.Subscriber('/set_point', Point, set_point_callback)
 
     
     reference_pub = rospy.Publisher('/drone_reference', Twist, queue_size=10)

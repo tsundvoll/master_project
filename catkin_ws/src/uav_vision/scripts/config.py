@@ -15,13 +15,13 @@ Kp_position_x = 1.5
 Ki_position_x = 0.01
 Kd_position_x = 0.3
 ####################
-Kp_position_y = 1.5
-Ki_position_y = 0.01
-Kd_position_y = 0.3
+Kp_position_y = Kp_position_x
+Ki_position_y = Ki_position_x
+Kd_position_y = Kd_position_x
 ####################
-Kp_position_z = 0.1
-Ki_position_z = 0.0
-Kd_position_z = 0.0
+Kp_position_z = 1.5
+Ki_position_z = 0.01
+Kd_position_z = 0.3
 ####################
 Kp_orientation = 0.0
 Ki_orientation = 0.0
@@ -29,4 +29,4 @@ Kd_orientation = 0.0
 ####################
 
 actuation_saturation = 5 # % of maximum velocity
-error_integral_limit = 1
+error_integral_limit = 40

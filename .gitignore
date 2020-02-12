@@ -5,6 +5,7 @@
 *.pgf
 *.svg
 *.csv
+*.pyc
 CMakeFiles/
 catkin_ws/build
 catkin_ws/devel
