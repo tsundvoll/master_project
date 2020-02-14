@@ -22,7 +22,7 @@
     <!-- Spawn simulated quadrotor uav -->
     <include file="$(find cvg_sim_gazebo)/launch/spawn_quadrotor.launch" >
         <arg name="model" value="$(find cvg_sim_gazebo)/urdf/quadrotor_sensors.urdf.xacro"/> 
-        <arg name="x" value="0.2" />
+        <arg name="x" value="1.0" />
         <arg name="y" value="0.0" />
         <arg name="z" value="0.7" />
     </include>

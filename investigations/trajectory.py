@@ -54,11 +54,13 @@ HELIPAD_POS_Z = 0.54
 # *                    0 -3 l /10
 # 0 -5 l/10            *
 
-speed = 2.0 # m/s
+speed = 0.1 # m/s
 
 min_height = 1.0
-max_height = 4.0
-height_step = 0.5
+max_height = 2.0
+height_step = 0.1
+
+# Ascending 1 meter with speed 0.1 and step 0.1 takes approximately 709 s
 
 # Settings for speed = 0.5
 # At 1m
@@ -76,11 +78,6 @@ height_step = 0.5
 # At 7m
 # length = 2.8 # in UAV's x direction
 # width = 7.0 # in UAV's y direction
-
-
-
-length_increase_with_height = 0.0 # per meter
-width_increase_with_height = 0.0 # per meter
 
 
 # sign = 1 or sign = -1
@@ -149,12 +146,14 @@ time_step = 1.0 / frequency
 set_point_counter = 0
 step_counter = 0
 transition_steps = 0
+total_transition_time = 0
 step_vector = np.empty(3)
 def get_next_set_point(uav_time):
     global set_point_counter
     global step_counter
     global step_vector
     global transition_steps
+    global total_transition_time
 
     if set_point_counter+1 >= len(set_points):
         return set_points[len(set_points)-1]
@@ -168,6 +167,7 @@ def get_next_set_point(uav_time):
         # rospy.loginfo("Distance to next setpoint: " + str(distance))
     
         transition_duration = distance / speed # 1.41421 s
+        total_transition_time += transition_duration
 
         transition_steps = max(1, math.ceil(transition_duration / time_step))
 
@@ -246,6 +246,7 @@ def run():
         uav_set_point = get_next_set_point(uav_time)
         uav_time += time_step
         rospy.loginfo("Uav_time: " + str(uav_set_point))
+        rospy.loginfo("Total transition time: " + str(total_transition_time))
 
         if len(markerArray.markers) == 0:
             markerArray.markers.append(helipad)

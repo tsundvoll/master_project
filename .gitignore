@@ -6,6 +6,7 @@
 *.svg
 *.csv
 *.pyc
+*.json
 CMakeFiles/
 catkin_ws/build
 catkin_ws/devel
