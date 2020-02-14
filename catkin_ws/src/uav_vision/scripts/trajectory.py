@@ -2,6 +2,7 @@
 
 import rospy
 
+from std_msgs.msg import Empty
 from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Point
@@ -54,13 +55,32 @@ HELIPAD_POS_Z = 0.54
 # *                    0 -3 l /10
 # 0 -5 l/10            *
 
-speed = 0.1 # m/s
+speed = 0.2 # m/s
 
 min_height = 1.0
-max_height = 2.0
-height_step = 0.1
+max_height = 8.0
+height_step = 0.5
 
 # Ascending 1 meter with speed 0.1 and step 0.1 takes approximately 709 s
+
+# Speed 100: 3.58488573363
+# Speed 0.2: 1792s: 29 min
+
+
+# 1792 s at 14 runder: 128 s at hver runde
+# # 2.5 oscilasjoner at hver runde: 51.2 s at hver oscilasjon
+
+# speed = 0.2 # m/s
+
+# min_height = 1.0
+# max_height = 8.0
+# height_step = 0.5
+
+
+# Speed 100: 9.87s
+# Speed 10: 39.57s
+# Speed 5: 75s
+# Speed 0.2: 1875s
 
 # Settings for speed = 0.5
 # At 1m
@@ -92,36 +112,86 @@ height_step = 0.1
 # ])
 
 
-# Add all the setpoints to an array
-set_points = np.empty((0,3))
+# Add all the setpoints to an array, starting at the mid bottom
+set_points = np.array([[0,0,min_height]])
 
 height = min_height
 sign = 1
 while height < max_height:
 
-    l = max(-0.35 + 0.45*height, 0)
-    w = max(-0.35 + 1.05*height, 0)
+    l_slope = 0.85
+    l_inter = -0.80
 
-    l_10 = l/10.0
-    w_2 = w/2.0
+    w_slope = 1.45
+    w_inter = -0.80
+
+    # Must be multiplied with 2:
+    # ('slope l:',        0.46135304
+    # ('intercept l:',    -0.3464550733967431
+    # ('slope w:',        0.78080833
+    # ('intercept w:',    -0.36154347233387263
+
+    # l = max(-0.35 + 0.45*height, 0)
+    # w = max(-0.35 + 1.05*height, 0)
+
+    # l_10 = l/10.0
+    # w_2 = w/2.0
+
+    # Set up flight pattern (description in master thesis)
+    # * Avoiding stand still value for all parameters (x,y,z) to avoid bias of this value
+
+    # h_0 = height + height_step*0.0
+    # h_1 = height + height_step*0.14
+    # h_2 = height + height_step*0.29
+    # h_3 = height + height_step*0.43
+    # h_4 = height + height_step*0.57
+    # h_5 = height + height_step*0.71
+    # h_6 = height + height_step*0.86
+
+    h_1 = height + height_step*0.16
+    h_2 = height + height_step*0.32
+    h_3 = height + height_step*0.48
+    h_4 = height + height_step*0.64
+    h_5 = height + height_step*0.8
+    h_6 = height + height_step*1.0
+
+    l_1 = sign*5*max(l_inter + l_slope*h_1, 0)/10.0
+    l_2 = sign*3*max(l_inter + l_slope*h_2, 0)/10.0
+    l_3 = sign*1*max(l_inter + l_slope*h_3, 0)/10.0
+    l_4 = -sign*1*max(l_inter + l_slope*h_4, 0)/10.0
+    l_5 = -sign*3*max(l_inter + l_slope*h_5, 0)/10.0
+    l_6 = -sign*5*max(l_inter + l_slope*h_6, 0)/10.0
+
+    w_1 = -max(w_inter + w_slope*h_1, 0)/2.0
+    w_2 = max(w_inter + w_slope*h_2, 0)/2.0
+    w_3 = -max(w_inter + w_slope*h_3, 0)/2.0
+    w_4 = max(w_inter + w_slope*h_4, 0)/2.0
+    w_5 = -max(w_inter + w_slope*h_5, 0)/2.0
+    w_6 = max(w_inter + w_slope*h_6, 0)/2.0
+
 
     set_points_element = np.array([
-    [0.0        , 0.0 , height],
-    [sign*5*l_10, -w_2, height],
-    [sign*3*l_10,  w_2, height],
-    [sign*1*l_10, -w_2, height],
-    [-sign*1*l_10,  w_2, height],
-    [-sign*3*l_10, -w_2, height],
-    [-sign*5*l_10,  w_2, height],
+        # [0.0, 0.0, h_0],
+        [l_1, w_1, h_1],
+        [l_2, w_2, h_2],
+        [l_3, w_3, h_3],
+        [l_4, w_4, h_4],
+        [l_5, w_5, h_5],
+        [l_6, w_6, h_6]
     ])
 
     # set_points_element = np.array([
-    # [0.0        , 0.0 , height],
-    # [0.0, w_2, height],
-    # [0.0, -w_2, height],
-    # # [5*l_10,  0.0, height],
-    # # [-5*l_10,  0.0, height],
+    #     [0.0        , 0.0 , height],
+    #     [sign*5*l_10, -w_2, height],
+    #     [sign*3*l_10,  w_2, height  + height_step*0.2],
+    #     [sign*1*l_10, -w_2, height  + height_step*0.4],
+    #     [-sign*1*l_10,  w_2, height + height_step*0.6],
+    #     [-sign*3*l_10, -w_2, height + height_step*0.8],
+    #     [-sign*5*l_10,  w_2, height + height_step*1.0],
     # ])
+
+    # 5 distances: increas height with 0.2 of height step for every distance
+    # This ensures a even ascend while traversing
 
     set_points = np.concatenate((set_points, set_points_element))
 
@@ -130,7 +200,7 @@ while height < max_height:
 
 # Add the final set point
 final_set_point = np.array([
-    [0.0, 0.0, max_height]
+    [0.0, 0.0, max_height],
 ])
 set_points = np.concatenate((set_points, final_set_point))
 
@@ -138,10 +208,9 @@ print(set_points)
 
 # Running setting
 
-frequency = 10
+frequency = 100 # Maximum around 250
 
 time_step = 1.0 / frequency
-
 
 set_point_counter = 0
 step_counter = 0
@@ -155,8 +224,10 @@ def get_next_set_point(uav_time):
     global transition_steps
     global total_transition_time
 
+    # When finished, report the last setpoint
     if set_point_counter+1 >= len(set_points):
-        return set_points[len(set_points)-1]
+        # return set_points[len(set_points)-1]
+        return None
 
     start_point = set_points[set_point_counter]
     end_point = set_points[set_point_counter+1]
@@ -175,13 +246,17 @@ def get_next_set_point(uav_time):
         # rospy.loginfo("step_vector: " + str(step_vector))
         
         next_set_point = start_point
+        step_counter += 0.5
+    elif step_counter == 1:
+        next_set_point = start_point + step_vector*step_counter
         step_counter += 1
-
-    elif step_counter == transition_steps:
+    elif step_counter == transition_steps-0.5:
+        next_set_point = start_point + step_vector*step_counter
+        step_counter += 0.5
+    elif step_counter >= transition_steps:
         step_counter = 0
         set_point_counter += 1
         next_set_point = end_point
-
     else:
         next_set_point = start_point + step_vector*step_counter
         step_counter += 1
@@ -196,6 +271,7 @@ def run():
     topic = 'visualization_marker_array'
     publisher = rospy.Publisher(topic, MarkerArray, queue_size=10)
     set_point_pub = rospy.Publisher("/set_point", Point, queue_size=10)
+    signal_pub = rospy.Publisher("/ardrone/takeoff", Empty, queue_size=1)
 
     rospy.loginfo("Starting trajectory module")
 
@@ -234,7 +310,11 @@ def run():
     marker.color.a = 1.0
     marker.pose.orientation.w = 1.0
 
-    
+    if len(markerArray.markers) == 0:
+        markerArray.markers.append(helipad)
+    else:
+        markerArray.markers[0] = helipad
+
     uav_time = 0.0
 
     set_point_msg = Point()
@@ -244,16 +324,12 @@ def run():
 
 
         uav_set_point = get_next_set_point(uav_time)
-        uav_time += time_step
-        rospy.loginfo("Uav_time: " + str(uav_set_point))
-        rospy.loginfo("Total transition time: " + str(total_transition_time))
+        rospy.loginfo("Set_point: " + str(uav_set_point))
 
-        if len(markerArray.markers) == 0:
-            markerArray.markers.append(helipad)
-        else:
-            markerArray.markers[0] = helipad
-
+    
         if uav_set_point is not None:
+            uav_time += time_step
+            rospy.loginfo("Total transition time: " + str(total_transition_time))
             
             marker.pose.position.x = HELIPAD_POS_X + uav_set_point[0]
             marker.pose.position.y = HELIPAD_POS_Y + uav_set_point[1]
@@ -264,15 +340,19 @@ def run():
             else:
                 markerArray.markers[1] = marker
         
+            # Publish the MarkerArray
+            publisher.publish(markerArray)
 
-        # Publish the MarkerArray
-        publisher.publish(markerArray)
+            # Publish the setpoint
+            set_point_msg.x = uav_set_point[0]
+            set_point_msg.y = uav_set_point[1]
+            set_point_msg.z = uav_set_point[2]
+            set_point_pub.publish(set_point_msg)
 
-        # Publish the setpoint
-        set_point_msg.x = uav_set_point[0]
-        set_point_msg.y = uav_set_point[1]
-        set_point_msg.z = uav_set_point[2]
-        set_point_pub.publish(set_point_msg)
+        else:
+            # Indicate that the trajectory is finished
+            signal_pub.publish(Empty())
+            break
 
         # if uav_time >= 3.0:
         #     break

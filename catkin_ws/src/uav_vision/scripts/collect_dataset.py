@@ -19,9 +19,15 @@ bridge = CvBridge()
 global_gt_pose = None
 global_image = None
 save_images = False
+global_signal = False
 
 IMG_WIDTH = 640
 IMG_HEIGHT = 360
+
+
+def signal_callback(data):
+    global global_signal
+    global_signal = True
 
 
 def gt_callback(data):
@@ -252,6 +258,7 @@ def main():
 
     rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
     rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
+    rospy.Subscriber('/ardrone/takeoff', Empty, signal_callback)
 
     pub_heartbeat = rospy.Publisher("/heartbeat", Empty, queue_size=10)
 
@@ -262,7 +269,7 @@ def main():
     filename="image_above.jpg"
 
     dataset = {}
-    filename_dataset = 'dataset_ellipses_and_positions_train_1400.json'
+    filename_dataset = 'full_dataset.json'
 
     count = 0
     NUM_DATAPOINTS = 1400
@@ -284,17 +291,14 @@ def main():
                 }
                 dataset[count] = data_instance
 
-                if count == NUM_DATAPOINTS-1:
+                if global_signal:
                     with open(filename_dataset, 'w') as fp:
                         json.dump(dataset, fp)
                     rospy.loginfo("Count: " + str(count))
                     rospy.loginfo("Saved as json")
                     break
-                elif count < NUM_DATAPOINTS:
-                    rospy.loginfo("Count: " + str(count))
                 else:
-                    break
-
+                    rospy.loginfo("Count: " + str(count))
                 count += 1
         else:
             rospy.loginfo("Waiting for signals")
