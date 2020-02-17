@@ -4,8 +4,8 @@ import math
 
 
 
-reference_height = 1.0
-offset_setpoint_x = -0.15
+reference_height = 1.5
+offset_setpoint_x = -0.2
 controller_desired_pose = np.array([offset_setpoint_x, 0.0, reference_height, 0.0, 0.0, -math.pi/2])
 
 ####################

@@ -59,7 +59,7 @@ speed = 0.2 # m/s
 
 min_height = 1.0
 max_height = 8.0
-height_step = 0.5
+height_step = 7.0
 
 # Ascending 1 meter with speed 0.1 and step 0.1 takes approximately 709 s
 

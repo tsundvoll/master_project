@@ -2,7 +2,9 @@
 import rospy
 import numpy as np
 import json
+import math
 import cv2
+import time
 from cv_bridge import CvBridge, CvBridgeError
 from scipy.spatial.transform import Rotation as R
 
@@ -11,10 +13,14 @@ from geometry_msgs.msg import Pose
 from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
 
+from keras.models import load_model
+
 import config as cfg
 
 
 bridge = CvBridge()
+
+nn_model = None
 
 global_gt_pose = None
 global_image = None
@@ -24,15 +30,29 @@ global_signal = False
 IMG_WIDTH = 640
 IMG_HEIGHT = 360
 
+x_mean = np.array([ 
+    6.90849561e-01,
+    5.27306617e-06,
+    6.92069939e-01,
+    -4.43393840e+02,
+    -2.51004351e+02,
+    1.12344295e+05,
+    -2.92006836e+01,
+    -2.90295541e+01
+])
+x_std = np.array([
+    1.47666745e-01,
+    6.88734929e-03,
+    1.48031010e-01,
+    2.24058127e+02,
+    1.31239825e+02,
+    7.37506773e+04,
+    1.52626994e+01,
+    1.52033420e+01
+])
+y_mean = np.array([-0.15933413, 0.03610403, 5.56289522])
+y_std = np.array([1.37827808, 2.27332637, 1.74280007])
 
-def signal_callback(data):
-    global global_signal
-    global_signal = True
-
-
-def gt_callback(data):
-    global global_gt_pose
-    global_gt_pose = data.pose.pose
 
 
 def image_callback(data):
@@ -43,71 +63,6 @@ def image_callback(data):
     except CvBridgeError as e:
         rospy.loginfo(e)
 
-
-def get_relative_position(gt_pose):
-    # Transform ground truth in body frame wrt. world frame to body frame wrt. landing platform
-
-    ##########
-    # 0 -> 2 #
-    ##########
-
-    # Position
-    p_x = gt_pose.position.x
-    p_y = gt_pose.position.y
-    p_z = gt_pose.position.z
-
-    # Translation of the world frame to body frame wrt. the world frame
-    d_0_2 = np.array([p_x, p_y, p_z])
-
-    # Orientation
-    q_x = gt_pose.orientation.x
-    q_y = gt_pose.orientation.y
-    q_z = gt_pose.orientation.z
-    q_w = gt_pose.orientation.w
-
-    # Rotation of the body frame wrt. the world frame
-    r_0_2 = R.from_quat([q_x, q_y, q_z, q_w])
-    r_2_0 = r_0_2.inv()
-    
-
-    ##########
-    # 0 -> 1 #
-    ##########
-    
-    # Translation of the world frame to landing frame wrt. the world frame
-    offset_x = 1.0
-    offset_y = 0.0
-    offset_z = 0.54
-    d_0_1 = np.array([offset_x, offset_y, offset_z])
-
-    # Rotation of the world frame to landing frame wrt. the world frame
-    # r_0_1 = np.identity(3) # No rotation, only translation
-    r_0_1 = np.identity(3) # np.linalg.inv(r_0_1)
-
-
-    ##########
-    # 2 -> 1 #
-    ##########
-    # Transformation of the body frame to landing frame wrt. the body frame
-    
-    # Translation of the landing frame to bdy frame wrt. the landing frame
-    d_1_2 = d_0_2 - d_0_1
-
-    # Rotation of the body frame to landing frame wrt. the body frame
-    r_2_1 = r_2_0
-
-    yaw = r_2_1.as_euler('xyz')[2]
-    r_2_1_yaw = R.from_euler('z', yaw)
-
-    # Translation of the body frame to landing frame wrt. the body frame
-    # Only yaw rotation is considered
-    d_2_1 = -r_2_1_yaw.apply(d_1_2)
-
-    # Translation of the landing frame to body frame wrt. the body frame
-    # This is more intuitive for the controller
-    d_2_1_inv = -d_2_1
-
-    return d_2_1_inv
 
 
 # Computer Vision
@@ -250,58 +205,83 @@ def get_ellipse_parameters(raw_img):
 
     ellipse = fit_ellipse(result)
 
-    return ellipse
+    A = ellipse[0]
+    B = ellipse[1]
+    C = ellipse[2]
+    D = ellipse[3]
+    E = ellipse[4]
+    F = ellipse[5]
+
+    # print(A)
+
+    inner_square = math.sqrt( (A-C)**2 + B**2)
+    outside = 1.0 / (B**2 - 4*A*C)
+    a = outside * math.sqrt(2*(A*E**2 + C*D**2 - B*D*E + (B**2 - 4*A*C)*F) * ( (A+C) + inner_square))
+    b = outside * math.sqrt(2*(A*E**2 + C*D**2 - B*D*E + (B**2 - 4*A*C)*F) * ( (A+C) - inner_square))
+
+    # print(a)
+    ellipse_and_a_b = np.array([A,B,C,D,E,F,a,b])
+
+    return ellipse_and_a_b
 
 
 def main():
-    rospy.init_node('collect_dataset', anonymous=True)
+    rospy.init_node('position_estimator', anonymous=True)
 
-    rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
     rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
-    rospy.Subscriber('/ardrone/takeoff', Empty, signal_callback)
+
+    rospy.loginfo("Initializing model...")
+
+    model_path = '/home/thomas/master_project/catkin_ws/src/uav_vision/scripts/nn_models/nn_model.h5'
+    weights_path = '/home/thomas/master_project/catkin_ws/src/uav_vision/scripts/nn_models/weights.h5'
+
+    nn_model = load_model(model_path)
+    nn_model.load_weights(weights_path)
+
+    # nn_model.summary()
 
     pub_heartbeat = rospy.Publisher("/heartbeat", Empty, queue_size=10)
-
     heartbeat_msg = Empty()
 
-    rospy.loginfo("Starting collecting dataset")
+    # time.sleep(1)
 
-    filename="image_above.jpg"
+    rospy.loginfo("Starting estimating position")
 
-    dataset = {}
-    filename_dataset = 'full_dataset_test.json'
 
-    count = 0
-    NUM_DATAPOINTS = 1400
-
-    rate = rospy.Rate(2) # Hz
+    rate = rospy.Rate(10) # Hz
     while not rospy.is_shutdown():
 
-        if (global_gt_pose is not None) and (global_image is not None):
-            pub_heartbeat.publish(heartbeat_msg)
-            
-            relative_position = get_relative_position(global_gt_pose)    
-            # global_image = cv2.imread(filename)
-            ellipse_parameters = get_ellipse_parameters(global_image)
-        
-            if ellipse_parameters is not None:
-                data_instance = {
-                    'ellipse': ellipse_parameters.tolist(),
-                    'ground_truth': relative_position.tolist()
-                }
-                dataset[count] = data_instance
+        if global_image is not None:
+            x_test = get_ellipse_parameters(global_image)
+            # print(x_test)
 
-                if global_signal:
-                    with open(filename_dataset, 'w') as fp:
-                        json.dump(dataset, fp)
-                    rospy.loginfo("Count: " + str(count))
-                    rospy.loginfo("Saved as json")
-                    break
-                else:
-                    rospy.loginfo("Count: " + str(count))
-                count += 1
-        else:
-            rospy.loginfo("Waiting for signals")
+            x_test_norm = (x_test - x_mean) / x_std
+            
+            # x_test_x_y = x_test_in_use[:,:6]
+            # x_test_z = x_test_in_use[:,6:]
+
+            # print(x_test_norm)
+
+
+
+            x_test_norm_x_y = [x_test_norm[:6]]
+            x_test_norm_z = [x_test_norm[6:]]
+            # print(x_test_norm_x_y)
+            # print(x_test_norm_z)
+
+            # input_nn = [x_test_norm_x_y, x_test_norm_z]
+
+            pt_pred_raw = nn_model.predict([x_test_norm_x_y, x_test_norm_z])
+
+            pt_pred_concat = np.array([pt_pred_raw[0][0], pt_pred_raw[1][0], pt_pred_raw[2][0]])[:,0]
+
+            point_prediction = pt_pred_concat*y_std + y_mean
+
+            print(np.round(point_prediction,4))
+            # print("x:", point_prediction[0], "y:", point_prediction[1],"z:", point_prediction[2])
+
+
+            pub_heartbeat.publish(heartbeat_msg)
 
         rate.sleep()
     
