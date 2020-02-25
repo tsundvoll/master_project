@@ -6,7 +6,8 @@ import math
 
 reference_height = 1.5
 offset_setpoint_x = -0.2
-controller_desired_pose = np.array([offset_setpoint_x, 0.0, reference_height, 0.0, 0.0, -math.pi/2])
+offset_setpoint_y = 0.0
+controller_desired_pose = np.array([offset_setpoint_x, offset_setpoint_y, reference_height, 0.0, 0.0, -math.pi/2])
 
 ####################
 #  PID parameters  #

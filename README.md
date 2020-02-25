@@ -10,6 +10,14 @@ ROS package names:
 
 * uav_vision
 
+## Installation
+
+### uuv_simulator
+sudo apt install ros-kinetic-uuv-simulator
+
+### gazebo_ros
+sudo apt-get install ros-kinetic-gazebo-ros
+
 
 ## Packages used:
 * uuv_simulator (https://github.com/uuvsimulator/uuv_simulator)
@@ -36,3 +44,89 @@ At speed 0.1, this becomes 18489s
 * Add extra setpoint before turning, to get smoother corners
 
 * Create an automatic report from the NN training over the architecture and the hyperparameters
+
+
+## Install Olympe
+Follow this guide: https://developer.parrot.com/docs/olympe/installation.html
+
+
+To investigate topics, use the command:
+```
+parrot-gz topic
+```
+With these options:
+```
+Options:
+  -h [ --help ]           Print this help message
+  -w [ --world-name ] arg World name.
+  -l [ --list ]           List all topics.
+  -i [ --info ] arg       Get information about a topic.
+  -e [ --echo ] arg       Output topic data to screen.
+  -p [ --publish ] arg    Publish message on a topic.
+  -r [ --request ] arg    Send a request.
+  -v [ --view ] arg       View topic data using a QT widget.
+  -z [ --hz ] arg         Get publish frequency.
+  -b [ --bw ] arg         Get topic bandwidth.
+  -u [ --unformatted ]    Output data from echo without formatting.
+  -d [ --duration ] arg   Duration (seconds) to run. Applicable with echo, hz, 
+                          and bw
+  -m [ --msg ] arg        Message to send on topic. Applicable with publish and
+                          request
+  -f [ --file ] arg       Path to a file containing the message to send on 
+                          topic. Applicable with publish and request
+```
+
+Topics from the Sphinx simulator:
+
+/gazebo/default/anafi4k/body/ultrasound/scan
+
+
+
+/gazebo/default/anafi4k/body/vertical_camera/image
+/gazebo/default/anafi4k/body/wrench
+/gazebo/default/anafi4k/gimbal_1/wrench
+/gazebo/default/anafi4k/gimbal_2/horizontal_camera/image
+/gazebo/default/anafi4k/gimbal_2/wrench
+/gazebo/default/anafi4k/joint_cmd
+/gazebo/default/animated_revolt/body/wrench
+/gazebo/default/animated_revolt/helipad_ar/link_01/wrench
+/gazebo/default/atmosphere
+/gazebo/default/default::ultrasound/cmd
+/gazebo/default/diagnostics
+/gazebo/default/factory
+/gazebo/default/factory/light
+/gazebo/default/gui
+/gazebo/default/gzclient_camera/cmd
+/gazebo/default/horizontal_camera/cmd
+/gazebo/default/joint
+/gazebo/default/light/modify
+/gazebo/default/log/control
+/gazebo/default/log/status
+/gazebo/default/marker
+/gazebo/default/model/info
+/gazebo/default/model/modify
+/gazebo/default/ocean/ocean_link/wrench
+/gazebo/default/omniscient_anafi4k/contacts
+/gazebo/default/physics
+/gazebo/default/physics/contacts
+/gazebo/default/playback_control
+/gazebo/default/pose/info
+/gazebo/default/pose/modify
+/gazebo/default/request
+/gazebo/default/response
+/gazebo/default/roads
+/gazebo/default/scene
+/gazebo/default/selection
+/gazebo/default/sensor
+/gazebo/default/skeleton_pose/info
+/gazebo/default/sky
+/gazebo/default/user_camera/joy_pose
+/gazebo/default/user_camera/joy_twist
+/gazebo/default/user_camera/pose
+/gazebo/default/vertical_camera/cmd
+/gazebo/default/visual
+/gazebo/default/wind
+/gazebo/default/world_control
+/gazebo/default/world_stats
+/gazebo/server/control
+/gazebo/world/modify

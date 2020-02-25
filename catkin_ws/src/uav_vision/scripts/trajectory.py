@@ -58,8 +58,8 @@ HELIPAD_POS_Z = 0.54
 speed = 0.2 # m/s
 
 min_height = 1.0
-max_height = 8.0
-height_step = 7.0
+max_height = 12.0
+height_step = 0.5
 
 # Ascending 1 meter with speed 0.1 and step 0.1 takes approximately 709 s
 
@@ -197,6 +197,17 @@ while height < max_height:
 
     height += height_step
     sign *= -1
+
+
+# set_points = np.array([[0,0,min_height]])
+
+# set_points_element = np.array([
+#         [0, 0, 5.0],
+#         [0, 0, 10.0]
+#     ])
+
+# set_points = np.concatenate((set_points, set_points_element))
+
 
 # Add the final set point
 final_set_point = np.array([

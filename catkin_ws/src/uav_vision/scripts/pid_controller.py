@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 import rospy
 import numpy as np
-from geometry_msgs.msg import Twist, Pose
+from geometry_msgs.msg import Twist, Pose, Point
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import Point
 from std_msgs.msg import Empty
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Odometry
@@ -92,6 +91,11 @@ def prev_gt_callback(data):
     # rospy.loginfo("z: " + str(relative_position[2]))
 
 
+def gt_callback_estimate(data):
+    global relative_position
+    relative_position = np.array([data.x, data.y, data.z, 0, 0, 0])
+
+
 # Setup for the PID controller
 error_prev = np.array([0.0]*6)
 error_integral = np.array([0.0]*6)
@@ -149,7 +153,9 @@ def controller(state):
 def main():
     rospy.init_node('pid_controller', anonymous=True)
 
-    rospy.Subscriber('/ground_truth/state', Odometry, prev_gt_callback)
+    # rospy.Subscriber('/ground_truth/state', Odometry, prev_gt_callback)
+    rospy.Subscriber('/drone_estimate_filtered', Point, gt_callback_estimate)
+    
 
     rospy.Subscriber('/set_point', Point, set_point_callback)
 
@@ -179,40 +185,42 @@ def main():
 
     rate = rospy.Rate(20) # Hz
     while not rospy.is_shutdown():
-        actuation = controller(relative_position)
-        msg = Twist()
-        msg.linear.x = actuation[0]
-        msg.linear.y = actuation[1]
-        msg.linear.z = actuation[2]
 
-        control_pub.publish(msg)
+        if relative_position is not None:
+            actuation = controller(relative_position)
+            msg = Twist()
+            msg.linear.x = actuation[0]
+            msg.linear.y = actuation[1]
+            msg.linear.z = actuation[2]
 
-        # Publish values for tuning
-        reference_pub.publish(reference_msg)
+            control_pub.publish(msg)
 
-        pose_msg.linear.x = relative_position[0]
-        pose_msg.linear.y = relative_position[1]
-        pose_msg.linear.z = relative_position[2]
-        pose_msg.angular.x = relative_position[3]
-        pose_msg.angular.y = relative_position[4]
-        pose_msg.angular.z = relative_position[5]
-        pose_pub.publish(pose_msg)
+            # Publish values for tuning
+            reference_pub.publish(reference_msg)
 
-        error_msg.linear.x = error_prev[0]
-        error_msg.linear.y = error_prev[1]
-        error_msg.linear.z = error_prev[2]
-        error_msg.angular.x = error_prev[3]
-        error_msg.angular.y = error_prev[4]
-        error_msg.angular.z = error_prev[5]
-        error_pub.publish(error_msg)
+            pose_msg.linear.x = relative_position[0]
+            pose_msg.linear.y = relative_position[1]
+            pose_msg.linear.z = relative_position[2]
+            pose_msg.angular.x = relative_position[3]
+            pose_msg.angular.y = relative_position[4]
+            pose_msg.angular.z = relative_position[5]
+            pose_pub.publish(pose_msg)
 
-        error_integral_msg.linear.x = error_integral[0]
-        error_integral_msg.linear.y = error_integral[1]
-        error_integral_msg.linear.z = error_integral[2]
-        error_integral_msg.angular.x = error_integral[3]
-        error_integral_msg.angular.y = error_integral[4]
-        error_integral_msg.angular.z = error_integral[5]
-        error_integral_pub.publish(error_integral_msg)
+            error_msg.linear.x = error_prev[0]
+            error_msg.linear.y = error_prev[1]
+            error_msg.linear.z = error_prev[2]
+            error_msg.angular.x = error_prev[3]
+            error_msg.angular.y = error_prev[4]
+            error_msg.angular.z = error_prev[5]
+            error_pub.publish(error_msg)
+
+            error_integral_msg.linear.x = error_integral[0]
+            error_integral_msg.linear.y = error_integral[1]
+            error_integral_msg.linear.z = error_integral[2]
+            error_integral_msg.angular.x = error_integral[3]
+            error_integral_msg.angular.y = error_integral[4]
+            error_integral_msg.angular.z = error_integral[5]
+            error_integral_pub.publish(error_integral_msg)
 
 
         rate.sleep()

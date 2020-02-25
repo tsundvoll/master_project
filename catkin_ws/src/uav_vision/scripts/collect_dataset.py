@@ -269,12 +269,12 @@ def main():
     filename="image_above.jpg"
 
     dataset = {}
-    filename_dataset = 'full_dataset_test.json'
+    filename_dataset = 'full_dataset_train_low_flight.json'
 
     count = 0
     NUM_DATAPOINTS = 1400
 
-    rate = rospy.Rate(2) # Hz
+    rate = rospy.Rate(20) # Hz
     while not rospy.is_shutdown():
 
         if (global_gt_pose is not None) and (global_image is not None):
