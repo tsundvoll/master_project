@@ -18,13 +18,20 @@ from keras.models import load_model
 import config as cfg
 
 
+# For converting between units
+conv_scale_to_bits = np.array([0.5, 2.55, 2.55]) # unit bits with ranges [[0,180], [0,255], [0,255]]
+
 bridge = CvBridge()
 
 nn_model = None
 
 global_gt_pose = None
 global_image = None
-save_images = False
+save_images = True
+is_at_lab = True
+
+filename = '/home/thomas/master_project/catkin_ws/src/uav_vision/scripts/real_image.png'
+global_image = cv2.imread(filename)
 
 IMG_WIDTH = 640
 IMG_HEIGHT = 360
@@ -64,6 +71,8 @@ def gt_callback(data):
 
 def image_callback(data):
     global global_image
+
+    
 
     try:
         global_image = bridge.imgmsg_to_cv2(data, 'bgr8') # {'bgr8' or 'rgb8}
@@ -158,6 +167,25 @@ def hsv_make_orange_to_green(hsv):
     return orange_to_green
 
 
+def hsv_make_orange_to_green_at_lab(hsv):
+    bgr_green = np.uint8([[[30,90,30]]])
+    hsv_green = cv2.cvtColor(bgr_green,cv2.COLOR_BGR2HSV)
+
+
+    # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
+    lower_orange = np.array([ 5,  10,  55])*conv_scale_to_bits
+    upper_orange = np.array([ 70, 100, 100])*conv_scale_to_bits
+
+    mask = cv2.inRange(hsv, lower_orange, upper_orange)
+
+    # change the orange to green
+    imask = mask>0
+    orange_to_green = hsv.copy()
+    orange_to_green[imask] = hsv_green
+
+    return orange_to_green
+
+
 def hsv_find_green_mask(hsv):
     bgr_green = np.uint8([[[30,90,30]]])
     hsv_green = cv2.cvtColor(bgr_green,cv2.COLOR_BGR2HSV)
@@ -174,6 +202,24 @@ def hsv_find_green_mask(hsv):
     upper_green = np.array([upper_green_h,upper_green_s,upper_green_v])
     green_mask = cv2.inRange(hsv, lower_green, upper_green)
   
+    # keep only the green
+    imask = green_mask>0
+    green = np.zeros_like(hsv, np.uint8)
+    green[imask] = hsv_green
+  
+    return green
+
+
+def hsv_find_green_mask_at_lab(hsv):
+    bgr_green = np.uint8([[[30,90,30]]])
+    hsv_green = cv2.cvtColor(bgr_green,cv2.COLOR_BGR2HSV)
+
+    # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
+    lower_green = np.array([ 75,  35,  25])*conv_scale_to_bits
+    upper_green = np.array([200, 100, 100])*conv_scale_to_bits
+
+    green_mask = cv2.inRange(hsv, lower_green, upper_green)
+
     # keep only the green
     imask = green_mask>0
     green = np.zeros_like(hsv, np.uint8)
@@ -212,14 +258,26 @@ def flood_fill(img):
 
 
 def preprocessing(raw_img):
-    hsv = cv2.cvtColor(raw_img, cv2.COLOR_BGR2HSV)
-    hsv = save_image(hsv, '1_hsv')
-    
-    hsv = save_image(hsv_make_orange_to_green(hsv), '2_orange_to_green')
-    hsv = save_image(make_blurry(hsv, 3), '3_make_blurry')
-    hsv = save_image(hsv_find_green_mask(hsv), '4_green_mask')
-    hsv = save_image(make_blurry(hsv, 3), '5_make_blurry')
-    gray = save_image(flood_fill(hsv), '6_flood_fill', is_gray=True)
+
+    if is_at_lab:
+        hsv = cv2.cvtColor(raw_img, cv2.COLOR_BGR2HSV)
+        hsv = save_image(hsv, 'LAB_1_hsv')
+        
+        hsv = save_image(hsv_make_orange_to_green_at_lab(hsv), 'LAB_2_orange_to_green')
+        hsv = save_image(make_blurry(hsv, 9), 'LAB_3_make_blurry')
+        hsv = save_image(hsv_find_green_mask_at_lab(hsv), 'LAB_4_green_mask')
+        hsv = save_image(make_blurry(hsv, 9), 'LAB_5_make_blurry')
+        gray = save_image(flood_fill(hsv), 'LAB_6_flood_fill', is_gray=True)
+
+    else:
+        hsv = cv2.cvtColor(raw_img, cv2.COLOR_BGR2HSV)
+        hsv = save_image(hsv, '1_hsv')
+        
+        hsv = save_image(hsv_make_orange_to_green(hsv), '2_orange_to_green')
+        hsv = save_image(make_blurry(hsv, 3), '3_make_blurry')
+        hsv = save_image(hsv_find_green_mask(hsv), '4_green_mask')
+        hsv = save_image(make_blurry(hsv, 3), '5_make_blurry')
+        gray = save_image(flood_fill(hsv), '6_flood_fill', is_gray=True)
 
     return gray
 
@@ -237,7 +295,12 @@ def fit_ellipse(points):
     S1 = np.dot(D1.T,D1)
     S2 = np.dot(D1.T,D2)
     S3 = np.dot(D2.T,D2)
-    inv_S3 = np.linalg.inv(S3)
+
+    try:
+        inv_S3 = np.linalg.inv(S3)
+    except np.linalg.LinAlgError:
+        print("fit_ellipse(): Got singular matrix")
+        return None
 
     T = - np.dot(inv_S3, S2.T) # for getting a2 from a1
 
@@ -259,6 +322,10 @@ def fit_ellipse(points):
     # NB! I am not sure if this is always correct
     if a1.shape[1] > 1:
         a1 = np.array([a1[:,0]]).T
+
+    if a1.shape != (3,1): # Make sure a1 has content
+        print("fit_ellipse(): a1 not OK")
+        return None
 
     a = np.concatenate((a1, np.dot(T, a1)))[:,0] # Choose the inner column with [:,0]
 
@@ -289,6 +356,7 @@ def get_ellipse_parameters(raw_img):
 
     # print(A)
     if B**2 - 4*A*C >= 0:
+        print("get_ellipse_parameters(): Shape found is not an ellipse")
         return None
 
     inner_square = math.sqrt( (A-C)**2 + B**2)
@@ -427,6 +495,8 @@ def main():
 
                 # Publish filtered estimate
                 pub_estimate_filtered.publish(estimate_filtered_msg)
+
+                print("x:", average_filtered[0], "y:", average_filtered[1], "z:", average_filtered[2])
 
 
             pub_heartbeat.publish(heartbeat_msg)

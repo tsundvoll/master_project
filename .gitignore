@@ -12,5 +12,6 @@
 CMakeFiles/
 catkin_ws/build
 catkin_ws/devel
+catkin_ws/src/ddpg
 investigations/nn_training/
 parrot-groundsdk/

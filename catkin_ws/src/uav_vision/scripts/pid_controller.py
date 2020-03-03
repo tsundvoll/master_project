@@ -16,7 +16,7 @@ import config as cfg
 
 
 relative_position = None
-def prev_gt_callback(data):
+def gt_callback(data):
     global relative_position
     gt_pose = data.pose.pose
 
@@ -91,7 +91,7 @@ def prev_gt_callback(data):
     # rospy.loginfo("z: " + str(relative_position[2]))
 
 
-def gt_callback_estimate(data):
+def estimate_callback(data):
     global relative_position
     relative_position = np.array([data.x, data.y, data.z, 0, 0, 0])
 
@@ -149,12 +149,16 @@ def controller(state):
     return actuation_clipped
 
 
-
 def main():
     rospy.init_node('pid_controller', anonymous=True)
 
-    # rospy.Subscriber('/ground_truth/state', Odometry, prev_gt_callback)
-    rospy.Subscriber('/drone_estimate_filtered', Point, gt_callback_estimate)
+
+    use_estimate = False
+
+    if use_estimate:
+        rospy.Subscriber('/drone_estimate_filtered', Point, estimate_callback)
+    else:
+        rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
     
 
     rospy.Subscriber('/set_point', Point, set_point_callback)

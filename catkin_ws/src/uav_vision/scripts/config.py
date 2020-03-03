@@ -2,11 +2,31 @@
 import numpy as np
 import math
 
+img_format = 720.0/1280.0
 
 
-reference_height = 1.5
-offset_setpoint_x = -0.2
-offset_setpoint_y = 0.0
+
+def height_to_delta_x_y(height):
+    R = 0.386 # m
+    m = 0.0 # m
+
+    a = height*math.tan(math.radians(45)) - (R + m)
+    alpha = math.atan(360.0/640.0)
+
+    delta_x = a * math.sin(alpha)
+    delta_y = a * math.cos(alpha)
+
+    print('delta_x:', delta_x)
+    print('delta_y:', delta_y)
+
+    return delta_x, delta_y
+
+reference_height = 0.3
+delta_x, delta_y = height_to_delta_x_y(reference_height)
+delta_x, delta_y = -0.17,0
+
+offset_setpoint_x = -0.15 + delta_x             # 0.79 (at h = 2.0) # 1.77 (at h = 4.0)
+offset_setpoint_y = delta_y                     # 1.41              # 3.15
 controller_desired_pose = np.array([offset_setpoint_x, offset_setpoint_y, reference_height, 0.0, 0.0, -math.pi/2])
 
 ####################

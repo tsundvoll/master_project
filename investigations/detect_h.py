@@ -179,6 +179,15 @@ def flood_fill(filename = "image_above.jpg"):
 
     return mask
 
+
+######################
+# New help functions #
+######################
+
+def normalize_vector(vector):
+    return vector/ np.linalg.norm(vector, ord=1)
+
+
 #############
 # New stuff #
 #############
@@ -191,7 +200,7 @@ def hsv_keep_white_only(hsv):
     hsv_black = cv2.cvtColor(bgr_black,cv2.COLOR_BGR2HSV)
 
     # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
-    lower_white = np.array([  0,   0,  95])*conv_scale_to_bits
+    lower_white = np.array([  0,   0,  85])*conv_scale_to_bits
     upper_white = np.array([360,  40, 100])*conv_scale_to_bits
 
     mask = cv2.inRange(hsv, lower_white, upper_white)
@@ -651,9 +660,62 @@ def detect_sub_pixecl_corners(img):
 
     number_of_corners = len(corner_x)
 
-    corners = np.stack((corner_x, corner_y), 1)
-    print "Corners:"
-    print corners
+    corners = np.stack((corner_x, corner_y), axis=1)
+    # print "Corners:"
+    # print corners
+    
+
+
+
+    if number_of_corners == 3:
+        print "Corners:"
+        print corners
+
+
+        distances = np.array([
+            np.linalg.norm(corners[0] - corners[1]),
+            np.linalg.norm(corners[1] - corners[2]),
+            np.linalg.norm(corners[2] - corners[0])
+        ])
+
+        min_dist_id = np.argmin(distances)
+        print "min_dist_id:"
+        print min_dist_id
+
+        if min_dist_id == 0:
+            relevant_corners = np.stack((corners[0], corners[1]), axis=0)
+        elif min_dist_id == 1:
+            relevant_corners = np.stack((corners[1], corners[2]), axis=0)
+        elif min_dist_id == 2:
+            relevant_corners = np.stack((corners[2], corners[0]), axis=0)
+        else:
+            print("ERROR: In fn. detect_sub_pixecl_corners(); min_dist_id out of bounds")
+            return None
+
+        dist_0_1 = distances[0]
+        dist_1_2 = distances[1]
+        dist_2_0 = distances[2]
+
+        print "Distances:"
+        print dist_0_1
+        print dist_1_2
+        print dist_2_0
+
+
+        img_corners = hsv_origin.copy()
+        # Pick the corner with the lowest y-coordinate
+        left_corner_id = np.argmin(relevant_corners, axis=0)[1]
+        right_corner_id = 1 - left_corner_id
+
+        corner_0 = relevant_corners[left_corner_id]
+        corner_1 = relevant_corners[right_corner_id]
+
+        img_corners[corner_0[0]][corner_0[1]] = hsv_red_color
+        img_corners[corner_1[0]][corner_1[1]] = hsv_red_color
+        hsv_save_image(img_corners, "5_relevant_corners")
+
+
+
 
     if number_of_corners == 4:
         # Define that the corner closest to the top belongs to the top cross-bar
@@ -681,95 +743,132 @@ def detect_sub_pixecl_corners(img):
         top_corner_closest = rest_corners[top_corner_closest_id]
         print "Top corner closest:", top_corner_closest
 
+        img_corners = hsv_origin.copy()
 
-        # To do:
-        # Find the angle between the norm of the line between those points and the x-axis of the image
+
+        relevant_corners = np.stack((top_corner, top_corner_closest), axis=0)
+
+        # Pick the corner with the lowest y-coordinate
+        left_corner_id = np.argmin(relevant_corners, axis=0)[1]
+        right_corner_id = 1 - left_corner_id
+
+        corner_0 = relevant_corners[left_corner_id]
+        corner_1 = relevant_corners[right_corner_id]
+
+        img_corners[corner_1[0]][corner_1[1]] = hsv_red_color
+        hsv_save_image(img_corners, "5_relevant_corners")
+
+
 
     if number_of_corners == 2:
-        top_corner_id = np.argmin(corner_x)
-        print "Top corner id:", top_corner_id
+        left_corner_id = np.argmin(corner_y)
+        right_corner_id = 1 - left_corner_id
+
+        corner_0 = corners[left_corner_id]
+        corner_1 = corners[right_corner_id]
 
 
-        p_x_0 = 299
-        p_y_0 = 120
-
-        p_x_1 = 305
-        p_y_1 = 73
-
-        # p_x = 10
-        # p_y = 10
-
-        # Calculate spatial gradient
-        dx, dy	= cv2.spatialGradient(blur)
-
-        corner_0 = corners[0]
-        corner_1 = corners[1]
-
-        grad_0 = np.array([dx[corner_0[0]][corner_0[1]], dy[corner_0[0]][corner_0[1]]])
-        grad_1 = np.array([dx[corner_1[0]][corner_1[1]], dy[corner_1[0]][corner_1[1]]])
+    # Calculate spatial gradient
+    dy, dx	= cv2.spatialGradient(blur) # OpenCV operates with x=column, y=row
 
 
-        grad_0_norm = grad_0/np.linalg.norm(grad_0, ord=1)
-        grad_1_norm = grad_1/np.linalg.norm(grad_1, ord=1)
-
-        print(grad_0)
-        print(grad_0_norm)
-        print
-        print(grad_1)
-        print(grad_1_norm)
-
-        print "Length of vector:"
-        print(np.linalg.norm(corner_1 - corner_0))
-
-        print(dx.shape)
-
-        scale = 5
-
-        gradient_0 = np.int0(corner_0 + grad_0_norm*scale)
-        print(gradient_0)
+    if number_of_corners == 1:
+        single_corner = corners[0]
+        grad_0 = np.array([dx[single_corner[0]][single_corner[1]], dy[single_corner[0]][single_corner[1]]])
 
 
+        grad_0_normalized = normalize_vector(grad_0)
 
-        mid_point = np.int0(corner_0 + 0.5*(corner_1 - corner_0))
+        mid_point_offset = 5 # px-distance
+        mid_point = np.int0(single_corner + grad_0_normalized*mid_point_offset)
 
-        img_grad = hsv_origin.copy()
-        img_grad[corner_0[0]][corner_0[1]] = hsv_green_color
-        img_grad[gradient_0[0]][gradient_0[1]] = hsv_red_color
+        cross_over_norm_norm = grad_0_normalized
 
-        img_grad[mid_point[0]][mid_point[1]] = hsv_red_color
+    # else:
 
-        hsv_save_image(img_grad, "5_gradient")
+    grad_0 = np.array([dx[corner_0[0]][corner_0[1]], dy[corner_0[0]][corner_0[1]]])
+    grad_1 = np.array([dx[corner_1[0]][corner_1[1]], dy[corner_1[0]][corner_1[1]]])
+    grad_sum = grad_0 + grad_1
+    grad_sum_normalized = grad_sum/np.linalg.norm(grad_sum, ord=1)
+
+    print "grad_sum_normalized:"
+    print grad_sum_normalized 
+
+    cross_over_vector = corner_1 - corner_0
+    mid_point = np.int0(corner_0 + 0.5*(cross_over_vector))
+
+    mid_value = double_blur[mid_point[0]][mid_point[1]]
+    print "mid_value:"
+    print mid_value 
 
 
 
-def detect_with_sift(img):
-    hsv_origin = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    hsv = hsv_save_image(hsv_origin, '1_hsv')
+
+
+    if mid_value < 200:
+        print "The mid_point is on the longitudinal bar"
+        # Choose to focus on the left point
+
+        v_long = corner_0 - corner_1
+        v_long_norm = normalize_vector(v_long)
+
+        grad_0_normalized = normalize_vector(grad_0)
+
+        if grad_0_normalized[0] < 0:
+            long_bar_norm = np.array([-cross_over_vector[1], cross_over_vector[0]])
+        else:
+            long_bar_norm = np.array([cross_over_vector[1], -cross_over_vector[0]])
+
+        long_bar_norm_normalized = normalize_vector(long_bar_norm)
+        
+
+        dist_to_top_edge = corner_0[0]
+        dist_to_bottom_edge = IMG_HEIGHT - corner_0[0]
+        dist_to_nearest_edge = min(dist_to_top_edge, dist_to_bottom_edge)
+
+
+        mid_point_offset = dist_to_nearest_edge / 2 # px-distance
+        mid_point = np.int0(corner_0 + long_bar_norm_normalized*mid_point_offset)
+
+        cross_over_norm_norm = v_long_norm
     
+    else:
+        if grad_sum_normalized[0] < 0:
+            cross_over_norm = np.array([-cross_over_vector[1], cross_over_vector[0]])
+        else:
+            cross_over_norm = np.array([cross_over_vector[1], -cross_over_vector[0]])
 
-    white = hsv_save_image(hsv_keep_white_only(hsv), "2_white", is_gray=True)
-
-    blur = make_gaussian_blurry(white, 5) 
-    blur = hsv_save_image(blur, "3_blur", is_gray=True)
+        cross_over_norm_norm = normalize_vector(cross_over_norm)
 
 
-    # sift = cv2.xfeatures2d.SIFT_create()
-    # kp = sift.detect(white,None)
 
-    sift = cv2.xfeatures2d.SIFT_create()
-    kp, des = sift.detectAndCompute(blur,None)
 
-    img_keypoints = cv2.drawKeypoints(blur,kp,hsv_origin,flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-    # img_keypoints = cv2.drawKeypoints(white,kp,hsv_origin)
+    direction_length = 20
+    direction_point = np.int0(mid_point + cross_over_norm_norm*direction_length)
+
+    # Draw on the image
+    img_grad = hsv_origin.copy()
+
+    img_grad[mid_point[0]][mid_point[1]] = hsv_red_color
     
-    hsv_save_image(img_keypoints, "4_sift_keypoints", is_gray=True)
+    # Draw direction point
+    img_grad[direction_point[0]][direction_point[1]] = hsv_red_color
 
-    print(kp)
+    img_grad = cv2.arrowedLine(img_grad,
+        (mid_point[1], mid_point[0]),
+        (direction_point[1], direction_point[0]),
+        color = (255,0,0), thickness = 2, tipLength = 0.5)
+
+    hsv_save_image(img_grad, "5_gradient")
+
 
 
 def run():
-    # filepath = 'dataset/image_h.jpg'
-    filepath = 'dataset/image_lines_2.jpg'
+    # filepath = 'dataset/image_2_corners_long_side.jpg'
+    filepath = 'dataset/image_lines_1_flip.jpg'
+
+
+    # filepath = 'dataset/image_lines_3_rot.jpg'
     # img = load_image('image_above_clean.jpg')
     # img = load_image('image_no_orange.jpg')
     # img = load_image('image_edge_orange.jpg')
@@ -780,6 +879,9 @@ def run():
     # detect_with_sift(img)
 
 
+
+    # To do:
+    # Find the angle between the norm of the line between those points and the x-axis of the image
 
 
 run()

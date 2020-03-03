@@ -113,12 +113,12 @@ def save_image():
     image_array.resize(height,width,depth)
 
 
-    filename = 'image_3'
+    filename = 'image_2_corners_long_side'
     filetype = '.jpg' # or 'png'
     filepath = 'dataset/' + filename + filetype
     imsave(filepath, image_array)
 
-    f = open("position.txt", "w")
+    f = open("position_2_corners_long_side.txt", "w")
     x_pos = str(prev_rel_position[0])
     y_pos = str(prev_rel_position[1])
     z_pos = str(prev_rel_position[2])
