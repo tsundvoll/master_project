@@ -27,11 +27,11 @@ nn_model = None
 
 global_gt_pose = None
 global_image = None
-save_images = True
-is_at_lab = True
+save_images = False
+is_at_lab = False
 
-filename = '/home/thomas/master_project/catkin_ws/src/uav_vision/scripts/real_image.png'
-global_image = cv2.imread(filename)
+# filename = '/home/thomas/master_project/catkin_ws/src/uav_vision/scripts/real_image.png'
+# global_image = cv2.imread(filename)
 
 IMG_WIDTH = 640
 IMG_HEIGHT = 360
@@ -71,8 +71,6 @@ def gt_callback(data):
 
 def image_callback(data):
     global global_image
-
-    
 
     try:
         global_image = bridge.imgmsg_to_cv2(data, 'bgr8') # {'bgr8' or 'rgb8}
@@ -496,7 +494,7 @@ def main():
                 # Publish filtered estimate
                 pub_estimate_filtered.publish(estimate_filtered_msg)
 
-                print("x:", average_filtered[0], "y:", average_filtered[1], "z:", average_filtered[2])
+                # print("x:", average_filtered[0], "y:", average_filtered[1], "z:", average_filtered[2])
 
 
             pub_heartbeat.publish(heartbeat_msg)

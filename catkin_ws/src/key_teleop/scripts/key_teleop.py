@@ -14,6 +14,9 @@ import math
 
 import rospy
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
+
+
 
 class Velocity(object):
 
@@ -65,7 +68,7 @@ class TextWindow():
             raise ValueError, 'lineno out of bounds'
         height, width = self._screen.getmaxyx()
         y = (height / self._num_lines) * lineno
-        x = 10
+        x = 5
         for text in message.split('\n'):
             text = text.ljust(width)
             self._screen.addstr(y, x, text)
@@ -87,6 +90,7 @@ class KeyTeleop():
     def __init__(self, interface):
         self._interface = interface
         self._pub_cmd = rospy.Publisher('key_vel', Twist)
+        self._pub_ctr_switch = rospy.Publisher('/controller_switch', Bool)
 
         self._hz = rospy.get_param('~hz', 10)
 
@@ -181,6 +185,7 @@ class SimpleKeyTeleop():
     def __init__(self, interface):
         self._interface = interface
         self._pub_cmd = rospy.Publisher('key_vel', Twist)
+        self._pub_ctr_switch = rospy.Publisher('/controller_switch', Bool)
 
         self._hz = rospy.get_param('~hz', 10)
 
@@ -282,15 +287,27 @@ class SimpleKeyTeleop():
             self._last_pressed[keycode] = rospy.get_time()
 
     def _publish(self):
-        self._interface.clear()
-        self._interface.write_line(2, 'Linear_x: %f, Linear_z: %f, Angular: %f' % (self._linear_x, self._linear_z, self._angular))
-        self._interface.write_line(3, 'Take_off: %f, Land: %f' % (self._take_off, self._land))
-        self._interface.write_line(5, 'Use arrow keys to move, q to exit.')
+        self._interface.clear()        
+        
+        self._interface.write_line(2, 'Linear_x: %f' % (self._linear_x))
+        self._interface.write_line(3, 'Linear_z: %f' % (self._linear_z))
+        self._interface.write_line(4, 'Angular: %f' % (self._angular))
+        self._interface.write_line(5, 'Take_off: %.1f, Land: %.1f' % (self._take_off, self._land))
+
+        self._interface.write_line(6, 'Controller: %f' % (self._controller_on))
+
+        
+        self._interface.write_line(8, 'Use arrow keys to move, q to exit.')
         self._interface.refresh()
 
         twist = self._get_twist(self._linear_x, self._linear_y, self._linear_z, self._angular,
                                                     self._take_off, self._land)
         self._pub_cmd.publish(twist)
+
+        ctr_switch_msg = Bool()
+        ctr_switch_msg.data = self._controller_on
+
+        self._pub_ctr_switch.publish(ctr_switch_msg)
 
 
 def main(stdscr):
