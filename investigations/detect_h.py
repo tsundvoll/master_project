@@ -200,19 +200,27 @@ def hsv_keep_white_only(hsv):
     hsv_black = cv2.cvtColor(bgr_black,cv2.COLOR_BGR2HSV)
 
     # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
-    lower_white = np.array([  0,   0,  85])*conv_scale_to_bits
-    upper_white = np.array([360,  40, 100])*conv_scale_to_bits
+    lower_white_all = np.array([  0,   0,  90])*conv_scale_to_bits
+    upper_white_all = np.array([360,  20, 100])*conv_scale_to_bits
 
-    mask = cv2.inRange(hsv, lower_white, upper_white)
 
-    # change the white to black
-    imask = mask>0
-    b_imask = mask<=0
-    orange_to_green = hsv.copy()
-    orange_to_green[imask] = hsv_white
-    orange_to_green[b_imask] = hsv_black
+    # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
+    lower_white_except_orange = np.array([ 70,   0,  85])*conv_scale_to_bits
+    upper_white_except_orange = np.array([360,  40, 100])*conv_scale_to_bits
 
-    return mask
+
+    # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
+    lower_white_almost_green = np.array([ 0,   0,  85])*conv_scale_to_bits
+    upper_white_almost_green = np.array([70,  10, 100])*conv_scale_to_bits
+
+
+    mask_all = cv2.inRange(hsv, lower_white_all, upper_white_all)
+    mask_except_orange = cv2.inRange(hsv, lower_white_except_orange, upper_white_except_orange)
+    mask_except_almost_green = cv2.inRange(hsv, lower_white_almost_green, upper_white_almost_green)
+
+    combined_mask = mask_all + mask_except_orange + mask_except_almost_green
+
+    return combined_mask
 
 
 def sharpen(img):
@@ -535,18 +543,19 @@ def detect_corners(img):
 
 
 
-def detect_sub_pixecl_corners(img):
+def detect_sub_pixecl_corners(img, img_id = 0):
     hsv_origin = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    hsv = hsv_save_image(hsv_origin, '1_hsv')
+    hsv = hsv_origin
+    # hsv = hsv_save_image(hsv_origin, '1_hsv')
 
     hsv_red_color = rgb_color_to_hsv(255, 0, 0)
     hsv_green_color = rgb_color_to_hsv(0, 255, 0)
     
-
-    white = hsv_save_image(hsv_keep_white_only(hsv), "2a_white", is_gray=True)
+    white = hsv_keep_white_only(hsv)
+    # hsv_save_image(white, "2a_white", is_gray=True)
 
     dilated = sharpen(white) 
-    hsv_save_image(dilated, "2b_dilated", is_gray=True)
+    # hsv_save_image(dilated, "2b_dilated", is_gray=True)
 
     # white = hsv_save_image(hsv_keep_white_only(hsv), "2_white", is_gray=True)
 
@@ -560,8 +569,8 @@ def detect_sub_pixecl_corners(img):
     ignore_border_size = 3
 
 
-    blur = hsv_save_image(blur, "3a_blur", is_gray=True)
-    double_blur = hsv_save_image(double_blur, "3b_double_blur", is_gray=True)
+    # blur = hsv_save_image(blur, "3a_blur", is_gray=True)
+    # double_blur = hsv_save_image(double_blur, "3b_double_blur", is_gray=True)
     
 
     # Sub-pixel:
@@ -643,13 +652,13 @@ def detect_sub_pixecl_corners(img):
 
     corner_x = np.int0(corners_clipped_on_intensity[:,1])
     corner_y = np.int0(corners_clipped_on_intensity[:,0])
-    img_best_corners[corner_x, corner_y] = img_all_corners[corner_x, corner_y] = hsv_red_color
+    img_best_corners[corner_x, corner_y] = hsv_red_color
 
 
 
     # Save images with marked corners
-    hsv_save_image(img_all_corners, '4_all_corners')
-    hsv_save_image(img_best_corners, '4_best_corners')
+    # hsv_save_image(img_all_corners, '4_all_corners')
+    # hsv_save_image(img_best_corners, '4_best_corners')
 
 
 
@@ -658,12 +667,33 @@ def detect_sub_pixecl_corners(img):
     y_est = None
     yaw_est = None
 
-    number_of_corners = len(corner_x)
 
-    corners = np.stack((corner_x, corner_y), axis=1)
-    # print "Corners:"
-    # print corners
-    
+
+    if np.ndim(corner_x) == 0:
+        number_of_corners = 1
+        corners = np.array([[corner_x, corner_y]])
+    else:
+        corners = np.stack((corner_x, corner_y), axis=1)
+        number_of_corners = len(corners)
+
+    print "Corners:"
+    print corners
+
+    print "number_of_corners:"
+    print number_of_corners
+
+
+    if number_of_corners == 0 or number_of_corners > 4:
+        print("Invalid number of corners")
+        return None
+
+
+    if number_of_corners == 2:
+        left_corner_id = np.argmin(corner_y)
+        right_corner_id = 1 - left_corner_id
+
+        corner_0 = corners[left_corner_id]
+        corner_1 = corners[right_corner_id]
 
 
 
@@ -712,7 +742,7 @@ def detect_sub_pixecl_corners(img):
 
         img_corners[corner_0[0]][corner_0[1]] = hsv_red_color
         img_corners[corner_1[0]][corner_1[1]] = hsv_red_color
-        hsv_save_image(img_corners, "5_relevant_corners")
+        # hsv_save_image(img_corners, "5_relevant_corners")
 
 
 
@@ -756,16 +786,11 @@ def detect_sub_pixecl_corners(img):
         corner_1 = relevant_corners[right_corner_id]
 
         img_corners[corner_1[0]][corner_1[1]] = hsv_red_color
-        hsv_save_image(img_corners, "5_relevant_corners")
+        # hsv_save_image(img_corners, "5_relevant_corners")
 
 
 
-    if number_of_corners == 2:
-        left_corner_id = np.argmin(corner_y)
-        right_corner_id = 1 - left_corner_id
-
-        corner_0 = corners[left_corner_id]
-        corner_1 = corners[right_corner_id]
+    
 
 
     # Calculate spatial gradient
@@ -784,28 +809,27 @@ def detect_sub_pixecl_corners(img):
 
         cross_over_norm_norm = grad_0_normalized
 
-    # else:
+    else:
+        grad_0 = np.array([dx[corner_0[0]][corner_0[1]], dy[corner_0[0]][corner_0[1]]])
+        grad_1 = np.array([dx[corner_1[0]][corner_1[1]], dy[corner_1[0]][corner_1[1]]])
+        grad_sum = grad_0 + grad_1
+        grad_sum_normalized = grad_sum/np.linalg.norm(grad_sum, ord=1)
 
-    grad_0 = np.array([dx[corner_0[0]][corner_0[1]], dy[corner_0[0]][corner_0[1]]])
-    grad_1 = np.array([dx[corner_1[0]][corner_1[1]], dy[corner_1[0]][corner_1[1]]])
-    grad_sum = grad_0 + grad_1
-    grad_sum_normalized = grad_sum/np.linalg.norm(grad_sum, ord=1)
+        print "grad_sum_normalized:"
+        print grad_sum_normalized 
 
-    print "grad_sum_normalized:"
-    print grad_sum_normalized 
+        cross_over_vector = corner_1 - corner_0
+        mid_point = np.int0(corner_0 + 0.5*(cross_over_vector))
 
-    cross_over_vector = corner_1 - corner_0
-    mid_point = np.int0(corner_0 + 0.5*(cross_over_vector))
-
-    mid_value = double_blur[mid_point[0]][mid_point[1]]
-    print "mid_value:"
-    print mid_value 
-
+        mid_value = double_blur[mid_point[0]][mid_point[1]]
+        print "mid_value:"
+        print mid_value 
 
 
 
 
-    if mid_value < 200:
+
+    if number_of_corners == 2 and mid_value < 200:
         print "The mid_point is on the longitudinal bar"
         # Choose to focus on the left point
 
@@ -832,7 +856,7 @@ def detect_sub_pixecl_corners(img):
 
         cross_over_norm_norm = v_long_norm
     
-    else:
+    elif number_of_corners != 1:
         if grad_sum_normalized[0] < 0:
             cross_over_norm = np.array([-cross_over_vector[1], cross_over_vector[0]])
         else:
@@ -859,29 +883,31 @@ def detect_sub_pixecl_corners(img):
         (direction_point[1], direction_point[0]),
         color = (255,0,0), thickness = 2, tipLength = 0.5)
 
-    hsv_save_image(img_grad, "5_gradient")
-
+    # hsv_save_image(img_grad, "5_gradient")
+    hsv_save_image(img_grad, str(img_id) +"_gradient")
 
 
 def run():
-    # filepath = 'dataset/image_2_corners_long_side.jpg'
-    filepath = 'dataset/image_lines_1_flip.jpg'
+    filepath = 'dataset/image_1_corner.jpg'
+    # filepath = 'dataset/real_image.png'
 
 
-    # filepath = 'dataset/image_lines_3_rot.jpg'
-    # img = load_image('image_above_clean.jpg')
-    # img = load_image('image_no_orange.jpg')
-    # img = load_image('image_edge_orange.jpg')
-    img = load_image(filepath)
+    filepaths = [
+        'dataset/image_0_corners.jpg',           # 0 corners
+        'dataset/image_1_corner.jpg',            # 1 corner
+        'dataset/image_lines_1.jpg',             # 2 corners short side
+        'dataset/image_lines_3.jpg',             # 3 corners
+        'dataset/image_h.jpg',                   # 4 corners
+        'dataset/image_2_corners_long_side.jpg', # 2 corners long side
+    ]
 
-    detect_sub_pixecl_corners(img)
-
-    # detect_with_sift(img)
+    img_id = 0
 
 
+    # for img_id in range(1,6):
+    img = load_image(filepaths[img_id])
+    detect_sub_pixecl_corners(img, img_id)
 
-    # To do:
-    # Find the angle between the norm of the line between those points and the x-axis of the image
 
 
 run()
