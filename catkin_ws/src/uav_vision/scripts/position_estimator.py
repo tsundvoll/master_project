@@ -8,7 +8,7 @@ import time
 from cv_bridge import CvBridge, CvBridgeError
 from scipy.spatial.transform import Rotation as R
 
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, Int32
 from geometry_msgs.msg import Pose, Point
 from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
@@ -17,6 +17,9 @@ from keras.models import load_model
 
 import config as cfg
 
+
+NO_EST = 0
+ELL_EST = 1
 
 # For converting between units
 conv_scale_to_bits = np.array([0.5, 2.55, 2.55]) # unit bits with ranges [[0,180], [0,255], [0,255]]
@@ -393,6 +396,7 @@ def main():
     pub_estimate = rospy.Publisher("/drone_estimate", Point, queue_size=10)
     pub_estimate_filtered = rospy.Publisher("/drone_estimate_filtered", Point, queue_size=10)
     pub_gt = rospy.Publisher("/drone_gt", Point, queue_size=10)
+    pub_estimate_status = rospy.Publisher("/estimate_status", Int32, queue_size=10)
     
     heartbeat_msg = Empty()
     estimate_msg = Point()
@@ -417,6 +421,9 @@ def main():
     rospy.loginfo("Prediction history size: " + str(prediction_history_size))
 
 
+    estimate_status = NO_EST
+
+
     rate = rospy.Rate(100) # Hz
     while not rospy.is_shutdown():
 
@@ -435,7 +442,9 @@ def main():
 
             if x_test is None:
                 print("No estimate available")
+                estimate_status = NO_EST
             else:
+                estimate_status = ELL_EST
 
                 x_test_norm = (x_test - x_mean) / x_std
                 
@@ -498,6 +507,14 @@ def main():
 
 
             pub_heartbeat.publish(heartbeat_msg)
+
+        
+        else:
+            # No image available => no estimate
+            estimate_status = NO_EST
+
+        estimate_status_msg = Int32(estimate_status)
+        pub_estimate_status.publish(estimate_status_msg)
 
         rate.sleep()
     
