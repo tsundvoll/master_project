@@ -396,7 +396,7 @@ def main():
     pub_estimate = rospy.Publisher("/drone_estimate", Point, queue_size=10)
     pub_estimate_filtered = rospy.Publisher("/drone_estimate_filtered", Point, queue_size=10)
     pub_gt = rospy.Publisher("/drone_gt", Point, queue_size=10)
-    pub_estimate_status = rospy.Publisher("/estimate_status", Int32, queue_size=10)
+    pub_estimate_status = rospy.Publisher("/drone_estimate_status", Int32, queue_size=10)
     
     heartbeat_msg = Empty()
     estimate_msg = Point()
