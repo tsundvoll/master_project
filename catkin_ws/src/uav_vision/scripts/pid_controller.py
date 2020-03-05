@@ -153,7 +153,7 @@ def main():
     rospy.init_node('pid_controller', anonymous=True)
 
 
-    use_estimate = True
+    use_estimate = False
 
     if use_estimate:
         rospy.Subscriber('/drone_estimate_filtered', Point, estimate_callback)

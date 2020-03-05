@@ -21,7 +21,7 @@ def height_to_delta_x_y(height):
 
     return delta_x, delta_y
 
-reference_height = 2.0
+reference_height = 1.0
 delta_x, delta_y = height_to_delta_x_y(reference_height)
 delta_x, delta_y = 0,0
 

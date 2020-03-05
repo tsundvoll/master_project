@@ -1,14 +1,32 @@
+#!/usr/bin/env python
+
+import rospy
+from sensor_msgs.msg import Image
+
+
 import matplotlib.pyplot as plt
-import cv2
 import numpy as np
 import math
 
+import cv2
+from cv_bridge import CvBridge, CvBridgeError
+bridge = CvBridge()
+drone_image_raw = None
 
 IMG_WIDTH = 640
 IMG_HEIGHT = 360
 
 # For converting between units
 conv_scale_to_bits = np.array([0.5, 2.55, 2.55]) # unit bits with ranges [[0,180], [0,255], [0,255]]
+
+
+#############
+# Callbacks #
+#############
+
+def video_callback(data):
+    global drone_image_raw
+    drone_image_raw = data
 
 
 ######################
@@ -62,11 +80,16 @@ def hsv_keep_white_only(hsv):
     lower_white_almost_green = np.array([ 0,   0,  85])*conv_scale_to_bits
     upper_white_almost_green = np.array([70,  10, 100])*conv_scale_to_bits
 
+    # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
+    lower = np.array([  0,   0,  70])*conv_scale_to_bits
+    upper = np.array([ 50,  20, 100])*conv_scale_to_bits
+
     mask_all = cv2.inRange(hsv, lower_white_all, upper_white_all)
     mask_except_orange = cv2.inRange(hsv, lower_white_except_orange, upper_white_except_orange)
     mask_except_almost_green = cv2.inRange(hsv, lower_white_almost_green, upper_white_almost_green)
+    mask = cv2.inRange(hsv, lower, upper) # May be to detect all the white
 
-    combined_mask = mask_all + mask_except_orange + mask_except_almost_green
+    combined_mask = mask_all + mask_except_orange + mask_except_almost_green # + mask
 
     return combined_mask
 
@@ -119,13 +142,12 @@ def detect_sub_pixecl_corners(img, img_id = 0):
 
     hsv_origin = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     hsv = hsv_origin
-    # hsv = hsv_save_image(hsv_origin, '1_hsv')
+    hsv = hsv_save_image(hsv_origin, '1_hsv')
 
     hsv_red_color = rgb_color_to_hsv(255, 0, 0)
-    hsv_green_color = rgb_color_to_hsv(0, 255, 0)
     
     white = hsv_keep_white_only(hsv)
-    # hsv_save_image(white, "2_white", is_gray=True)
+    hsv_save_image(white, "2_white", is_gray=True)
 
     blur = make_gaussian_blurry(white, 5) 
     double_blur = make_gaussian_blurry(blur, second_blur_size)
@@ -262,7 +284,7 @@ def detect_sub_pixecl_corners(img, img_id = 0):
         img_corners = hsv_origin.copy()
         img_corners[corner_0[0]][corner_0[1]] = hsv_red_color
         img_corners[corner_1[0]][corner_1[1]] = hsv_red_color
-        # hsv_save_image(img_corners, "5_relevant_corners")
+        hsv_save_image(img_corners, "5_relevant_corners")
 
 
     if number_of_corners == 4:
@@ -372,6 +394,9 @@ def detect_sub_pixecl_corners(img, img_id = 0):
     est_yaw(dir_vector)
 
 
+    return img_grad
+
+
 def run():
     filepath = 'dataset/image_1_corner.jpg'
     # filepath = 'dataset/real_image.png'
@@ -401,4 +426,44 @@ def run():
     yaw_est = None
 """
 
-run()
+# run()
+
+
+def main():   
+    
+    rospy.init_node('detect_h', anonymous=True)
+
+    rospy.Subscriber('/ardrone/bottom/image_raw', Image, video_callback)
+
+    pub_image = rospy.Publisher('/image_with_direction', Image, queue_size=10)
+
+    rospy.loginfo("Starting preprocessing of image")
+
+    rate = rospy.Rate(100) # Hz
+    while not rospy.is_shutdown():
+
+
+        
+        if drone_image_raw is not None:
+            try:
+                cv_image = bridge.imgmsg_to_cv2(drone_image_raw, 'bgr8') # , 'bgr8', 'rgb8
+            except CvBridgeError as e:
+                rospy.loginfo(e)
+        
+            cv_img_with_direction = detect_sub_pixecl_corners(cv_image)
+            if cv_img_with_direction is not None:
+                cv_bgr_img_with_direction = cv2.cvtColor(cv_img_with_direction, cv2.COLOR_HSV2BGR)
+
+                try:
+                    msg_img_with_direction = bridge.cv2_to_imgmsg(cv_bgr_img_with_direction, 'bgr8')
+                except CvBridgeError as e:
+                    rospy.loginfo(e)
+
+
+                pub_image.publish(msg_img_with_direction)
+            
+        rate.sleep()
+
+
+if __name__ == '__main__':
+    main()
