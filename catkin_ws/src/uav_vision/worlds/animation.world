@@ -17,9 +17,12 @@
 <sdf version="1.4">
   <world name="oceans_waves">
     <physics name="default_physics" default="true" type="ode">
-      <max_step_size>0.002</max_step_size>
+      <!-- <max_step_size>0.002</max_step_size>
       <real_time_factor>1</real_time_factor>
-      <real_time_update_rate>500</real_time_update_rate>
+      <real_time_update_rate>500</real_time_update_rate> -->
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
     </physics>
     <scene>
       <ambient>0.01 0.01 0.01 1.0</ambient>
@@ -32,7 +35,7 @@
     </scene>
 
     <!-- Start place for the drone -->
-    <!--     
+        
     <model name='ground_plane'>
       <static>1</static>
       <link name='link'>
@@ -40,7 +43,7 @@
           <geometry>
             <plane>
               <normal>0 0 1</normal>
-              <size>1 1</size>
+              <size>100 100</size>
             </plane>
           </geometry>
           <surface>
@@ -62,13 +65,15 @@
           <geometry>
             <plane>
               <normal>0 0 1</normal>
-              <size>1 1</size>
+              <size>100 100</size>
             </plane>
           </geometry>
           <material>
             <script>
               <uri>file://media/materials/scripts/gazebo.material</uri>
               <name>Gazebo/Blue</name>
+              <!-- <name>Gazebo/Turquoise</name> -->
+              <!-- <name>Gazebo/Indigo</name> -->
             </script>
           </material>
         </visual>
@@ -80,7 +85,7 @@
         <kinematic>0</kinematic>
         <gravity>1</gravity>
       </link>
-    </model> -->
+    </model>
 
     <!-- Landing platform -->
     <!-- <model name='helipad_ar'>
@@ -190,9 +195,9 @@
 
 
     <!-- Bounding box with sea surface -->
-    <include>
+    <!-- <include>
       <uri>model://ocean</uri>
-    </include>
+    </include> -->
 
 
     <!-- Animated revolt -->
@@ -223,7 +228,7 @@
         <static>1</static>
         <pose>0 0 0.0 0 0 0</pose>
         <link name='link_01'>
-          <pose>1 0 0.45 0 0 1.57</pose>
+          <pose>1 0 0.45 0 0 -1.57</pose>
           <collision name='collision_01'>
             <geometry>
               <mesh>

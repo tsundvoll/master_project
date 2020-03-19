@@ -22,7 +22,7 @@ def height_to_delta_x_y(height):
     return delta_x, delta_y
 
 reference_height = 1.0
-delta_x, delta_y = height_to_delta_x_y(reference_height)
+# delta_x, delta_y = height_to_delta_x_y(reference_height)
 delta_x, delta_y = 0,0
 
 offset_setpoint_x = -0.15 + delta_x             # 0.79 (at h = 2.0) # 1.77 (at h = 4.0)
@@ -30,7 +30,7 @@ offset_setpoint_y = delta_y                     # 1.41              # 3.15
 controller_desired_pose = np.array([offset_setpoint_x, offset_setpoint_y, reference_height, 0.0, 0.0, -math.pi/2])
 
 
-pid_with_estimate = True
+pid_with_estimate = False
 
 if pid_with_estimate:
     ####################

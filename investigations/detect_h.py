@@ -426,7 +426,7 @@ def run():
     yaw_est = None
 """
 
-# run()
+run()
 
 
 def main():   
@@ -465,5 +465,5 @@ def main():
         rate.sleep()
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
