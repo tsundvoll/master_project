@@ -13,17 +13,17 @@ from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 drone_image_raw = None
 
-
-# Constants
-
-# Image size
 IMG_WIDTH = 640
 IMG_HEIGHT = 360
+
+# For converting between units
+conv_scale_to_bits = np.array([0.5, 2.55, 2.55]) # unit bits with ranges [[0,180], [0,255], [0,255]]
 
 
 #############
 # Callbacks #
 #############
+
 def video_callback(data):
     global drone_image_raw
     drone_image_raw = data
@@ -58,44 +58,20 @@ def load_image(filename):
 def rgb_color_to_hsv(red, green, blue):
     bgr_color = np.uint8([[[blue,green,red]]])
     hsv_color = cv2.cvtColor(bgr_color,cv2.COLOR_BGR2HSV)
-    return hsv_color[0][0].tolist()
+    return hsv_color
 
 
 def normalize_vector(vector):
     return vector / np.linalg.norm(vector) #, ord=1)
 
 
-def draw_dot(img, position, color):
-    cX = position[1]
-    cY = position[0]
-    cv2.circle(img, (cX, cY), 3, color, -1)
-
-
-def hsv_to_opencv_hsv(hue, saturation, value):
-    """ 
-    Function that takes in hue, saturation and value in the ranges
-        hue: [0, 360] degrees,  saturation: [0, 100] %,     value: [0, 100] %
-    and converts it to OpenCV hsv which operates with the ranges
-        hue: [0, 180],          saturation: [0, 255],       value: [0, 255]
-    """
-    converting_constant = np.array([0.5, 2.55, 2.55]) 
-    return np.array([ hue, saturation, value])*converting_constant
-
-
-# Colors to draw with
-HSV_RED_COLOR = rgb_color_to_hsv(255,0,0)
-HSV_BLUE_COLOR = rgb_color_to_hsv(0,0,255)
-HSV_BLACK_COLOR = rgb_color_to_hsv(0,0,0)
-HSV_YELLOW_COLOR = [30, 255, 255]
-HSV_LIGHT_ORANGE_COLOR = [15, 255, 255]
-
-
 ##################
 # Main functions #
 ##################
-def hsv_keep_white_only_simple(hsv):    
-    lower_white = hsv_to_opencv_hsv(0, 0, 50)
-    upper_white = hsv_to_opencv_hsv(360, 50, 100)
+def hsv_keep_white_only_simple(hsv):
+    # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
+    lower_white = np.array([   0,   0,  50])*conv_scale_to_bits
+    upper_white = np.array([ 360,  50, 100])*conv_scale_to_bits
 
     mask = cv2.inRange(hsv, lower_white, upper_white)
 
@@ -110,20 +86,29 @@ def hsv_keep_white_only_simple(hsv):
 
 
 def hsv_keep_white_only(hsv):
-    lower_white_all = hsv_to_opencv_hsv(0, 0, 90)
-    upper_white_all = hsv_to_opencv_hsv(360, 20, 100)
+    # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
+    lower_white_all = np.array([  0,   0,  90])*conv_scale_to_bits
+    upper_white_all = np.array([360,  20, 100])*conv_scale_to_bits
 
-    lower_white_except_orange = hsv_to_opencv_hsv(70, 0, 85)
-    upper_white_except_orange = hsv_to_opencv_hsv(360, 40, 100)
+    # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
+    lower_white_except_orange = np.array([ 70,   0,  85])*conv_scale_to_bits
+    upper_white_except_orange = np.array([360,  40, 100])*conv_scale_to_bits
 
-    lower_white_almost_green = hsv_to_opencv_hsv(0, 0, 85)
-    upper_white_almost_green = hsv_to_opencv_hsv(70, 10, 100)
+    # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
+    lower_white_almost_green = np.array([ 0,   0,  85])*conv_scale_to_bits
+    upper_white_almost_green = np.array([70,  10, 100])*conv_scale_to_bits
+
+    # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
+    lower = np.array([  0,   0,  70])*conv_scale_to_bits
+    upper = np.array([ 50,  20, 100])*conv_scale_to_bits
 
     mask_all = cv2.inRange(hsv, lower_white_all, upper_white_all)
     mask_except_orange = cv2.inRange(hsv, lower_white_except_orange, upper_white_except_orange)
     mask_except_almost_green = cv2.inRange(hsv, lower_white_almost_green, upper_white_almost_green)
-    combined_mask = mask_all + mask_except_orange + mask_except_almost_green 
-    
+    mask = cv2.inRange(hsv, lower, upper) # May be to detect all the white
+
+    combined_mask = mask_all + mask_except_orange + mask_except_almost_green # + mask
+
     return combined_mask
 
 
@@ -158,8 +143,9 @@ def detect_moment(img):
 
 
 def keep_orange_only(hsv):
-    lower_orange = hsv_to_opencv_hsv(25, 50, 50)
-    upper_orange = hsv_to_opencv_hsv(35, 100, 100)
+    # In degrees, %, %, ranges [[0,360], [0,100], [0,100]]
+    lower_orange = np.array([ 25,  50,  50])*conv_scale_to_bits
+    upper_orange = np.array([ 35, 100, 100])*conv_scale_to_bits
 
     mask = cv2.inRange(hsv, lower_orange, upper_orange) 
 
@@ -195,14 +181,15 @@ def find_pixels_inside_orange(hsv):
     y_max = np.amax(orange_y)
     # print x_min, x_max, y_min, y_max
 
+    hsv_black_color = rgb_color_to_hsv(0,0,0)
+    hsv_white_color = rgb_color_to_hsv(0,0,0)
 
+    hsv_inside_orange[0:x_min,] = hsv_black_color
+    hsv_inside_orange[x_max+1:,] = hsv_black_color
 
-    hsv_inside_orange[0:x_min,] = HSV_BLACK_COLOR
-    hsv_inside_orange[x_max+1:,] = HSV_BLACK_COLOR
-
-    hsv_inside_orange[:,0:y_min] = HSV_BLACK_COLOR
-    hsv_inside_orange[:,y_max+1:] = HSV_BLACK_COLOR
-    # hsv_inside_orange[x_min:x_max+1, y_min:y_max+1] = HSV_BLACK_COLOR
+    hsv_inside_orange[:,0:y_min] = hsv_black_color
+    hsv_inside_orange[:,y_max+1:] = hsv_black_color
+    # hsv_inside_orange[x_min:x_max+1, y_min:y_max+1] = hsv_black_color
 
     # hsv_save_image(hsv_inside_orange, '3_inside_orange')
 
@@ -220,7 +207,7 @@ def find_pixels_inside_orange(hsv):
 
     # # hsv_save_image(hsv_ellipse_mask, '4_ellipse_mask', is_gray=True)
 
-    # hsv_ellipse[hsv_ellipse_mask==0] = HSV_BLACK_COLOR
+    # hsv_ellipse[hsv_ellipse_mask==0] = hsv_black_color
 
     # hsv_save_image(hsv_ellipse, '5_ellipse')
 
@@ -320,7 +307,10 @@ def find_orange_arrow_point(hsv):
 
     # Draw corners
     img_all_corners = hsv.copy()
-    img_all_corners[corner_x, corner_y] = HSV_RED_COLOR
+    hsv_red_color = rgb_color_to_hsv(255,0,0)
+
+    img_all_corners[corner_x, corner_y] = hsv_red_color
+
     hsv_save_image(img_all_corners, "4_corners")
 
     if len(corners_clipped_on_intensity) == 1:
@@ -342,6 +332,13 @@ def find_white_centroid(hsv_white_only):
     # calculate x,y coordinate of center
     cX = int(M["m10"] / M["m00"])
     cY = int(M["m01"] / M["m00"])
+
+    # cv2.circle(img_centroid, (cX, cY), 5, (255, 255, 255), -1)
+    # cv2.putText(img_centroid, "centroid", (cX - 25, cY - 25),
+    #     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+    # hsv_save_image(img_centroid, "4_centroid")
+
     
     # Returned the transposed point,
     #  because of difference from OpenCV axis
@@ -711,11 +708,39 @@ def detect_inner_corners(hsv_white_only, img_id = 0):
 
 
 def run(img_count = 0):
+    # filepath = 'dataset/new_helipad_05.png'
+    # filepath_rot_180 = 'dataset/new_helipad_05_rot_180.png'
+
+    # rotate_180 = True
+
+    # if rotate_180:
+    #     img = load_image(filepath_rot_180)
+    # else:
+    #     img = load_image(filepath)
+
+    # Colors to draw with
+    hsv_red_color_raw = rgb_color_to_hsv(255,0,0)[0][0]
+    hsv_red_color = (int(hsv_red_color_raw[0]),
+                        int(hsv_red_color_raw[1]),
+                        int(hsv_red_color_raw[2]),
+    )
+    hsv_blue_color_raw = rgb_color_to_hsv(0,0,255)[0][0]
+    hsv_blue_color = (int(hsv_blue_color_raw[0]),
+                        int(hsv_blue_color_raw[1]),
+                        int(hsv_blue_color_raw[2]),
+    )
+    hsv_yellow_color = (30, 255, 255)
+    hsv_light_orange_color = (15, 255, 255)
 
 
-
+    # filepath = "dataset/image_lines_2.jpg"
+    filepath = "dataset/image_15.png"
+    filepath = "dataset/image_17.png"
+    filepath = "dataset/image_7.png"
+    filepath = "dataset/image_38.png"
 
     filepath = "dataset/low_flight_dataset_02/image_"+str(img_count)+".png"
+    
     img = load_image(filepath)
 
 
@@ -742,22 +767,64 @@ def run(img_count = 0):
         if arrowhead is None: # Arrowhead is not visible or too many corners found
             print "Arrowhead is not found"
         else:
+            # print "arrowhead:", arrowhead
+
+            # print "#########"
+            # print "# Angle #"
+            # print "#########"
             theta = calc_angle_centroid_arrowhead(centroid, arrowhead)
             # print "Theta to arrowhead: ", theta
 
-            draw_dot(img_marked, arrowhead, HSV_BLUE_COLOR)
+            # draw arrowhead
+            aX = arrowhead[1]
+            aY = arrowhead[0]
+            cv2.circle(img_marked, (aX, aY), 3, hsv_blue_color, -1)
+            # cv2.putText(img_marked, "arrowhead", (aX - 50, aY - 10),
+            #     cv2.FONT_HERSHEY_SIMPLEX, 0.5, hsv_blue_color, 1)
 
 
     heading, inner_corners = detect_inner_corners(hsv_white_only)
     if inner_corners is None:
         print "No inner corners found"
     else:
+        # draw inner corners
         for corner in inner_corners:
-            draw_dot(img_marked, corner, HSV_LIGHT_ORANGE_COLOR)
+            # print(corner)
+            icX = corner[1]
+            icY = corner[0]
+            cv2.circle(img_marked, (icX, icY), 3, hsv_light_orange_color, -1)
 
-        draw_dot(img_marked, heading, HSV_YELLOW_COLOR)
+        # draw heading
+        hX = heading[1]
+        hY = heading[0]
+        cv2.circle(img_marked, (hX, hY), 3, hsv_yellow_color, -1)
+        # cv2.putText(img_marked, "heading", (hX + 10, hY - 10),
+        #     cv2.FONT_HERSHEY_SIMPLEX, 0.5, hsv_yellow_color, 1)
     
-    draw_dot(img_marked, centroid, HSV_RED_COLOR)
+    
+    # draw centroid
+    cX = centroid[1]
+    cY = centroid[0]
+    cv2.circle(img_marked, (cX, cY), 3, hsv_red_color, -1)
+    # cv2.putText(img_marked, "centroid", (cX-70, cY - 5),
+    #     cv2.FONT_HERSHEY_SIMPLEX, 0.5, hsv_red_color, 1)
+
+
+    # ellipse
+    # v = arrowhead - centroid
+    # v_T = np.array([-v[1], v[0]])
+
+    # print "v:", v
+    # print "v_T:", v_T
+
+    # l_axes = IMG_WIDTH*2 # For good measure
+
+    # theta_ellipse = theta - 90
+
+    # cv2.ellipse(img=img_marked, center=(cX, cY),
+    #     axes=(l_axes, l_axes), angle=theta_ellipse,
+    #     startAngle=0, endAngle=180,
+    #     color=(255), thickness=-1, lineType=8, shift=0)
 
 
     hsv_save_image(img_marked, "3_marked")
