@@ -179,7 +179,7 @@ def find_pixels_inside_orange(hsv):
     x_max = np.amax(orange_x)
     y_min = np.amin(orange_y)
     y_max = np.amax(orange_y)
-    print x_min, x_max, y_min, y_max
+    # print x_min, x_max, y_min, y_max
 
     hsv_black_color = rgb_color_to_hsv(0,0,0)
     hsv_white_color = rgb_color_to_hsv(0,0,0)
@@ -352,7 +352,7 @@ def calc_angle_centroid_arrowhead(centroid, arrowhead):
         and the horizontal axis.
     """
     v_1 = arrowhead - centroid
-    print "v_1: ", v_1
+    # print "v_1: ", v_1
 
     dx, dy = v_1[0], v_1[1]
     theta = np.degrees(np.arctan2(dy, -dx))
@@ -367,7 +367,7 @@ def calc_angle_centroid_mid_point(centroid, mid_point):
         The mid-point is between the two inner corners in the H.
     """
     v_2 = mid_point - centroid
-    print "v_2: ", v_2
+    # print "v_2: ", v_2
 
     dx, dy = v_2[0], v_2[1]
     alpha = np.degrees(np.arctan2(-dy, -dx))
@@ -384,13 +384,13 @@ def alpha_to_theta(alpha):
     else:
         alpha_sat = alpha
 
-    print "alpha_sat: ", alpha_sat
+    # print "alpha_sat: ", alpha_sat
 
 
 
     theta = 90 - alpha_sat
 
-    print "Theta (from alpha): ", theta
+    # print "Theta (from alpha): ", theta
     # return theta
 
 
@@ -555,7 +555,7 @@ def detect_inner_corners(hsv_white_only, img_id = 0):
         corners = np.stack((corner_x, corner_y), axis=1)
         number_of_corners = len(corners)
 
-    print "Number of corners:", number_of_corners
+    # print "Number of corners:", number_of_corners
 
     if number_of_corners == 0 or number_of_corners > 4:
         print("Invalid number of corners")
@@ -760,20 +760,20 @@ def run(img_count = 0):
     hsv_save_image(hsv_white_only, "3_white_only", is_gray=True)
 
     centroid = find_white_centroid(hsv_white_only)
-    print "centroid:", centroid
+    # print "centroid:", centroid
 
     if isOrangeVisible:
         arrowhead = find_orange_arrow_point(hsv) # for testing with an angle : + np.array([1, 1])
         if arrowhead is None: # Arrowhead is not visible or too many corners found
             print "Arrowhead is not found"
         else:
-            print "arrowhead:", arrowhead
+            # print "arrowhead:", arrowhead
 
-            print "#########"
-            print "# Angle #"
-            print "#########"
+            # print "#########"
+            # print "# Angle #"
+            # print "#########"
             theta = calc_angle_centroid_arrowhead(centroid, arrowhead)
-            print "Theta to arrowhead: ", theta
+            # print "Theta to arrowhead: ", theta
 
             # draw arrowhead
             aX = arrowhead[1]
@@ -789,7 +789,7 @@ def run(img_count = 0):
     else:
         # draw inner corners
         for corner in inner_corners:
-            print(corner)
+            # print(corner)
             icX = corner[1]
             icY = corner[0]
             cv2.circle(img_marked, (icX, icY), 3, hsv_light_orange_color, -1)
@@ -830,13 +830,13 @@ def run(img_count = 0):
     hsv_save_image(img_marked, "3_marked")
 
 
-# i = 3
-for i in range(42):
-    answer = raw_input("Press enter for next image")
-    print ""
-    print "##########################"
-    print "# Now testing on image", i, "#"
-    print "##########################"
-    run(i)
+i = 35
+# for i in range(42):
+#     answer = raw_input("Press enter for next image")
+print ""
+print "##########################"
+print "# Now testing on image", i, "#"
+print "##########################"
+run(i)
 
 # run()
