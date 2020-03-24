@@ -7,6 +7,7 @@ from sensor_msgs.msg import Image
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import json
 
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
@@ -15,6 +16,15 @@ drone_image_raw = None
 
 
 # Constants
+L1 = 79.0
+L2 = 341.0
+L3 = 863.0
+L4 = 1110.0
+
+RELATION_R_L1 = L4 / L1
+RELATION_R_L2 = L4 / L2
+RELATION_R_L3 = L4 / L3
+RELATION_R_L4 = L4 / L4
 
 # Image size
 IMG_WIDTH = 640
@@ -126,6 +136,16 @@ def limit_point_to_be_inside_image(point):
 
     return limited_point
 
+
+def print_header(text):
+    text_length = len(text)
+    border_line = "#"*(text_length+4)
+    text_line = "# " + text + " #"
+
+    print ""
+    print border_line
+    print text_line
+    print border_line
 
 # Colors to draw with
 HSV_RED_COLOR = rgb_color_to_hsv(255,0,0)
@@ -1037,6 +1057,46 @@ def find_orange_arrow_point(hsv):
         return None
 
 
+def calc_dist_to_landing_platform(centroid, arrowhead):
+    print
+    print "Dist to landing platform calculations"
+    
+
+    object_length_px = np.linalg.norm(centroid - arrowhead)
+    print "Object length: ", object_length_px
+
+    object_length_m = 0.288
+    focal_length = 374.67
+    distance_to_landing_platform = (object_length_m*focal_length) / object_length_px
+
+    d = 750
+    f = 374.67
+    s_r = 288
+    s_o = 133.09
+    h_i = 360
+
+    h_s = (f*s_r*h_i)/(s_o*d)
+
+    print "Sensor height:", h_s
+
+    # print "Pixel size:", object_length_px
+    # lens_angle = 92.0
+    # deg_per_px = lens_angle/np.sqrt(IMG_HEIGHT**2 + IMG_WIDTH**2)
+    
+    # angle = object_length_px * deg_per_px
+    # if angle <= 0 or angle >=90:
+    #     print "Invalid angle (", angle, ")"
+    #     return None
+
+    # angle_radians = np.radians(angle)
+
+    # distance_to_landing_platform = object_length_m*1/np.tan(angle_radians)
+
+    print distance_to_landing_platform
+    print
+    return distance_to_landing_platform
+
+
 def run(img_count = 0):
     suffix = "_flip_horizontal"
     suffix = ""
@@ -1062,17 +1122,28 @@ def run(img_count = 0):
     hsv_save_image(hsv_white_only, "3_white_only", is_gray=True)
 
     centroid = find_white_centroid(hsv_white_only)
-    # print "centroid:", centroid
+    print "centroid:", centroid
+
+
 
     if isOrangeVisible:
         arrowhead = find_orange_arrow_point(hsv) # for testing with an angle : + np.array([1, 1])
+        print "arrowhead:", arrowhead
+
         if arrowhead is None: # Arrowhead is not visible or too many corners found
             print "Arrowhead is not found"
+            return None, None
         else:
+            found_length_px = np.linalg.norm(centroid-arrowhead)
+            print "length:", found_length_px
+            return found_length_px, centroid
+
             theta = calc_angle_centroid_arrowhead(centroid, arrowhead)
             # print "Theta to arrowhead: ", theta
-
             draw_dot(img_marked, arrowhead, HSV_BLUE_COLOR)
+
+
+            calc_dist_to_landing_platform(centroid, arrowhead)
 
     inner_corners, intensities = find_right_angled_corners(hsv_white_only)
 
@@ -1115,8 +1186,22 @@ def run(img_count = 0):
 # 1 three corners showing
 
 
-single_image_index = 1
+single_image_index = 4
 single_image = False
+
+# json_filepath = "dataset/low_flight_dataset_02/low_flight_dataset.json"
+# with open(json_filepath) as json_file:
+#     data = json.load(json_file)
+#     index = str(single_image_index)
+#     z = data[index]['ground_truth'][2]
+#     print "GT_z:", z
+
+results_gt = []
+results_est = []
+
+total_results = []
+
+focal_length = 374.67
 
 if single_image:
     print "###########################"
@@ -1124,12 +1209,87 @@ if single_image:
     print "###########################"
     run(single_image_index)
 else:
-    for i in range(42):
-        answer = raw_input("Press enter for next image")
+    for i in range(3):
+        # answer = raw_input("Press enter for next image")
         print ""
         print "###########################"
-        print "# Now testing on image", i, "#"
+        print "# Running CV module on image", i, "#"
         print "###########################"
-        run(i)
+        length, centroid = run(i)
+        print ""
+        print "# Preprocessing"
+        print "length, centroid:", length, centroid
+        print ""
 
+        if length is not None:
+            json_filepath = "dataset/low_flight_dataset_02/low_flight_dataset.json"
+            with open(json_filepath) as json_file:
+                data = json.load(json_file)
+                index = str(i)
+                gt_x = data[index]['ground_truth'][0]*1000
+                gt_y = data[index]['ground_truth'][1]*1000
+                gt_z = data[index]['ground_truth'][2]*1000
+                results_gt.append([gt_x, gt_y, gt_z])
+                print "GT: ", gt_x, gt_y, gt_z
+
+            x_0 = IMG_HEIGHT/2.0
+            y_0 = IMG_WIDTH/2.0
+            d_x = x_0 - centroid[0]
+            d_y = y_0 - centroid[1]
+
+            est_z = 288*focal_length / length - 59.4
+            
+            # Camera is placed 150 mm along x-axis of the drone
+            est_x = -(est_z * d_x / focal_length) - 150 
+            est_y = -(est_z * d_y / focal_length)
+
+            print "Est:", est_x, est_y, est_z
+            results_est.append([est_x, est_y, est_z])
+            total_results.append([gt_z, est_z])
+
+
+np_results_gt = np.array(results_gt)
+np_results_est = np.array(results_est)
+# print "Results ground truth"
+# print np_results_gt
+# print "Results estimate"
+# print np_results_est
+
+print_header("Showing results")
+
+n_results = len(np_results_gt)
+print "n_results:", n_results
+rjust = 7
+print "||  gt_x   |  est_x  ||  gt_y   |  est_y  ||  gt_z   |  est_z  ||"
+print "-----------------------------------------------------------------"
+for i in range(n_results):
+
+    text_gt_x = '{:.2f}'.format(round(np_results_gt[i][0], 2)).rjust(rjust)
+    text_est_x = '{:.2f}'.format(round(np_results_est[i][0], 2)).rjust(rjust)
+
+    text_gt_y = '{:.2f}'.format(round(np_results_gt[i][1], 2)).rjust(rjust)
+    text_est_y = '{:.2f}'.format(round(np_results_est[i][1], 2)).rjust(rjust)
+
+    text_gt_z = '{:.2f}'.format(round(np_results_gt[i][2], 2)).rjust(rjust)
+    text_est_z = '{:.2f}'.format(round(np_results_est[i][2], 2)).rjust(rjust)
+
+    print "||", text_gt_x, "|",text_est_x, \
+        "||", text_gt_y, "|",text_est_y, \
+        "||", text_gt_z, "|",text_est_z, "||"
+
+# print total_results
+
+# print ""
+# print "Diffs:"
+# diffs = []
+# diffs_sum = 0
+# for res in total_results:
+#     diff = res[0]-res[1]
+#     diffs_sum += diff
+#     # print diff
+#     diffs.append(res[0]-res[1])
+# n_diffs = len(total_results)
+# print n_diffs
+# avr = diffs_sum / n_diffs
+# print avr
 # run()
