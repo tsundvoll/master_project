@@ -1097,6 +1097,29 @@ def calc_dist_to_landing_platform(centroid, arrowhead):
     return distance_to_landing_platform
 
 
+def calculate_position(center_px, radius_px):
+    real_radius = 375 # mm (750mm in diameter / 2)
+    # real_radius = 288 # previous value
+
+    # Center of image
+    x_0 = IMG_HEIGHT/2.0
+    y_0 = IMG_WIDTH/2.0
+
+    # Find distances from center of image to center of LP
+    d_x = x_0 - center_px[0]
+    d_y = y_0 - center_px[1]
+
+    est_z = real_radius*focal_length / radius_px # - 59.4
+    
+    # Camera is placed 150 mm along x-axis of the drone
+    # Since the camera is pointing down, the x and y axis of the drone
+    # is the inverse of the x and y axis of the camera
+    est_x = -(est_z * d_x / focal_length) - 150 
+    est_y = -(est_z * d_y / focal_length)
+
+    return np.array([est_x, est_y, est_z])
+
+
 def run(img_count = 0):
     suffix = "_flip_horizontal"
     suffix = ""
@@ -1231,6 +1254,8 @@ else:
                 gt_z = data[index]['ground_truth'][2]*1000
                 results_gt.append([gt_x, gt_y, gt_z])
                 print "GT: ", gt_x, gt_y, gt_z
+
+            print calculate_position(centroid, length)
 
             x_0 = IMG_HEIGHT/2.0
             y_0 = IMG_WIDTH/2.0
