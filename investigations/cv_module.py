@@ -12,11 +12,8 @@ import json
 import sys
 
 
-print 'Number of arguments:', len(sys.argv), 'arguments.'
-print 'Argument List:', str(sys.argv)
-
 sys_image_id = int(sys.argv[1])
-print 'Sys_image_id:', sys_image_id
+# print 'Sys_image_id:', sys_image_id
 
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
@@ -212,6 +209,98 @@ def get_normal_vector(hsv_canvas, a, b, gradient_of_image):
     return normal_vector
 
 
+def get_normal_vector_2(hsv_white_only, corner_a, corner_b):
+
+    hsv_crop = hsv_white_only.copy()
+
+    c_m = np.int0(get_mid_point(corner_a, corner_b))
+
+    vector_length = np.linalg.norm(corner_a - corner_b)
+
+    long_length = np.int0(vector_length*1.1)
+    short_length = np.int0(long_length / 4.0)
+
+
+    center_coordinates = (c_m[1], c_m[0])
+    # center_coordinates = (50, 100) 
+    axesLength = (long_length, short_length) 
+    angle = 0
+    startAngle = 0
+    endAngle = 360 
+    color = (100) 
+    thickness = -1
+
+    # cv2.ellipse(img=hsv_ellipse_mask, center=(center_y, center_x),
+    #     axes=(l_y, l_x), angle=0, startAngle=0, endAngle=360,
+    #     color=(255), thickness=-1, lineType=8, shift=0)
+
+    # Using cv2.ellipse() method 
+    # Draw a ellipse with red line borders of thickness of 5 px 
+    cv2.ellipse(img=hsv_crop, center=center_coordinates, axes=axesLength, 
+            angle=angle, startAngle=startAngle, endAngle=endAngle, 
+            color=color, thickness=thickness, lineType=8, shift=0) 
+
+    hsv_save_image(hsv_crop, "5_crop", is_gray=True)
+
+    return normal_vector
+
+def get_normal_vector_3(hsv_white_only, corner_a, corner_b, is_short_side):
+    hsv_normals = hsv_white_only.copy()
+
+    vector_between_a_b = corner_a - corner_b
+    vector_length = np.linalg.norm(vector_between_a_b)
+    unit_vector_between_a_b = normalize_vector(vector_between_a_b)
+
+    v_x, v_y = vector_between_a_b
+    normal_unit_vector_left = normalize_vector(np.array([-v_y, v_x]))
+    normal_unit_vector_right = normalize_vector(np.array([v_y, -v_x]))
+
+    if is_short_side:
+        check_length = vector_length / 3.0
+        sign = 1
+    else:
+        short_length = vector_length * L1/L2
+        check_length = short_length / 3.0
+        sign = -1
+
+    check_left_a = np.int0(corner_a + \
+        sign*unit_vector_between_a_b*check_length + \
+        normal_unit_vector_left*check_length)
+    check_left_b = np.int0(corner_b - \
+        sign*unit_vector_between_a_b*check_length + \
+        normal_unit_vector_left*check_length)
+
+    check_right_a = np.int0(corner_a + \
+        sign*unit_vector_between_a_b*check_length + \
+        normal_unit_vector_right*check_length)
+    check_right_b = np.int0(corner_b - \
+        sign*unit_vector_between_a_b*check_length + \
+        normal_unit_vector_right*check_length)
+
+    value_left_a = hsv_white_only[check_left_a[0]][check_left_a[1]]
+    value_left_b = hsv_white_only[check_left_b[0]][check_left_b[1]]
+    value_right_a = hsv_white_only[check_right_a[0]][check_right_a[1]]
+    value_right_b = hsv_white_only[check_right_b[0]][check_right_b[1]]
+
+    avr_left = value_left_a/2.0 + value_left_b/2.0
+    avr_right = value_right_a/2.0 + value_right_b/2.0
+
+    print "avr_left:", avr_left
+    print "avr_right:", avr_right
+
+    draw_dot(hsv_normals, check_left_a, (225))
+    draw_dot(hsv_normals, check_left_b, (225))
+    draw_dot(hsv_normals, check_right_a, (75))
+    draw_dot(hsv_normals, check_right_b, (75))
+
+    hsv_save_image(hsv_normals, "5_normals", is_gray=True)
+    
+    if avr_left > avr_right:
+        return normal_unit_vector_left
+    else:
+        return normal_unit_vector_right
+
+
 # Colors to draw with
 HSV_RED_COLOR = rgb_color_to_hsv(255,0,0)
 HSV_BLUE_COLOR = rgb_color_to_hsv(0,0,255)
@@ -253,6 +342,27 @@ def get_green_mask(hsv):
     return green_mask
 
 
+def flood_fill(img, start=(0,0)):
+    h,w = img.shape
+    seed = start
+
+    mask = np.zeros((h+2,w+2),np.uint8) # Adding a padding of 1
+
+    if img[start[1]][start[0]] == 255: # If the starting point is already filled, return empty mask
+        mask = mask[1:h+1,1:w+1] # Removing the padding
+        return mask
+
+    floodflags = 8
+    # floodflags |= cv2.FLOODFILL_FIXED_RANGE
+    floodflags |= cv2.FLOODFILL_MASK_ONLY
+    floodflags |= (255 << 8)
+
+    num,img,mask,rect = cv2.floodFill(img, mask, seed, (255,0,0), (10,)*3, (10,)*3, floodflags)
+    mask = mask[1:h+1,1:w+1] # Removing the padding
+    
+    return mask
+
+
 def get_pixels_inside_green(hsv):
     """ 
         Function that finds the green in an image, make a bounding box around it,
@@ -267,25 +377,19 @@ def get_pixels_inside_green(hsv):
     hsv_green_mask = get_green_mask(hsv)  
     hsv_save_image(hsv_green_mask, "1b_green_mask", is_gray=True)
 
-    green_x, green_y = np.where(hsv_green_mask==255)
-    
-    if len(green_x) == 0:
-        print "No green in image"
-        # If no green in image: return original image
-        return hsv, False
+    hsv_green_mask = make_gaussian_blurry(hsv_green_mask, 5)
 
-    x_min = np.amin(green_x)
-    x_max = np.amax(green_x)
-    y_min = np.amin(green_y)
-    y_max = np.amax(green_y)
+    hsv_green_mask_flood_01 = flood_fill(hsv_green_mask, start=(0,0))
+    hsv_green_mask_flood_02 = flood_fill(hsv_green_mask, start=(IMG_WIDTH-1,0))
+    hsv_green_mask_flood_03 = flood_fill(hsv_green_mask, start=(0,IMG_HEIGHT-1))
+    hsv_green_mask_flood_04 = flood_fill(hsv_green_mask, start=(IMG_WIDTH-1,IMG_HEIGHT-1))
 
-    hsv_inside_green[0:x_min,] = HSV_BLACK_COLOR
-    hsv_inside_green[x_max+1:,] = HSV_BLACK_COLOR
+    hsv_green_mask_flood_combined = cv2.bitwise_or(hsv_green_mask_flood_01, hsv_green_mask_flood_02, hsv_green_mask_flood_03, hsv_green_mask_flood_04)
 
-    hsv_inside_green[:,0:y_min] = HSV_BLACK_COLOR
-    hsv_inside_green[:,y_max+1:] = HSV_BLACK_COLOR
+    mask = cv2.bitwise_not(hsv_green_mask_flood_combined)
+    hsv_inside_green = cv2.bitwise_or(hsv_inside_green, hsv, mask=mask)
 
-    return hsv_inside_green, True
+    return hsv_inside_green
 
 
 def find_white_centroid(hsv):
@@ -436,158 +540,6 @@ def find_right_angled_corners(img):
     return corners, intensities
 
 
-def find_goal_point(hsv_white_only, inner_corners):
-    number_of_corners = len(inner_corners)
-    average_filter_size = 19
-    img_average_intensity = make_circle_average_blurry(hsv_white_only, average_filter_size)
-
-    ######################
-    # Define the inner_corners #
-
-    if number_of_corners == 1:
-        corner_0 = inner_corners[0]
-
-    elif number_of_corners == 2:
-        left_corner_id = np.argmin(inner_corners[:,1])
-        right_corner_id = 1 - left_corner_id
-
-        corner_0 = inner_corners[left_corner_id]
-        corner_1 = inner_corners[right_corner_id]
-        
-    elif number_of_corners == 3:
-        distances = np.array([
-            np.linalg.norm(inner_corners[0] - inner_corners[1]),
-            np.linalg.norm(inner_corners[1] - inner_corners[2]),
-            np.linalg.norm(inner_corners[2] - inner_corners[0])
-        ])
-
-        median = np.median(distances)
-        median_id = np.where(distances == median)[0][0]
-
-        if median_id == 0:
-            relevant_corners = np.stack((inner_corners[0], inner_corners[1]), axis=0)
-        elif median_id == 1:
-            relevant_corners = np.stack((inner_corners[1], inner_corners[2]), axis=0)
-        elif median_id == 2:
-            relevant_corners = np.stack((inner_corners[2], inner_corners[0]), axis=0)
-        else:
-            print("ERROR: In fn. detect_sub_pixecl_corners(); min_dist_id out of bounds")
-            return None, None
-
-        dist_0_1, dist_1_2, dist_2_0 = distances[0], distances[1], distances[2]
-
-        # Pick the corner with the lowest y-coordinate
-        left_corner_id = np.argmin(relevant_corners, axis=0)[1]
-        right_corner_id = 1 - left_corner_id
-
-        corner_0 = relevant_corners[left_corner_id]
-        corner_1 = relevant_corners[right_corner_id]
-
-    elif number_of_corners == 4:
-        # For the first corner, chose the corner closest to the top
-        # This will belong to the top cross-bar
-        top_corner_id = np.argmin(inner_corners[:,0]) # Find lowest x-index
-        top_corner = inner_corners[top_corner_id]
-        top_corner_stack = np.array([top_corner]*3)
-        rest_corners = np.delete(inner_corners, top_corner_id, 0)
-        dist = np.linalg.norm(rest_corners - top_corner_stack, axis=1)
-
-        # For the second corner, chose the corner closest to top corner
-        top_corner_closest_id = np.argmin(dist)
-        top_corner_closest = rest_corners[top_corner_closest_id]
-
-        relevant_corners = np.stack((top_corner, top_corner_closest), axis=0)
-
-        # Choose the corner with the lowest y-coordinate as the first corner
-        left_corner_id = np.argmin(relevant_corners, axis=0)[1]
-        right_corner_id = 1 - left_corner_id
-
-        corner_0 = relevant_corners[left_corner_id]
-        corner_1 = relevant_corners[right_corner_id]
-
-    else:
-        # Invalid number of corners
-        return None, None
-
-    ##################################
-    # Define goal point and direction #'
-    goal_point = None
-    goal_direction = None
-
-    # Calculate spatial gradient
-    dy, dx	= cv2.spatialGradient(hsv_white_only) # Invert axis, since OpenCV operates with x=column, y=row
-    
-    if number_of_corners == 1:
-        grad_0 = np.array([dx[corner_0[0]][corner_0[1]], dy[corner_0[0]][corner_0[1]]])
-        grad_0_normalized = normalize_vector(grad_0)
-
-        goal_point_offset = 5 # px-distance
-        goal_point = np.int0(corner_0 + grad_0_normalized*goal_point_offset)
-
-        goal_direction = grad_0_normalized
-    else:
-        grad_0 = np.array([dx[corner_0[0]][corner_0[1]], dy[corner_0[0]][corner_0[1]]])
-        grad_1 = np.array([dx[corner_1[0]][corner_1[1]], dy[corner_1[0]][corner_1[1]]])
-        grad_sum = grad_0 + grad_1
-        grad_sum_normalized = normalize_vector(grad_sum)
-
-        cross_over_vector = corner_1 - corner_0
-        goal_point = np.int0(corner_0 + 0.5*(cross_over_vector))
-        goal_value = img_average_intensity[goal_point[0]][goal_point[1]]
-
-
-    if (number_of_corners == 2 or number_of_corners == 3) and goal_value < 200:
-        # The two inner_corners form the longitudinal bar
-
-        # Choose to focus on the uppermost corner,
-        # since it is assumed the orientation is approximately right
-        longitudinal_corners = np.stack((corner_0, corner_1))
-
-        upper_corner_id = np.argmin(longitudinal_corners[:,0])
-        lower_corner_id = 1 - upper_corner_id
-
-        upper_corner = longitudinal_corners[upper_corner_id]
-        lower_corner = longitudinal_corners[lower_corner_id]
-
-        longitudinal_vector = upper_corner - lower_corner
-        longitudinal_unit_vector = normalize_vector(longitudinal_vector)
-
-        upper_corner_gradient = get_gradient_of_point(upper_corner, dx, dy)
-        upper_corner_unit_gradient = normalize_vector(upper_corner_gradient)
-
-
-        longitudinal_length = np.linalg.norm(longitudinal_vector)
-        travese_length = longitudinal_length*REL_TRAV_LONG
-        length_from_upper_corner_to_goal = travese_length/2.0
-
-        arrow_length = 10
-        grad_start = upper_corner
-        grad_end = np.int0(upper_corner + upper_corner_unit_gradient*arrow_length)
-
-        angle = calc_angle_between_vectors(longitudinal_vector, upper_corner_unit_gradient)
-        l_x, l_y = longitudinal_unit_vector[0], longitudinal_unit_vector[1]
-        if angle > 0:
-            # This means the gradient is pointing to the left
-            dir_vector = np.array([-l_y, l_x])
-        else:
-            # The gradient is pointing to the right (or is parallel)
-            dir_vector = np.array([l_y, -l_x])
-        goal_point = np.int0(upper_corner + dir_vector*length_from_upper_corner_to_goal)
-        goal_point = limit_point_to_be_inside_image(goal_point)
-        
-        goal_direction = longitudinal_unit_vector
-    
-    elif number_of_corners != 1:
-        if grad_sum_normalized[0] < 0:
-            cross_over_norm = np.array([-cross_over_vector[1], cross_over_vector[0]])
-        else:
-            cross_over_norm = np.array([cross_over_vector[1], -cross_over_vector[0]])
-
-        goal_direction = normalize_vector(cross_over_norm)
-
-    return goal_point, goal_direction
-
-
 def find_orange_arrowhead(hsv):
     hsv_orange_mask = get_orange_mask(hsv)
     hsv_orange_mask = make_gaussian_blurry(hsv_orange_mask, 5) 
@@ -700,7 +652,6 @@ def evaluate_inner_corners(hsv):
 
     hsv_white_only_before_blur = get_white_mask(hsv)
     hsv_white_only = make_gaussian_blurry(hsv_white_only_before_blur, 5)
-    hsv_white_only_double_blur = make_gaussian_blurry(hsv_white_only_before_blur, 15)
     hsv_save_image(hsv_white_only, "2_white", is_gray=True)
 
     inner_corners, intensities = find_right_angled_corners(hsv_white_only)
@@ -708,17 +659,13 @@ def evaluate_inner_corners(hsv):
     average_filter_size = 19
     img_average_intensity = make_circle_average_blurry(hsv_white_only, average_filter_size)
 
-    gradient_of_image = get_gradient_of_image(hsv_white_only_double_blur)
-
-    hsv_save_image(gradient_of_image[0], "2x_gradient_of_image", is_gray=True)
-    hsv_save_image(gradient_of_image[1], "2y_gradient_of_image", is_gray=True)
-
+    gradient_of_image = get_gradient_of_image(hsv_white_only)
 
     if (inner_corners is not None):
         n_inner_corners = len(inner_corners)
         print "n_inner_corners:", n_inner_corners
 
-        if (n_inner_corners > 1) and (n_inner_corners <= 4):
+        if (n_inner_corners > 1) and (n_inner_corners <= 5):
         
             for corner in inner_corners:
                 draw_dot(hsv_canvas, corner, HSV_YELLOW_COLOR)
@@ -731,14 +678,17 @@ def evaluate_inner_corners(hsv):
             c_m = get_mid_point(corner_a, corner_b)
             draw_dot(hsv_canvas, c_m, HSV_BLUE_COLOR)
 
+            hsv_save_image(hsv_canvas, "3_canvas")
+
+
             c_m_value = img_average_intensity[np.int0(c_m[0])][np.int0(c_m[1])]
             print "c_m_value", c_m_value
 
-            normal_vector = get_normal_vector(hsv_white_only_double_blur, corner_a, corner_b, gradient_of_image)
-            normal_unit_vector = normalize_vector(normal_vector)
-
             if c_m_value > 190: # The points are on a short side
                 print "Short side"
+                is_short_side = True
+                normal_vector = get_normal_vector_3(hsv_white_only, corner_a, corner_b, is_short_side)
+                normal_unit_vector = normalize_vector(normal_vector)
 
                 length_short_side = np.linalg.norm(corner_a - corner_b)
                 length_long_side = length_short_side * L2/L1
@@ -749,15 +699,18 @@ def evaluate_inner_corners(hsv):
 
             else: # The points are on a long side
                 print "Long side"
+                is_short_side = False
+                normal_vector = get_normal_vector_3(hsv_white_only, corner_a, corner_b, is_short_side)
+                normal_unit_vector = normalize_vector(normal_vector)
 
                 length_long_side = np.linalg.norm(corner_a - corner_b)
                 length_short_side = length_long_side * L1/L2
                 length_to_center = length_short_side / 2.0
                 length_radius = length_long_side * L4/L2
 
-                forward_unit_vector = corner_a - corner_b
+                forward_unit_vector = normalize_vector(corner_a - corner_b)
             
-            hsv_save_image(hsv_white_only_double_blur, "4_white_gradient", is_gray=True)
+            hsv_save_image(hsv_white_only_before_blur, "4_white_gradient", is_gray=True)
 
             end = c_m + forward_unit_vector*10
             draw_arrow(hsv_canvas, c_m, end)
@@ -777,11 +730,13 @@ def evaluate_inner_corners(hsv):
 
 
 def run(img_count = 0):
-    filepath = "dataset/low_flight_dataset_02/image_"+str(img_count)+".png"
+    # filepath = "dataset/low_flight_dataset_01/image_"+str(img_count)+".png"
     # filepath = "dataset/image_2_corners_long_side.jpg"
+    filepath = "dataset/white_corner_test.png"
+    
     hsv = load_hsv_image(filepath)
 
-    hsv_inside_green, isGreenInImage = get_pixels_inside_green(hsv)
+    hsv_inside_green = get_pixels_inside_green(hsv)
     hsv_save_image(hsv_inside_green, "1c_inside_green")
 
     center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv_inside_green)
@@ -806,7 +761,6 @@ def run(img_count = 0):
 
     # inner_corners, intensities = find_right_angled_corners(hsv_white_only)
 
-    # goal, goal_direction = find_goal_point(hsv_white_only, inner_corners)
     
 
 ############
