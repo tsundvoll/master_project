@@ -9,6 +9,15 @@ import numpy as np
 import math
 import json
 
+import sys
+
+
+print 'Number of arguments:', len(sys.argv), 'arguments.'
+print 'Argument List:', str(sys.argv)
+
+sys_image_id = int(sys.argv[1])
+print 'Sys_image_id:', sys_image_id
+
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
@@ -68,7 +77,7 @@ def hsv_save_image(image, label='image', is_gray=False):
 def load_hsv_image(filename):
     img = cv2.imread(filename) # import as BGR
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) # convert to HSV
-    hsv_save_image(hsv, "1_hsv") # Save image
+    hsv_save_image(hsv, "1a_hsv") # Save image
     return hsv
 
 
@@ -94,14 +103,15 @@ def hsv_to_opencv_hsv(hue, saturation, value):
 
 
 def draw_dot(img, position, color):
-    cX = position[1]
-    cY = position[0]
+    cX = np.int0(position[1])
+    cY = np.int0(position[0])
     cv2.circle(img, (cX, cY), 3, color, -1)
 
 
 def draw_arrow(img, start, end):
-    return cv2.arrowedLine(img, (start[1], start[0]),
-        (end[1], end[0]),
+    return cv2.arrowedLine(img,
+        (np.int0(start[1]), np.int0(start[0])),
+        (np.int0(end[1]), np.int0(end[0])),
         color = (75,0,0), thickness = 1, tipLength = 0.4)
 
 
@@ -149,11 +159,57 @@ def print_header(text):
     print border_line
 
 
-def get_gradient_of_point(point, dx, dy):
-    point_x = point[0]
-    point_y = point[1]
+def get_gradient_of_image(img):
+    dy, dx = cv2.spatialGradient(img) # Invert axis, since OpenCV operates with x=column, y=row
+    return np.stack((dy,dx))
+
+
+def get_gradient_of_point(point, gradient_of_image):
+    dx = gradient_of_image[0]
+    dy = gradient_of_image[1]
+    
+    point_x = np.int0(point[0])
+    point_y = np.int0(point[1])
     gradient = np.array([dx[point_x][point_y], dy[point_x][point_y]])
     return gradient
+
+
+def get_mid_point(a, b):
+    return (a+b)/2.0
+
+
+def get_normal_vector(hsv_canvas, a, b, gradient_of_image):
+    gradient_in_a = get_gradient_of_point(a, gradient_of_image)
+    gradient_in_b = get_gradient_of_point(b, gradient_of_image)
+    gradient_sum = gradient_in_a + gradient_in_b
+
+    print "a:", a
+    print "b:", b
+
+
+    end_grad_a = a + normalize_vector(gradient_in_a)*10
+    end_grad_b = b + normalize_vector(gradient_in_b)*10
+
+    draw_arrow(hsv_canvas, a, end_grad_a)
+    draw_arrow(hsv_canvas, b, end_grad_b)
+
+    vector_between_a_b = a-b
+
+    print "vector_between:", vector_between_a_b
+
+    print "gradient_sum:", gradient_sum
+
+    angle = calc_angle_between_vectors(vector_between_a_b, gradient_sum)
+
+    v_x, v_y = vector_between_a_b[0], vector_between_a_b[1]
+    if angle > 0:
+        # This means the gradient is pointing to the left
+        normal_vector = np.array([-v_y, v_x])
+    else:
+        # The gradient is pointing to the right (or is parallel)
+        normal_vector = np.array([v_y, -v_x])
+    
+    return normal_vector
 
 
 # Colors to draw with
@@ -187,6 +243,49 @@ def get_orange_mask(hsv):
 
     orange_mask = cv2.inRange(hsv, lower_orange, upper_orange) 
     return orange_mask
+
+
+def get_green_mask(hsv):
+    lower_green = hsv_to_opencv_hsv(100, 50, 25)
+    upper_green = hsv_to_opencv_hsv(135, 75, 75)
+
+    green_mask = cv2.inRange(hsv, lower_green, upper_green) 
+    return green_mask
+
+
+def get_pixels_inside_green(hsv):
+    """ 
+        Function that finds the green in an image, make a bounding box around it,
+        fits an ellipse in the bounding box
+        and paints everything outside the ellipse in black.
+
+        Returns the painted image and a boolean stating wheather any green was found.
+     """
+
+    hsv_inside_green = hsv.copy()
+
+    hsv_green_mask = get_green_mask(hsv)  
+    hsv_save_image(hsv_green_mask, "1b_green_mask", is_gray=True)
+
+    green_x, green_y = np.where(hsv_green_mask==255)
+    
+    if len(green_x) == 0:
+        print "No green in image"
+        # If no green in image: return original image
+        return hsv, False
+
+    x_min = np.amin(green_x)
+    x_max = np.amax(green_x)
+    y_min = np.amin(green_y)
+    y_max = np.amax(green_y)
+
+    hsv_inside_green[0:x_min,] = HSV_BLACK_COLOR
+    hsv_inside_green[x_max+1:,] = HSV_BLACK_COLOR
+
+    hsv_inside_green[:,0:y_min] = HSV_BLACK_COLOR
+    hsv_inside_green[:,y_max+1:] = HSV_BLACK_COLOR
+
+    return hsv_inside_green, True
 
 
 def find_white_centroid(hsv):
@@ -327,7 +426,7 @@ def find_right_angled_corners(img):
     corners = clip_corners_on_border(corners, ignore_border_size)
     if corners is None:
         # Found no corners
-        return None
+        return None, None
 
     corners, intensities = clip_corners_on_intensity(corners, img, average_filter_size)
     if corners is None:
@@ -571,6 +670,27 @@ def evaluate_arrow(hsv):
         return None, None, None
 
 
+
+def get_relevant_corners(inner_corners):
+    n_inner_corners = len(inner_corners)
+
+    # For the first corner, chose the corner closest to the top
+    # This will belong to the top cross-bar
+    top_corner_id = np.argmin(inner_corners[:,0]) # Find lowest x-index
+    top_corner = inner_corners[top_corner_id]
+    top_corner_stack = np.array([top_corner]*(n_inner_corners-1))
+    rest_corners = np.delete(inner_corners, top_corner_id, 0)
+    dist = np.linalg.norm(rest_corners - top_corner_stack, axis=1)
+
+    # For the second corner, chose the corner closest to top corner
+    top_corner_closest_id = np.argmin(dist)
+    top_corner_closest = rest_corners[top_corner_closest_id]
+
+    relevant_corners = np.stack((top_corner, top_corner_closest), axis=0)
+
+    return relevant_corners
+
+
 def evaluate_inner_corners(hsv):
     # wp
     """ Use the inner corners to find: 
@@ -578,29 +698,94 @@ def evaluate_inner_corners(hsv):
     """
     hsv_canvas = hsv.copy()
 
-    hsv_white_only = get_white_mask(hsv)
-    hsv_white_only = make_gaussian_blurry(hsv_white_only, 5)
-
+    hsv_white_only_before_blur = get_white_mask(hsv)
+    hsv_white_only = make_gaussian_blurry(hsv_white_only_before_blur, 5)
+    hsv_white_only_double_blur = make_gaussian_blurry(hsv_white_only_before_blur, 15)
+    hsv_save_image(hsv_white_only, "2_white", is_gray=True)
 
     inner_corners, intensities = find_right_angled_corners(hsv_white_only)
+    
+    average_filter_size = 19
+    img_average_intensity = make_circle_average_blurry(hsv_white_only, average_filter_size)
 
-    for corner in inner_corners:
-        draw_dot(hsv_canvas, corner, HSV_LIGHT_ORANGE_COLOR)
+    gradient_of_image = get_gradient_of_image(hsv_white_only_double_blur)
 
-    # goal, goal_direction = find_goal_point(hsv_white_only, inner_corners)
+    hsv_save_image(gradient_of_image[0], "2x_gradient_of_image", is_gray=True)
+    hsv_save_image(gradient_of_image[1], "2y_gradient_of_image", is_gray=True)
 
-    hsv_save_image(hsv_canvas, "2_canvas")
 
+    if (inner_corners is not None):
+        n_inner_corners = len(inner_corners)
+        print "n_inner_corners:", n_inner_corners
+
+        if (n_inner_corners > 1) and (n_inner_corners <= 4):
+        
+            for corner in inner_corners:
+                draw_dot(hsv_canvas, corner, HSV_YELLOW_COLOR)
+
+            corner_a, corner_b = get_relevant_corners(inner_corners)
+
+            draw_dot(hsv_canvas, corner_a, HSV_RED_COLOR)
+            draw_dot(hsv_canvas, corner_b, HSV_LIGHT_ORANGE_COLOR)
+
+            c_m = get_mid_point(corner_a, corner_b)
+            draw_dot(hsv_canvas, c_m, HSV_BLUE_COLOR)
+
+            c_m_value = img_average_intensity[np.int0(c_m[0])][np.int0(c_m[1])]
+            print "c_m_value", c_m_value
+
+            normal_vector = get_normal_vector(hsv_white_only_double_blur, corner_a, corner_b, gradient_of_image)
+            normal_unit_vector = normalize_vector(normal_vector)
+
+            if c_m_value > 190: # The points are on a short side
+                print "Short side"
+
+                length_short_side = np.linalg.norm(corner_a - corner_b)
+                length_long_side = length_short_side * L2/L1
+                length_to_center = - length_long_side / 2.0
+                length_radius = length_short_side * L4/L1
+
+                forward_unit_vector = normal_unit_vector
+
+            else: # The points are on a long side
+                print "Long side"
+
+                length_long_side = np.linalg.norm(corner_a - corner_b)
+                length_short_side = length_long_side * L1/L2
+                length_to_center = length_short_side / 2.0
+                length_radius = length_long_side * L4/L2
+
+                forward_unit_vector = corner_a - corner_b
+            
+            hsv_save_image(hsv_white_only_double_blur, "4_white_gradient", is_gray=True)
+
+            end = c_m + forward_unit_vector*10
+            draw_arrow(hsv_canvas, c_m, end)
+
+            center = c_m + normal_unit_vector*length_to_center
+            draw_dot(hsv_canvas, center, HSV_BLUE_COLOR)
+
+            hsv_save_image(hsv_canvas, "3_canvas")
+                      
+            neg_x_axis = np.array([-1,0])
+            angle = calc_angle_between_vectors(forward_unit_vector, neg_x_axis)
+        
+            print "Angle:", np.degrees(angle)
+            return center, length_radius, angle
 
     return None, None, None
 
 
 def run(img_count = 0):
     filepath = "dataset/low_flight_dataset_02/image_"+str(img_count)+".png"
+    # filepath = "dataset/image_2_corners_long_side.jpg"
     hsv = load_hsv_image(filepath)
 
-    center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv)
-    center_px_from_inner_corners, radius_length_px_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv)
+    hsv_inside_green, isGreenInImage = get_pixels_inside_green(hsv)
+    hsv_save_image(hsv_inside_green, "1c_inside_green")
+
+    center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv_inside_green)
+    center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
 
     if (center_px_from_arrow is not None):
         center_px, radius_length_px, angle = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
@@ -638,8 +823,9 @@ def run(img_count = 0):
 # 1 three corners showing
 
 
-single_image_index = 4
-single_image = False
+# single_image_index = 40
+single_image_index = sys_image_id
+single_image = True
 
 results_gt = []
 results_est = []
