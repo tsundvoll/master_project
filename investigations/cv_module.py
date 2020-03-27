@@ -799,6 +799,20 @@ def evaluate_inner_corners(hsv):
     return None, None, None
 
 
+def print_data_on_a_line(title, data_gt, data_est_e, data_est_a, data_est_i):
+    rjust = 12
+    rjust_2 = 10
+    # print "|     || Ground Truth ||   Method 1 |   Method 2 |   Method 3 ||"
+    print "||-----||--------------||------------|------------|------------||"
+
+    text_gt = '{:.2f}'.format(round(data_gt, 2)).rjust(rjust)
+    text_est_e = '{:.2f}'.format(round(data_est_e, 2)).rjust(rjust_2)
+    text_est_a = '{:.2f}'.format(round(data_est_a, 2)).rjust(rjust_2)
+    text_est_i = '{:.2f}'.format(round(data_est_i, 2)).rjust(rjust_2)
+
+    print "||", title.rjust(3), "||", text_gt, "||",text_est_e, \
+            "|", text_est_a, "|",text_est_i, "||"
+
 def present_results(
         est_e_x, est_e_y, est_e_z, est_e_yaw,
         est_a_x, est_a_y, est_a_z, est_a_yaw,
@@ -812,19 +826,16 @@ def present_results(
         i: inner corner detection
     """
     print_header("Results")
-    rjust = 7
-
-    print "# X #"
-    print "||  gt_x   |  est_x  ||  gt_y   |  est_y  ||"
-
-
-    text_gt_x = '{:.2f}'.format(round(gt_x, 2)).rjust(rjust)
-    text_est_e_x = '{:.2f}'.format(round(est_e_x, 2)).rjust(rjust)
-    text_est_a_x = '{:.2f}'.format(round(est_a_x, 2)).rjust(rjust)
-    text_est_i_x = '{:.2f}'.format(round(est_i_x, 2)).rjust(rjust)
-
-    print "||", text_gt_x, "|",text_est_e_x, \
-            "||", text_est_a_x, "|",text_est_i_x, "||"
+    print "Method 1: Ellipse detection"
+    print "Method 2: Arrow detection"
+    print "Method 3: Inner corner detection"
+    print "|==============================================================||"
+    print "||     || Ground Truth ||   Method 1 |   Method 2 |   Method 3 ||"
+    print_data_on_a_line("X", gt_x, est_e_x, est_a_x, est_i_x)
+    print_data_on_a_line("Y", gt_y, est_e_y, est_a_y, est_i_y)
+    print_data_on_a_line("Z", gt_z, est_e_z, est_a_z, est_i_z)
+    print_data_on_a_line("Yaw", np.degrees(gt_yaw), np.degrees(est_e_yaw), np.degrees(est_a_yaw), np.degrees(est_i_yaw))
+    print "|==============================================================||"
 
 
 
