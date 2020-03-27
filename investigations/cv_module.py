@@ -240,8 +240,6 @@ def get_normal_vector_2(hsv_white_only, corner_a, corner_b):
             angle=angle, startAngle=startAngle, endAngle=endAngle, 
             color=color, thickness=thickness, lineType=8, shift=0) 
 
-    hsv_save_image(hsv_crop, "5_crop", is_gray=True)
-
     return normal_vector
 
 def get_normal_vector_3(hsv_white_only, corner_a, corner_b, is_short_side):
@@ -257,11 +255,11 @@ def get_normal_vector_3(hsv_white_only, corner_a, corner_b, is_short_side):
 
     if is_short_side:
         check_length = vector_length / 3.0
-        sign = 1
+        sign = 1 # Go outwards from the corners
     else:
         short_length = vector_length * L1/L2
         check_length = short_length / 3.0
-        sign = -1
+        sign = -1 # Go inwards from the corners
 
     check_left_a = np.int0(corner_a + \
         sign*unit_vector_between_a_b*check_length + \
@@ -374,22 +372,49 @@ def get_pixels_inside_green(hsv):
 
     hsv_inside_green = hsv.copy()
 
+    # hsv_green_mask = get_green_mask(hsv)  
+    # hsv_save_image(hsv_green_mask, "1b_green_mask", is_gray=True)
+
+    # hsv_green_mask = make_gaussian_blurry(hsv_green_mask, 5)
+
+    # hsv_green_mask_flood_01 = flood_fill(hsv_green_mask, start=(0,0))
+    # hsv_green_mask_flood_02 = flood_fill(hsv_green_mask, start=(IMG_WIDTH-1,0))
+    # hsv_green_mask_flood_03 = flood_fill(hsv_green_mask, start=(0,IMG_HEIGHT-1))
+    # hsv_green_mask_flood_04 = flood_fill(hsv_green_mask, start=(IMG_WIDTH-1,IMG_HEIGHT-1))
+
+    # hsv_green_mask_flood_combined = cv2.bitwise_or(hsv_green_mask_flood_01, hsv_green_mask_flood_02, hsv_green_mask_flood_03, hsv_green_mask_flood_04)
+
+    # mask = cv2.bitwise_not(hsv_green_mask_flood_combined)
+    # hsv_inside_green = cv2.bitwise_or(hsv_inside_green, hsv, mask=mask)
+
+    ## Ellipse method
     hsv_green_mask = get_green_mask(hsv)  
-    hsv_save_image(hsv_green_mask, "1b_green_mask", is_gray=True)
+    hsv_ellipse_mask = np.zeros((IMG_HEIGHT, IMG_WIDTH))
+    hsv_ellipse = hsv.copy()
 
-    hsv_green_mask = make_gaussian_blurry(hsv_green_mask, 5)
+    green_x, green_y = np.where(hsv_green_mask==255)
+    # If no green in image: return original image
+    if len(green_x) == 0:
+        return hsv
 
-    hsv_green_mask_flood_01 = flood_fill(hsv_green_mask, start=(0,0))
-    hsv_green_mask_flood_02 = flood_fill(hsv_green_mask, start=(IMG_WIDTH-1,0))
-    hsv_green_mask_flood_03 = flood_fill(hsv_green_mask, start=(0,IMG_HEIGHT-1))
-    hsv_green_mask_flood_04 = flood_fill(hsv_green_mask, start=(IMG_WIDTH-1,IMG_HEIGHT-1))
+    x_min = np.amin(green_x)
+    x_max = np.amax(green_x)
+    y_min = np.amin(green_y)
+    y_max = np.amax(green_y)
 
-    hsv_green_mask_flood_combined = cv2.bitwise_or(hsv_green_mask_flood_01, hsv_green_mask_flood_02, hsv_green_mask_flood_03, hsv_green_mask_flood_04)
+    center_x = np.int0((x_min + x_max) / 2.0)
+    center_y = np.int0((y_min + y_max) / 2.0)
 
-    mask = cv2.bitwise_not(hsv_green_mask_flood_combined)
-    hsv_inside_green = cv2.bitwise_or(hsv_inside_green, hsv, mask=mask)
+    l_x = np.int0(x_max - center_x)+1
+    l_y = np.int0(y_max - center_y)+1
 
-    return hsv_inside_green
+    cv2.ellipse(img=hsv_ellipse_mask, center=(center_y, center_x),
+        axes=(l_y, l_x), angle=0, startAngle=0, endAngle=360,
+        color=(255), thickness=-1, lineType=8, shift=0)
+
+    hsv_ellipse[hsv_ellipse_mask==0] = HSV_BLACK_COLOR
+
+    return hsv_ellipse
 
 
 def find_white_centroid(hsv):
@@ -652,7 +677,6 @@ def evaluate_inner_corners(hsv):
 
     hsv_white_only_before_blur = get_white_mask(hsv)
     hsv_white_only = make_gaussian_blurry(hsv_white_only_before_blur, 5)
-    hsv_save_image(hsv_white_only, "2_white", is_gray=True)
 
     inner_corners, intensities = find_right_angled_corners(hsv_white_only)
     
@@ -710,8 +734,6 @@ def evaluate_inner_corners(hsv):
 
                 forward_unit_vector = normalize_vector(corner_a - corner_b)
             
-            hsv_save_image(hsv_white_only_before_blur, "4_white_gradient", is_gray=True)
-
             end = c_m + forward_unit_vector*10
             draw_arrow(hsv_canvas, c_m, end)
 
@@ -737,9 +759,9 @@ def run(img_count = 0):
     hsv = load_hsv_image(filepath)
 
     hsv_inside_green = get_pixels_inside_green(hsv)
-    hsv_save_image(hsv_inside_green, "1c_inside_green")
+    hsv_save_image(hsv_inside_green, "1b_inside_green")
 
-    center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv_inside_green)
+    center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
     center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
 
     if (center_px_from_arrow is not None):
