@@ -156,93 +156,11 @@ def print_header(text):
     print border_line
 
 
-def get_gradient_of_image(img):
-    dy, dx = cv2.spatialGradient(img) # Invert axis, since OpenCV operates with x=column, y=row
-    return np.stack((dy,dx))
-
-
-def get_gradient_of_point(point, gradient_of_image):
-    dx = gradient_of_image[0]
-    dy = gradient_of_image[1]
-    
-    point_x = np.int0(point[0])
-    point_y = np.int0(point[1])
-    gradient = np.array([dx[point_x][point_y], dy[point_x][point_y]])
-    return gradient
-
-
 def get_mid_point(a, b):
     return (a+b)/2.0
 
 
-def get_normal_vector(hsv_canvas, a, b, gradient_of_image):
-    gradient_in_a = get_gradient_of_point(a, gradient_of_image)
-    gradient_in_b = get_gradient_of_point(b, gradient_of_image)
-    gradient_sum = gradient_in_a + gradient_in_b
-
-    print "a:", a
-    print "b:", b
-
-
-    end_grad_a = a + normalize_vector(gradient_in_a)*10
-    end_grad_b = b + normalize_vector(gradient_in_b)*10
-
-    draw_arrow(hsv_canvas, a, end_grad_a)
-    draw_arrow(hsv_canvas, b, end_grad_b)
-
-    vector_between_a_b = a-b
-
-    print "vector_between:", vector_between_a_b
-
-    print "gradient_sum:", gradient_sum
-
-    angle = calc_angle_between_vectors(vector_between_a_b, gradient_sum)
-
-    v_x, v_y = vector_between_a_b[0], vector_between_a_b[1]
-    if angle > 0:
-        # This means the gradient is pointing to the left
-        normal_vector = np.array([-v_y, v_x])
-    else:
-        # The gradient is pointing to the right (or is parallel)
-        normal_vector = np.array([v_y, -v_x])
-    
-    return normal_vector
-
-
-def get_normal_vector_2(hsv_white_only, corner_a, corner_b):
-
-    hsv_crop = hsv_white_only.copy()
-
-    c_m = np.int0(get_mid_point(corner_a, corner_b))
-
-    vector_length = np.linalg.norm(corner_a - corner_b)
-
-    long_length = np.int0(vector_length*1.1)
-    short_length = np.int0(long_length / 4.0)
-
-
-    center_coordinates = (c_m[1], c_m[0])
-    # center_coordinates = (50, 100) 
-    axesLength = (long_length, short_length) 
-    angle = 0
-    startAngle = 0
-    endAngle = 360 
-    color = (100) 
-    thickness = -1
-
-    # cv2.ellipse(img=hsv_ellipse_mask, center=(center_y, center_x),
-    #     axes=(l_y, l_x), angle=0, startAngle=0, endAngle=360,
-    #     color=(255), thickness=-1, lineType=8, shift=0)
-
-    # Using cv2.ellipse() method 
-    # Draw a ellipse with red line borders of thickness of 5 px 
-    cv2.ellipse(img=hsv_crop, center=center_coordinates, axes=axesLength, 
-            angle=angle, startAngle=startAngle, endAngle=endAngle, 
-            color=color, thickness=thickness, lineType=8, shift=0) 
-
-    return normal_vector
-
-def get_normal_vector_3(hsv_white_only, corner_a, corner_b, is_short_side):
+def get_normal_vector(hsv_white_only, corner_a, corner_b, is_short_side):
     hsv_normals = hsv_white_only.copy()
 
     vector_between_a_b = corner_a - corner_b
@@ -291,7 +209,7 @@ def get_normal_vector_3(hsv_white_only, corner_a, corner_b, is_short_side):
     draw_dot(hsv_normals, check_right_a, (75))
     draw_dot(hsv_normals, check_right_b, (75))
 
-    hsv_save_image(hsv_normals, "5_normals", is_gray=True)
+    # hsv_save_image(hsv_normals, "5_normals", is_gray=True)
     
     if avr_left > avr_right:
         return normal_unit_vector_left
@@ -621,6 +539,14 @@ def calculate_position(center_px, radius_px):
     return np.array([est_x, est_y, est_z])
 
 
+def evaluate_ellipse(hsv):
+    hsv_green_mask = get_green_mask(hsv)
+    hsv_save_image(hsv_green_mask, "2_green_mask", is_gray=True)
+    
+    
+    
+    return None, None, None
+
 def evaluate_arrow(hsv):
     """ Use the arrow to find: 
         center, radius, angle 
@@ -683,8 +609,6 @@ def evaluate_inner_corners(hsv):
     average_filter_size = 19
     img_average_intensity = make_circle_average_blurry(hsv_white_only, average_filter_size)
 
-    gradient_of_image = get_gradient_of_image(hsv_white_only)
-
     if (inner_corners is not None):
         n_inner_corners = len(inner_corners)
         print "n_inner_corners:", n_inner_corners
@@ -702,7 +626,7 @@ def evaluate_inner_corners(hsv):
             c_m = get_mid_point(corner_a, corner_b)
             draw_dot(hsv_canvas, c_m, HSV_BLUE_COLOR)
 
-            hsv_save_image(hsv_canvas, "3_canvas")
+            # hsv_save_image(hsv_canvas, "3_canvas")
 
 
             c_m_value = img_average_intensity[np.int0(c_m[0])][np.int0(c_m[1])]
@@ -711,7 +635,7 @@ def evaluate_inner_corners(hsv):
             if c_m_value > 190: # The points are on a short side
                 print "Short side"
                 is_short_side = True
-                normal_vector = get_normal_vector_3(hsv_white_only, corner_a, corner_b, is_short_side)
+                normal_vector = get_normal_vector(hsv_white_only, corner_a, corner_b, is_short_side)
                 normal_unit_vector = normalize_vector(normal_vector)
 
                 length_short_side = np.linalg.norm(corner_a - corner_b)
@@ -724,7 +648,7 @@ def evaluate_inner_corners(hsv):
             else: # The points are on a long side
                 print "Long side"
                 is_short_side = False
-                normal_vector = get_normal_vector_3(hsv_white_only, corner_a, corner_b, is_short_side)
+                normal_vector = get_normal_vector(hsv_white_only, corner_a, corner_b, is_short_side)
                 normal_unit_vector = normalize_vector(normal_vector)
 
                 length_long_side = np.linalg.norm(corner_a - corner_b)
@@ -740,7 +664,7 @@ def evaluate_inner_corners(hsv):
             center = c_m + normal_unit_vector*length_to_center
             draw_dot(hsv_canvas, center, HSV_BLUE_COLOR)
 
-            hsv_save_image(hsv_canvas, "3_canvas")
+            # hsv_save_image(hsv_canvas, "3_canvas")
                       
             neg_x_axis = np.array([-1,0])
             angle = calc_angle_between_vectors(forward_unit_vector, neg_x_axis)
@@ -752,29 +676,35 @@ def evaluate_inner_corners(hsv):
 
 
 def run(img_count = 0):
-    # filepath = "dataset/low_flight_dataset_01/image_"+str(img_count)+".png"
+    filepath = "dataset/low_flight_dataset_01/image_"+str(img_count)+".png"
     # filepath = "dataset/image_2_corners_long_side.jpg"
-    filepath = "dataset/white_corner_test.png"
+    # filepath = "dataset/white_corner_test.png"
     
     hsv = load_hsv_image(filepath)
 
     hsv_inside_green = get_pixels_inside_green(hsv)
-    hsv_save_image(hsv_inside_green, "1b_inside_green")
 
-    center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
-    center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
+    center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
+    # center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
+    # center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
 
-    if (center_px_from_arrow is not None):
-        center_px, radius_length_px, angle = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
-        print "Position from arrow:", calculate_position(center_px, radius_length_px)
+    if (center_px_from_ellipse is not None):
+        center_px, radius_length_px, angle = center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse
+        print "Position from ellipse:", calculate_position(center_px, radius_length_px)
     else:
-        print "Position from arrow: [Not available]"
+        print "Position from ellipse: [Not available]"
 
-    if (center_px_from_inner_corners is not None):
-        center_px, radius_length_px, angle = center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners
-        print "Position from inner corners:", calculate_position(center_px, radius_length_px)
-    else:
-        print "Position from inner corners: [Not available]"
+    # if (center_px_from_arrow is not None):
+    #     center_px, radius_length_px, angle = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
+    #     print "Position from arrow:", calculate_position(center_px, radius_length_px)
+    # else:
+    #     print "Position from arrow: [Not available]"
+
+    # if (center_px_from_inner_corners is not None):
+    #     center_px, radius_length_px, angle = center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners
+    #     print "Position from inner corners:", calculate_position(center_px, radius_length_px)
+    # else:
+    #     print "Position from inner corners: [Not available]"
 
     print ""
 
