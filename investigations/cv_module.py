@@ -528,6 +528,7 @@ def calculate_position(center_px, radius_px):
     d_x = x_0 - center_px[0]
     d_y = y_0 - center_px[1]
 
+
     est_z = real_radius*focal_length / radius_px # - 59.4 # (adjustment)
     
     # Camera is placed 150 mm along x-axis of the drone
@@ -539,13 +540,136 @@ def calculate_position(center_px, radius_px):
     return np.array([est_x, est_y, est_z])
 
 
+def fit_ellipse(points):
+    x = points[1]
+    y = IMG_HEIGHT-points[0]
+
+    D11 = np.square(x)
+    D12 = x*y
+    D13 = np.square(y)
+    D1 = np.array([D11, D12, D13]).T
+    D2 = np.array([x, y, np.ones(x.shape[0])]).T
+
+    S1 = np.dot(D1.T,D1)
+    S2 = np.dot(D1.T,D2)
+    S3 = np.dot(D2.T,D2)
+
+    try:
+        inv_S3 = np.linalg.inv(S3)
+    except np.linalg.LinAlgError:
+        print("fit_ellipse(): Got singular matrix")
+        return None
+
+    T = - np.dot(inv_S3, S2.T) # for getting a2 from a1
+
+    M = S1 + np.dot(S2, T)
+
+    C1 = np.array([
+        [0, 0, 0.5],
+        [0, -1, 0],
+        [0.5, 0, 0]
+    ])
+
+    M = np.dot(C1, M) # This premultiplication can possibly be made more efficient
+    
+    eigenvalues, eigenvectors = np.linalg.eig(M)
+    cond = 4*eigenvectors[0]*eigenvectors[2] - np.square(eigenvectors[0])
+    a1 = eigenvectors[:,cond > 0]
+    
+    # Choose the first if there are two eigenvectors with cond > 0
+    # NB! I am not sure if this is always correct
+    if a1.shape[1] > 1:
+        a1 = np.array([a1[:,0]]).T
+
+    if a1.shape != (3,1): # Make sure a1 has content
+        print("fit_ellipse(): a1 not OK")
+        return None
+
+    a = np.concatenate((a1, np.dot(T, a1)))[:,0] # Choose the inner column with [:,0]
+
+    if np.any(np.iscomplex(a)):
+        print("Found complex number")
+        return None
+    else:
+        return a
+
+
+def get_ellipse_parameters(green_ellipse):
+    edges = cv2.Canny(green_ellipse,100,200)
+    result = np.where(edges == 255)
+
+    ellipse = fit_ellipse(result)
+
+    if ellipse is None:
+        return None
+
+    A = ellipse[0]
+    B = ellipse[1]
+    C = ellipse[2]
+    D = ellipse[3]
+    E = ellipse[4]
+    F = ellipse[5]
+
+    # print(A)
+    if B**2 - 4*A*C >= 0:
+        print("get_ellipse_parameters(): Shape found is not an ellipse")
+        return None
+
+    inner_square = math.sqrt( (A-C)**2 + B**2)
+    outside = 1.0 / (B**2 - 4*A*C)
+    a = outside * math.sqrt(2*(A*E**2 + C*D**2 - B*D*E + (B**2 - 4*A*C)*F) * ( (A+C) + inner_square))
+    b = outside * math.sqrt(2*(A*E**2 + C*D**2 - B*D*E + (B**2 - 4*A*C)*F) * ( (A+C) - inner_square))
+
+    # x_0 = (2.0*C*D - B*E) / (B*B - 4.0*A*C) 
+    # y_0 = (2.0*A*E - B*D) / (B*B - 4.0*A*C)
+
+    y_0 = (2.0*C*D - B*E) / (B*B - 4.0*A*C) 
+    x_0 = (2.0*A*E - B*D) / (B*B - 4.0*A*C)
+
+    # print(a)
+    # ellipse_and_a_b = np.array([A,B,C,D,E,F,a,b])
+    ellipse_and_a_b = np.array([x_0,y_0,a,b])
+
+    return ellipse_and_a_b
+
+
 def evaluate_ellipse(hsv):
-    hsv_green_mask = get_green_mask(hsv)
-    hsv_save_image(hsv_green_mask, "2_green_mask", is_gray=True)
+    """ Use the green ellipse to find: 
+        center, radius, angle 
+    """
+    bw_green_mask = get_green_mask(hsv)
+    hsv_save_image(bw_green_mask, "2_green_mask", is_gray=True)
+
+    top_border =    bw_green_mask[0,:]
+    bottom_border = bw_green_mask[IMG_HEIGHT-1,:]
+    left_border =   bw_green_mask[:,0]
+    right_border =  bw_green_mask[:,IMG_WIDTH-1]
     
+    sum_top_border = np.sum(top_border) + \
+        np.sum(bottom_border) + \
+        np.sum(left_border) + \
+        np.sum(right_border)
+
+    print sum_top_border
+
+    if sum_top_border != 0: 
+        # Then the green ellipse is toughing the border
+        return None, None, None
     
-    
-    return None, None, None
+    bw_green_ellipse = flood_fill(bw_green_mask, start=(0,0))
+    hsv_save_image(bw_green_ellipse, "3_green_ellipse", is_gray=True)
+
+
+    ellipse_parameters = get_ellipse_parameters(bw_green_ellipse)
+
+    # Choose the largest of the a and b parameter for the radius
+    # Choose angle = 0 since it is not possible to estimate from the ellipse
+    center_px = ellipse_parameters[0:2]
+    radius_px = np.amax(np.abs(ellipse_parameters[2:4]))
+    angle = 0
+
+    return center_px, radius_px, angle
+
 
 def evaluate_arrow(hsv):
     """ Use the arrow to find: 
@@ -675,8 +799,38 @@ def evaluate_inner_corners(hsv):
     return None, None, None
 
 
+def present_results(
+        est_e_x, est_e_y, est_e_z, est_e_yaw,
+        est_a_x, est_a_y, est_a_z, est_a_yaw,
+        est_i_x, est_i_y, est_i_z, est_i_yaw,
+        gt_x, gt_y, gt_z, gt_yaw):
+    """
+        Presenting the results from the different methods
+        and comparing them to the ground truth
+        e: ellipse detection
+        a: arrow detection
+        i: inner corner detection
+    """
+    print_header("Results")
+    rjust = 7
+
+    print "# X #"
+    print "||  gt_x   |  est_x  ||  gt_y   |  est_y  ||"
+
+
+    text_gt_x = '{:.2f}'.format(round(gt_x, 2)).rjust(rjust)
+    text_est_e_x = '{:.2f}'.format(round(est_e_x, 2)).rjust(rjust)
+    text_est_a_x = '{:.2f}'.format(round(est_a_x, 2)).rjust(rjust)
+    text_est_i_x = '{:.2f}'.format(round(est_i_x, 2)).rjust(rjust)
+
+    print "||", text_gt_x, "|",text_est_e_x, \
+            "||", text_est_a_x, "|",text_est_i_x, "||"
+
+
+
 def run(img_count = 0):
-    filepath = "dataset/low_flight_dataset_01/image_"+str(img_count)+".png"
+    dataset_id = 1
+    filepath = "dataset/low_flight_dataset_0"+str(dataset_id)+"/image_"+str(img_count)+".png"
     # filepath = "dataset/image_2_corners_long_side.jpg"
     # filepath = "dataset/white_corner_test.png"
     
@@ -685,28 +839,50 @@ def run(img_count = 0):
     hsv_inside_green = get_pixels_inside_green(hsv)
 
     center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
-    # center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
-    # center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
+    center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
+    center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
 
     if (center_px_from_ellipse is not None):
         center_px, radius_length_px, angle = center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse
-        print "Position from ellipse:", calculate_position(center_px, radius_length_px)
+        est_ellipse_x, est_ellipse_y, est_ellipse_z = calculate_position(center_px, radius_length_px)
+        print "Position from ellipse:", est_ellipse_x, est_ellipse_y, est_ellipse_z
     else:
+        est_ellipse_x, est_ellipse_y, est_ellipse_z = None, None, None
         print "Position from ellipse: [Not available]"
 
-    # if (center_px_from_arrow is not None):
-    #     center_px, radius_length_px, angle = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
-    #     print "Position from arrow:", calculate_position(center_px, radius_length_px)
-    # else:
-    #     print "Position from arrow: [Not available]"
+    if (center_px_from_arrow is not None):
+        center_px, radius_length_px, angle = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
+        est_arrow_x, est_arrow_y, est_arrow_z = calculate_position(center_px, radius_length_px)
+        print "Position from arrow:", est_arrow_x, est_arrow_y, est_arrow_z
+    else:
+        est_arrow_x, est_arrow_y, est_arrow_z = None, None, None
+        print "Position from arrow: [Not available]"
 
-    # if (center_px_from_inner_corners is not None):
-    #     center_px, radius_length_px, angle = center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners
-    #     print "Position from inner corners:", calculate_position(center_px, radius_length_px)
-    # else:
-    #     print "Position from inner corners: [Not available]"
+    if (center_px_from_inner_corners is not None):
+        center_px, radius_length_px, angle = center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners
+        est_inner_corners_x, est_inner_corners_y, est_inner_corners_z = calculate_position(center_px, radius_length_px)
+        print "Position from inner corners:", est_inner_corners_x, est_inner_corners_y, est_inner_corners_z
+    else:
+        est_inner_corners_x, est_inner_corners_y, est_inner_corners_z = None, None, None
+        print "Position from inner corners: [Not available]"
 
     print ""
+
+    json_filepath = "dataset/low_flight_dataset_0"+str(dataset_id)+"/low_flight_dataset.json"
+    with open(json_filepath) as json_file:
+        data = json.load(json_file)
+        gt_x, gt_y, gt_z = np.array(data[str(img_count)]['ground_truth'][0:3])*1000
+        gt_yaw = np.array(data[str(img_count)]['ground_truth'][3])
+        results_gt = np.array([gt_x, gt_y, gt_z, gt_yaw])
+        print "GT: ", gt_x, gt_y, gt_z, gt_yaw
+
+    
+    present_results(
+        est_ellipse_x, est_ellipse_y, est_ellipse_z, angle_from_ellipse,
+        est_arrow_x, est_arrow_y, est_arrow_z, angle_from_arrow,
+        est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, angle_from_inner_corners,
+        gt_x, gt_y, gt_z, gt_yaw
+    )
 
 
 
