@@ -813,11 +813,27 @@ def print_data_on_a_line(title, data_gt, data_est_e, data_est_a, data_est_i):
     print "||", title.rjust(3), "||", text_gt, "||",text_est_e, \
             "|", text_est_a, "|",text_est_i, "||"
 
-def present_results(
-        est_e_x, est_e_y, est_e_z, est_e_yaw,
-        est_a_x, est_a_y, est_a_z, est_a_yaw,
-        est_i_x, est_i_y, est_i_z, est_i_yaw,
-        gt_x, gt_y, gt_z, gt_yaw):
+
+def print_data_on_a_line_2(title, data):
+    rjust_gt = 12
+    rjust_est = 10
+    # print "|     || Ground Truth ||   Method 1 |   Method 2 |   Method 3 ||"
+    print "||-----||--------------||------------|------------|------------||"
+
+    text_gt = data[0].rjust(rjust_gt)
+    text_est_e = data[1].rjust(rjust_est)
+    text_est_a = data[2].rjust(rjust_est)
+    text_est_i = data[3].rjust(rjust_est)
+
+    print "||", title.rjust(3), "||", text_gt, "||",text_est_e, \
+            "|", text_est_a, "|",text_est_i, "||"
+
+# def present_results(
+#         gt_x, gt_y, gt_z, gt_yaw,
+#         est_e_x, est_e_y, est_e_z, est_e_yaw,
+#         est_a_x, est_a_y, est_a_z, est_a_yaw,
+#         est_i_x, est_i_y, est_i_z, est_i_yaw):
+def present_results(results):
     """
         Presenting the results from the different methods
         and comparing them to the ground truth
@@ -825,18 +841,33 @@ def present_results(
         a: arrow detection
         i: inner corner detection
     """
+
+    text_results = results.copy()
+
+    for i_method in range(4):
+        for i_variable in range(4):
+            data = results[i_method][i_variable]
+            if data is None:
+                text_results[i_method][i_variable] = 'None'
+            else:
+                text_results[i_method][i_variable] = '{:.2f}'.format(round(data, 2))
+
+
     print_header("Results")
     print "Method 1: Ellipse detection"
     print "Method 2: Arrow detection"
     print "Method 3: Inner corner detection"
     print "|==============================================================||"
     print "||     || Ground Truth ||   Method 1 |   Method 2 |   Method 3 ||"
-    print_data_on_a_line("X", gt_x, est_e_x, est_a_x, est_i_x)
-    print_data_on_a_line("Y", gt_y, est_e_y, est_a_y, est_i_y)
-    print_data_on_a_line("Z", gt_z, est_e_z, est_a_z, est_i_z)
-    print_data_on_a_line("Yaw", np.degrees(gt_yaw), np.degrees(est_e_yaw), np.degrees(est_a_yaw), np.degrees(est_i_yaw))
+    print_data_on_a_line_2("X", text_results[:,0])
+    print_data_on_a_line_2("Y", text_results[:,1])
+    print_data_on_a_line_2("Z", text_results[:,2])
+    print_data_on_a_line_2("Yaw", text_results[:,3])
+    # print_data_on_a_line_2("X", gt_x, est_e_x, est_a_x, est_i_x)
+    # print_data_on_a_line_2("Y", gt_y, est_e_y, est_a_y, est_i_y)
+    # print_data_on_a_line_2("Z", gt_z, est_e_z, est_a_z, est_i_z)
+    # print_data_on_a_line_2("Yaw", gt_yaw, est_e_yaw, est_a_yaw, est_i_yaw)
     print "|==============================================================||"
-
 
 
 def run(img_count = 0):
@@ -853,29 +884,41 @@ def run(img_count = 0):
     center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
     center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
 
+    ############
+    # Method 1 #
+    ############
     if (center_px_from_ellipse is not None):
-        center_px, radius_length_px, angle = center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse
+        center_px, radius_length_px, angle_rad = center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse
         est_ellipse_x, est_ellipse_y, est_ellipse_z = calculate_position(center_px, radius_length_px)
-        print "Position from ellipse:", est_ellipse_x, est_ellipse_y, est_ellipse_z
+        est_ellipse_angle = np.degrees(angle_rad)
+        # print "Position from ellipse:", est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle
     else:
-        est_ellipse_x, est_ellipse_y, est_ellipse_z = None, None, None
-        print "Position from ellipse: [Not available]"
+        est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle = None, None, None, None
+        # print "Position from ellipse: [Not available]"
 
+    ############
+    # Method 2 #
+    ############
     if (center_px_from_arrow is not None):
-        center_px, radius_length_px, angle = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
+        center_px, radius_length_px, angle_rad = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
         est_arrow_x, est_arrow_y, est_arrow_z = calculate_position(center_px, radius_length_px)
-        print "Position from arrow:", est_arrow_x, est_arrow_y, est_arrow_z
+        est_arrow_angle = np.degrees(angle_rad)
+        # print "Position from arrow:", est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle
     else:
-        est_arrow_x, est_arrow_y, est_arrow_z = None, None, None
-        print "Position from arrow: [Not available]"
+        est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle = None, None, None, None
+        # print "Position from arrow: [Not available]"
 
+    ############
+    # Method 3 #
+    ############
     if (center_px_from_inner_corners is not None):
-        center_px, radius_length_px, angle = center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners
+        center_px, radius_length_px, angle_rad = center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners
         est_inner_corners_x, est_inner_corners_y, est_inner_corners_z = calculate_position(center_px, radius_length_px)
-        print "Position from inner corners:", est_inner_corners_x, est_inner_corners_y, est_inner_corners_z
+        est_inner_corners_angle = np.degrees(angle_rad)
+        # print "Position from inner corners:", est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle
     else:
-        est_inner_corners_x, est_inner_corners_y, est_inner_corners_z = None, None, None
-        print "Position from inner corners: [Not available]"
+        est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle = None, None, None, None
+        # print "Position from inner corners: [Not available]"
 
     print ""
 
@@ -885,18 +928,16 @@ def run(img_count = 0):
         gt_x, gt_y, gt_z = np.array(data[str(img_count)]['ground_truth'][0:3])*1000
         gt_yaw = np.array(data[str(img_count)]['ground_truth'][3])
         results_gt = np.array([gt_x, gt_y, gt_z, gt_yaw])
-        print "GT: ", gt_x, gt_y, gt_z, gt_yaw
+        # print "GT: ", gt_x, gt_y, gt_z, gt_yaw
 
     
-    present_results(
-        est_ellipse_x, est_ellipse_y, est_ellipse_z, angle_from_ellipse,
-        est_arrow_x, est_arrow_y, est_arrow_z, angle_from_arrow,
-        est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, angle_from_inner_corners,
-        gt_x, gt_y, gt_z, gt_yaw
-    )
+    results = np.array([
+        [gt_x, gt_y, gt_z, gt_yaw],
+        [est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle],
+        [est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle],
+        [est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle]])
 
-
-
+    present_results(results)
 
     # inner_corners, intensities = find_right_angled_corners(hsv_white_only)
 
