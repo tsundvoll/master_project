@@ -10,6 +10,7 @@ import math
 import json
 
 import sys
+from prettytable import PrettyTable
 
 
 sys_image_id = int(sys.argv[1])
@@ -201,8 +202,8 @@ def get_normal_vector(hsv_white_only, corner_a, corner_b, is_short_side):
     avr_left = value_left_a/2.0 + value_left_b/2.0
     avr_right = value_right_a/2.0 + value_right_b/2.0
 
-    print "avr_left:", avr_left
-    print "avr_right:", avr_right
+    # print "avr_left:", avr_left
+    # print "avr_right:", avr_right
 
     draw_dot(hsv_normals, check_left_a, (225))
     draw_dot(hsv_normals, check_left_b, (225))
@@ -650,7 +651,7 @@ def evaluate_ellipse(hsv):
         np.sum(left_border) + \
         np.sum(right_border)
 
-    print sum_top_border
+    # print sum_top_border
 
     if sum_top_border != 0: 
         # Then the green ellipse is toughing the border
@@ -668,6 +669,11 @@ def evaluate_ellipse(hsv):
     radius_px = np.amax(np.abs(ellipse_parameters[2:4]))
     angle = 0
 
+
+    hsv_canvas_ellipse = hsv.copy()
+    draw_dot(hsv_canvas_ellipse, center_px, HSV_BLUE_COLOR)
+    hsv_save_image(hsv_canvas_ellipse, "4_canvas_ellipse")
+
     return center_px, radius_px, angle
 
 
@@ -684,12 +690,17 @@ def evaluate_arrow(hsv):
         arrow_unit_vector = normalize_vector(arrow_vector)
         ref_vector = np.array([0,1])
         
-        angle = np.degrees(calc_angle_between_vectors(arrow_vector, ref_vector))
+        angle = calc_angle_between_vectors(arrow_vector, ref_vector)
 
         arrow_length_px = np.linalg.norm(arrow_vector)
         # Use known relation between the real radius and the real arrow length
         # to find the radius length in pixels
         radius_length_px = arrow_length_px * RELATION_R_L3
+
+        hsv_canvas_arrow = hsv.copy()
+        draw_dot(hsv_canvas_arrow, center_px, HSV_RED_COLOR)
+        draw_dot(hsv_canvas_arrow, arrowhead_px, HSV_RED_COLOR)
+        hsv_save_image(hsv_canvas_arrow, "4_canvas_arrow")
 
         return center_px, radius_length_px, angle
         
@@ -735,7 +746,7 @@ def evaluate_inner_corners(hsv):
 
     if (inner_corners is not None):
         n_inner_corners = len(inner_corners)
-        print "n_inner_corners:", n_inner_corners
+        # print "n_inner_corners:", n_inner_corners
 
         if (n_inner_corners > 1) and (n_inner_corners <= 5):
         
@@ -754,10 +765,10 @@ def evaluate_inner_corners(hsv):
 
 
             c_m_value = img_average_intensity[np.int0(c_m[0])][np.int0(c_m[1])]
-            print "c_m_value", c_m_value
+            # print "c_m_value", c_m_value
 
             if c_m_value > 190: # The points are on a short side
-                print "Short side"
+                # print "Short side"
                 is_short_side = True
                 normal_vector = get_normal_vector(hsv_white_only, corner_a, corner_b, is_short_side)
                 normal_unit_vector = normalize_vector(normal_vector)
@@ -770,7 +781,7 @@ def evaluate_inner_corners(hsv):
                 forward_unit_vector = normal_unit_vector
 
             else: # The points are on a long side
-                print "Long side"
+                # print "Long side"
                 is_short_side = False
                 normal_vector = get_normal_vector(hsv_white_only, corner_a, corner_b, is_short_side)
                 normal_unit_vector = normalize_vector(normal_vector)
@@ -793,7 +804,10 @@ def evaluate_inner_corners(hsv):
             neg_x_axis = np.array([-1,0])
             angle = calc_angle_between_vectors(forward_unit_vector, neg_x_axis)
         
-            print "Angle:", np.degrees(angle)
+            hsv_canvas_inner_corners = hsv.copy()
+            draw_dot(hsv_canvas_inner_corners, center, HSV_LIGHT_ORANGE_COLOR)
+            hsv_save_image(hsv_canvas_inner_corners, "4_canvas_inner_corners")
+
             return center, length_radius, angle
 
     return None, None, None
@@ -842,32 +856,32 @@ def present_results(results):
         i: inner corner detection
     """
 
-    text_results = results.copy()
-
-    for i_method in range(4):
-        for i_variable in range(4):
-            data = results[i_method][i_variable]
-            if data is None:
-                text_results[i_method][i_variable] = 'None'
-            else:
-                text_results[i_method][i_variable] = '{:.2f}'.format(round(data, 2))
-
-
     print_header("Results")
     print "Method 1: Ellipse detection"
     print "Method 2: Arrow detection"
     print "Method 3: Inner corner detection"
-    print "|==============================================================||"
-    print "||     || Ground Truth ||   Method 1 |   Method 2 |   Method 3 ||"
-    print_data_on_a_line_2("X", text_results[:,0])
-    print_data_on_a_line_2("Y", text_results[:,1])
-    print_data_on_a_line_2("Z", text_results[:,2])
-    print_data_on_a_line_2("Yaw", text_results[:,3])
-    # print_data_on_a_line_2("X", gt_x, est_e_x, est_a_x, est_i_x)
-    # print_data_on_a_line_2("Y", gt_y, est_e_y, est_a_y, est_i_y)
-    # print_data_on_a_line_2("Z", gt_z, est_e_z, est_a_z, est_i_z)
-    # print_data_on_a_line_2("Yaw", gt_yaw, est_e_yaw, est_a_yaw, est_i_yaw)
-    print "|==============================================================||"
+
+
+    dat_dtype = {
+        'names' : (' ', 'Ground Truth', 'Method 1', 'Method 2', 'Method 3'),
+        'formats' : ('|S12', 'd', 'd', 'd', 'd')}
+    dat = np.zeros(4, dat_dtype)
+
+    dat[' '] = np.array(['X', 'Y', 'Z', 'Yaw'])
+    dat['Ground Truth'] = np.round(results[0], 2)
+    dat['Method 1'] = np.round(results[1], 2)
+    dat['Method 2'] = np.round(results[2], 2)
+    dat['Method 3'] = np.round(results[3], 2)
+
+    # print dat
+
+    table = PrettyTable(dat.dtype.names)
+    for row in dat:
+        table.add_row(row)
+    table.align = 'r'
+
+    print table
+
 
 
 def run(img_count = 0):
@@ -884,6 +898,9 @@ def run(img_count = 0):
     center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
     center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
 
+
+
+
     ############
     # Method 1 #
     ############
@@ -893,7 +910,8 @@ def run(img_count = 0):
         est_ellipse_angle = np.degrees(angle_rad)
         # print "Position from ellipse:", est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle
     else:
-        est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle = None, None, None, None
+        # est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle = None, None, None, None
+        est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle = 0.0, 0.0, 0.0, 0.0
         # print "Position from ellipse: [Not available]"
 
     ############
@@ -905,7 +923,8 @@ def run(img_count = 0):
         est_arrow_angle = np.degrees(angle_rad)
         # print "Position from arrow:", est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle
     else:
-        est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle = None, None, None, None
+        # est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle = None, None, None, None
+        est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle = 0.0, 0.0, 0.0, 0.0
         # print "Position from arrow: [Not available]"
 
     ############
@@ -917,19 +936,16 @@ def run(img_count = 0):
         est_inner_corners_angle = np.degrees(angle_rad)
         # print "Position from inner corners:", est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle
     else:
-        est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle = None, None, None, None
+        # est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle = None, None, None, None
+        est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle = 0.0, 0.0, 0.0, 0.0
         # print "Position from inner corners: [Not available]"
 
-    print ""
 
     json_filepath = "dataset/low_flight_dataset_0"+str(dataset_id)+"/low_flight_dataset.json"
     with open(json_filepath) as json_file:
         data = json.load(json_file)
         gt_x, gt_y, gt_z = np.array(data[str(img_count)]['ground_truth'][0:3])*1000
-        gt_yaw = np.array(data[str(img_count)]['ground_truth'][3])
-        results_gt = np.array([gt_x, gt_y, gt_z, gt_yaw])
-        # print "GT: ", gt_x, gt_y, gt_z, gt_yaw
-
+        gt_yaw = np.degrees(np.array(data[str(img_count)]['ground_truth'][3]))*(-1) - 90 # Counter-clockwise is positive angle and zero degrees is rotated 90 degrees to the left
     
     results = np.array([
         [gt_x, gt_y, gt_z, gt_yaw],
@@ -938,8 +954,7 @@ def run(img_count = 0):
         [est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle]])
 
     present_results(results)
-
-    # inner_corners, intensities = find_right_angled_corners(hsv_white_only)
+    
 
     
 
@@ -969,58 +984,58 @@ if single_image:
     print "# Now testing on image", str(single_image_index).rjust(2), "#"
     print "###########################"
     run(single_image_index)
-else:
-    for i in range(3):
-        # answer = raw_input("Press enter for next image")
-        print ""
-        print "###########################"
-        print "# Running CV module on image", i, "#"
-        print "###########################"
-        length, centroid = run(i)
-        print ""
-        print "# Preprocessing"
-        print "length, centroid:", length, centroid
-        print ""
+# else:
+#     for i in range(3):
+#         # answer = raw_input("Press enter for next image")
+#         print ""
+#         print "###########################"
+#         print "# Running CV module on image", i, "#"
+#         print "###########################"
+#         length, centroid = run(i)
+#         print ""
+#         print "# Preprocessing"
+#         print "length, centroid:", length, centroid
+#         print ""
 
-        if length is not None:
-            json_filepath = "dataset/low_flight_dataset_02/low_flight_dataset.json"
-            with open(json_filepath) as json_file:
-                data = json.load(json_file)
-                gt_x, gt_y, gt_z = np.array(data[str(i)]['ground_truth'][0:3])*1000
-                results_gt.append([gt_x, gt_y, gt_z])
-                print "GT: ", gt_x, gt_y, gt_z
+#         if length is not None:
+#             json_filepath = "dataset/low_flight_dataset_02/low_flight_dataset.json"
+#             with open(json_filepath) as json_file:
+#                 data = json.load(json_file)
+#                 gt_x, gt_y, gt_z = np.array(data[str(i)]['ground_truth'][0:3])*1000
+#                 results_gt.append([gt_x, gt_y, gt_z])
+#                 print "GT: ", gt_x, gt_y, gt_z
 
-            est_x, est_y, est_z = calculate_position(centroid, length)
+#             est_x, est_y, est_z = calculate_position(centroid, length)
 
-            print "Est:", est_x, est_y, est_z
-            results_est.append([est_x, est_y, est_z])
+#             print "Est:", est_x, est_y, est_z
+#             results_est.append([est_x, est_y, est_z])
 
 
-    np_results_gt = np.array(results_gt)
-    np_results_est = np.array(results_est)
-    # print "Results ground truth"
-    # print np_results_gt
-    # print "Results estimate"
-    # print np_results_est
+#     np_results_gt = np.array(results_gt)
+#     np_results_est = np.array(results_est)
+#     # print "Results ground truth"
+#     # print np_results_gt
+#     # print "Results estimate"
+#     # print np_results_est
 
-    print_header("Showing results")
+#     print_header("Showing results")
 
-    n_results = len(np_results_gt)
-    print "n_results:", n_results
-    rjust = 7
-    print "||  gt_x   |  est_x  ||  gt_y   |  est_y  ||  gt_z   |  est_z  ||"
-    print "-----------------------------------------------------------------"
-    for i in range(n_results):
+#     n_results = len(np_results_gt)
+#     print "n_results:", n_results
+#     rjust = 7
+#     print "||  gt_x   |  est_x  ||  gt_y   |  est_y  ||  gt_z   |  est_z  ||"
+#     print "-----------------------------------------------------------------"
+#     for i in range(n_results):
 
-        text_gt_x = '{:.2f}'.format(round(np_results_gt[i][0], 2)).rjust(rjust)
-        text_est_x = '{:.2f}'.format(round(np_results_est[i][0], 2)).rjust(rjust)
+#         text_gt_x = '{:.2f}'.format(round(np_results_gt[i][0], 2)).rjust(rjust)
+#         text_est_x = '{:.2f}'.format(round(np_results_est[i][0], 2)).rjust(rjust)
 
-        text_gt_y = '{:.2f}'.format(round(np_results_gt[i][1], 2)).rjust(rjust)
-        text_est_y = '{:.2f}'.format(round(np_results_est[i][1], 2)).rjust(rjust)
+#         text_gt_y = '{:.2f}'.format(round(np_results_gt[i][1], 2)).rjust(rjust)
+#         text_est_y = '{:.2f}'.format(round(np_results_est[i][1], 2)).rjust(rjust)
 
-        text_gt_z = '{:.2f}'.format(round(np_results_gt[i][2], 2)).rjust(rjust)
-        text_est_z = '{:.2f}'.format(round(np_results_est[i][2], 2)).rjust(rjust)
+#         text_gt_z = '{:.2f}'.format(round(np_results_gt[i][2], 2)).rjust(rjust)
+#         text_est_z = '{:.2f}'.format(round(np_results_est[i][2], 2)).rjust(rjust)
 
-        print "||", text_gt_x, "|",text_est_x, \
-            "||", text_gt_y, "|",text_est_y, \
-            "||", text_gt_z, "|",text_est_z, "||"
+#         print "||", text_gt_x, "|",text_est_x, \
+#             "||", text_gt_y, "|",text_est_y, \
+#             "||", text_gt_z, "|",text_est_z, "||"
