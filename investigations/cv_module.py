@@ -100,10 +100,10 @@ def hsv_to_opencv_hsv(hue, saturation, value):
     return np.array([ hue, saturation, value])*converting_constant
 
 
-def draw_dot(img, position, color):
+def draw_dot(img, position, color, size=3):
     cX = np.int0(position[1])
     cY = np.int0(position[0])
-    cv2.circle(img, (cX, cY), 3, color, -1)
+    cv2.circle(img, (cX, cY), size, color, -1)
 
 
 def draw_arrow(img, start, end):
@@ -715,7 +715,7 @@ def evaluate_ellipse(hsv):
     radius_px = np.amax(np.abs(ellipse_parameters[2:4]))
     angle = 0
 
-    print "center_px:", center_px
+    # print "center_px:", center_px
 
     hsv_canvas_ellipse = hsv.copy()
     draw_dot(hsv_canvas_ellipse, center_px, HSV_BLUE_COLOR)
@@ -927,7 +927,7 @@ def present_results(results):
 
 
 def run(img_count = 0):
-    dataset_id = 2
+    dataset_id = 1
     filepath = "dataset/low_flight_dataset_0"+str(dataset_id)+"/image_"+str(img_count)+".png"
     # filepath = "dataset/image_2_corners_long_side.jpg"
     # filepath = "dataset/white_corner_test.png"
@@ -941,6 +941,7 @@ def run(img_count = 0):
     center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
 
 
+    hsv_canvas_all = hsv.copy()
 
 
     ############
@@ -950,6 +951,8 @@ def run(img_count = 0):
         center_px, radius_length_px, angle_rad = center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse
         est_ellipse_x, est_ellipse_y, est_ellipse_z = calculate_position(center_px, radius_length_px)
         est_ellipse_angle = np.degrees(angle_rad)
+
+        draw_dot(hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=5)
         # print "Position from ellipse:", est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle
     else:
         # est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle = None, None, None, None
@@ -963,6 +966,8 @@ def run(img_count = 0):
         center_px, radius_length_px, angle_rad = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
         est_arrow_x, est_arrow_y, est_arrow_z = calculate_position(center_px, radius_length_px)
         est_arrow_angle = np.degrees(angle_rad)
+
+        draw_dot(hsv_canvas_all, center_px, HSV_RED_COLOR, size=4)
         # print "Position from arrow:", est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle
     else:
         # est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle = None, None, None, None
@@ -976,12 +981,15 @@ def run(img_count = 0):
         center_px, radius_length_px, angle_rad = center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners
         est_inner_corners_x, est_inner_corners_y, est_inner_corners_z = calculate_position(center_px, radius_length_px)
         est_inner_corners_angle = np.degrees(angle_rad)
+
+        draw_dot(hsv_canvas_all, center_px, HSV_LIGHT_ORANGE_COLOR, size=3)
         # print "Position from inner corners:", est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle
     else:
         # est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle = None, None, None, None
         est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle = 0.0, 0.0, 0.0, 0.0
         # print "Position from inner corners: [Not available]"
 
+    hsv_save_image(hsv_canvas_all, "5_canvas_all")
 
     json_filepath = "dataset/low_flight_dataset_0"+str(dataset_id)+"/low_flight_dataset.json"
     with open(json_filepath) as json_file:
@@ -994,7 +1002,7 @@ def run(img_count = 0):
 
         if gt_yaw <= -180:
             gt_yaw += 360
-            
+
     results = np.array([
         [gt_x, gt_y, gt_z, gt_yaw],
         [est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle],
@@ -1022,7 +1030,8 @@ def run(img_count = 0):
 
 # single_image_index = 40
 single_image_index = sys_image_id
-single_image = True
+single_image = False
+len_dataset = 40
 
 results_gt = []
 results_est = []
@@ -1032,6 +1041,15 @@ if single_image:
     print "# Now testing on image", str(single_image_index).rjust(2), "#"
     print "###########################"
     run(single_image_index)
+else:
+    for image_index in range(len_dataset):
+        print "###########################"
+        print "# Now testing on image", str(image_index).rjust(2), "#"
+        print "###########################"
+        run(image_index)
+        answer = raw_input("Press enter for next image")
+
+
 # else:
 #     for i in range(3):
 #         # answer = raw_input("Press enter for next image")
