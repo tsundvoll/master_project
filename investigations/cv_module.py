@@ -664,11 +664,14 @@ def get_ellipse_parameters(green_ellipse):
     a = outside * math.sqrt(2*(A*E**2 + C*D**2 - B*D*E + (B**2 - 4*A*C)*F) * ( (A+C) + inner_square))
     b = outside * math.sqrt(2*(A*E**2 + C*D**2 - B*D*E + (B**2 - 4*A*C)*F) * ( (A+C) - inner_square))
 
-    # x_0 = (2.0*C*D - B*E) / (B*B - 4.0*A*C) 
-    # y_0 = (2.0*A*E - B*D) / (B*B - 4.0*A*C)
+    x_raw = (2.0*C*D - B*E) / (B*B - 4.0*A*C) 
+    y_raw = (2.0*A*E - B*D) / (B*B - 4.0*A*C)
 
-    y_0 = (2.0*C*D - B*E) / (B*B - 4.0*A*C) 
-    x_0 = (2.0*A*E - B*D) / (B*B - 4.0*A*C)
+    # y_0 = (2.0*C*D - B*E) / (B*B - 4.0*A*C) 
+    # x_0 = IMG_HEIGHT - (2.0*A*E - B*D) / (B*B - 4.0*A*C) - 1
+    
+    x_0 = (IMG_HEIGHT - 1) - y_raw
+    y_0 = x_raw
 
     # print(a)
     # ellipse_and_a_b = np.array([A,B,C,D,E,F,a,b])
@@ -712,10 +715,11 @@ def evaluate_ellipse(hsv):
     radius_px = np.amax(np.abs(ellipse_parameters[2:4]))
     angle = 0
 
+    print "center_px:", center_px
 
     hsv_canvas_ellipse = hsv.copy()
     draw_dot(hsv_canvas_ellipse, center_px, HSV_BLUE_COLOR)
-    hsv_save_image(hsv_canvas_ellipse, "4_canvas_ellipse")
+    hsv_save_image(hsv_canvas_ellipse, "4_canvas_ellipse") #, is_gray=True)
 
     return center_px, radius_px, angle
 
@@ -773,7 +777,6 @@ def get_relevant_corners(inner_corners):
 
 
 def evaluate_inner_corners(hsv):
-    # wp
     """ Use the inner corners to find: 
         center, radius, angle 
     """
@@ -924,7 +927,7 @@ def present_results(results):
 
 
 def run(img_count = 0):
-    dataset_id = 1
+    dataset_id = 2
     filepath = "dataset/low_flight_dataset_0"+str(dataset_id)+"/image_"+str(img_count)+".png"
     # filepath = "dataset/image_2_corners_long_side.jpg"
     # filepath = "dataset/white_corner_test.png"
