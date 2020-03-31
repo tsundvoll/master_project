@@ -336,8 +336,51 @@ def get_pixels_inside_green(hsv):
     return hsv_ellipse
 
 
+def get_pixels_inside_orange(hsv):
+    """ 
+        Function that finds the orange in an image, make a bounding box around it,
+        and paints everything outside the box in black.
+
+        Returns the painted image and a boolean stating wheather any orange was found.
+     """
+    
+    hsv_inside_orange = hsv.copy()
+    hsv_ellipse_mask = np.zeros((IMG_HEIGHT, IMG_WIDTH))
+    hsv_ellipse = hsv.copy()
+
+    hsv_orange_only = get_orange_mask(hsv)  
+    hsv_save_image(hsv_orange_only, "2b_orange_mask", is_gray=True)
+
+    orange_x, orange_y = np.where(hsv_orange_only==255)
+    # If no orange in image: return original image
+    if len(orange_x) == 0:
+        x_min = 0
+        x_max = IMG_HEIGHT - 1
+        y_min = 0
+        y_max = IMG_WIDTH - 1
+    else:
+        x_min = np.amin(orange_x)
+        x_max = np.amax(orange_x)
+        y_min = np.amin(orange_y)
+        y_max = np.amax(orange_y)
+    
+
+    hsv_inside_orange[0:x_min,] = HSV_BLACK_COLOR
+    hsv_inside_orange[x_max+1:,] = HSV_BLACK_COLOR
+
+    hsv_inside_orange[:,0:y_min] = HSV_BLACK_COLOR
+    hsv_inside_orange[:,y_max+1:] = HSV_BLACK_COLOR
+
+    hsv_save_image(hsv_inside_orange, '3_inside_orange')
+
+    return hsv_inside_orange
+
+
 def find_white_centroid(hsv):
-    hsv_white_only = get_white_mask(hsv)
+
+    hsv_inside_orange = get_pixels_inside_orange(hsv)
+
+    hsv_white_only = get_white_mask(hsv_inside_orange)
     hsv_white_only = make_gaussian_blurry(hsv_white_only, 5)
 
 	# calculate moments of binary image
@@ -842,11 +885,7 @@ def print_data_on_a_line_2(title, data):
     print "||", title.rjust(3), "||", text_gt, "||",text_est_e, \
             "|", text_est_a, "|",text_est_i, "||"
 
-# def present_results(
-#         gt_x, gt_y, gt_z, gt_yaw,
-#         est_e_x, est_e_y, est_e_z, est_e_yaw,
-#         est_a_x, est_a_y, est_a_z, est_a_yaw,
-#         est_i_x, est_i_y, est_i_z, est_i_yaw):
+
 def present_results(results):
     """
         Presenting the results from the different methods
