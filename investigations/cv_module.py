@@ -54,6 +54,8 @@ def make_gaussian_blurry(image, blur_size):
 
 def make_circle_average_blurry(image, blur_size):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (blur_size,blur_size))
+    # print ""
+    # print kernel
     n_elements = np.float64(np.count_nonzero(kernel))
     kernel_norm = (kernel/n_elements)
     
@@ -151,7 +153,7 @@ def print_header(text):
     border_line = "#"*(text_length+4)
     text_line = "# " + text + " #"
 
-    print ""
+    # print ""
     print border_line
     print text_line
     print border_line
@@ -533,6 +535,9 @@ def find_orange_arrowhead(hsv):
 
     hsv_orange_mask_inverted = cv2.bitwise_not(hsv_orange_mask)
 
+    hsv_save_image(hsv_orange_mask_inverted, "0_orange_mask_inverted", is_gray=True)
+
+
     orange_corners, intensities = find_right_angled_corners(hsv_orange_mask_inverted)
 
     if orange_corners is None:
@@ -785,6 +790,8 @@ def evaluate_inner_corners(hsv):
     hsv_white_only_before_blur = get_white_mask(hsv)
     hsv_white_only = make_gaussian_blurry(hsv_white_only_before_blur, 5)
 
+    hsv_save_image(hsv_white_only, "0_white_only", is_gray=True)
+
     inner_corners, intensities = find_right_angled_corners(hsv_white_only)
     
     average_filter_size = 19
@@ -898,7 +905,7 @@ def present_results(results):
         i: inner corner detection
     """
 
-    print_header("Results")
+    # print_header("Results")
     print "Method 1: Ellipse detection"
     print "Method 2: Arrow detection"
     print "Method 3: Inner corner detection"
@@ -909,7 +916,7 @@ def present_results(results):
         'formats' : ('|S12', 'd', 'd', 'd', 'd')}
     dat = np.zeros(4, dat_dtype)
 
-    dat[' '] = np.array(['X', 'Y', 'Z', 'Yaw'])
+    dat[' '] = np.array(['X (mm)', 'Y (mm)', 'Z (mm)', 'Yaw (deg)'])
     dat['Ground Truth'] = np.round(results[0], 2)
     dat['Method 1'] = np.round(results[1], 2)
     dat['Method 2'] = np.round(results[2], 2)
@@ -927,7 +934,7 @@ def present_results(results):
 
 
 def run(img_count = 0):
-    dataset_id = 1
+    dataset_id = 2
     filepath = "dataset/low_flight_dataset_0"+str(dataset_id)+"/image_"+str(img_count)+".png"
     # filepath = "dataset/image_2_corners_long_side.jpg"
     # filepath = "dataset/white_corner_test.png"
@@ -1040,14 +1047,19 @@ if single_image:
     print "###########################"
     print "# Now testing on image", str(single_image_index).rjust(2), "#"
     print "###########################"
+    # text = "Now testing on image " + str(single_image_index).rjust(2)
+    # print_header(str())
     run(single_image_index)
 else:
     for image_index in range(len_dataset):
-        print "###########################"
-        print "# Now testing on image", str(image_index).rjust(2), "#"
-        print "###########################"
+        text = "Now testing on image " + str(image_index).rjust(2)
+        print_header(text)
+        # print "###########################"
+        # print "# Now testing on image", str(image_index).rjust(2), "#"
+        # print "###########################"
         run(image_index)
-        answer = raw_input("Press enter for next image")
+        # answer = raw_input("Press enter for next image")
+        answer = raw_input("")
 
 
 # else:
