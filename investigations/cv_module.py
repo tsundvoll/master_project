@@ -987,8 +987,14 @@ def run(img_count = 0):
     with open(json_filepath) as json_file:
         data = json.load(json_file)
         gt_x, gt_y, gt_z = np.array(data[str(img_count)]['ground_truth'][0:3])*1000
-        gt_yaw = np.degrees(np.array(data[str(img_count)]['ground_truth'][3]))*(-1) - 90 # Counter-clockwise is positive angle and zero degrees is rotated 90 degrees to the left
-    
+        gt_yaw_raw = np.degrees(np.array(data[str(img_count)]['ground_truth'][3]))
+        
+        # Counter-clockwise is positive angle and zero degrees is rotated 90 degrees to the left
+        gt_yaw = gt_yaw_raw*(-1) - 90
+
+        if gt_yaw <= -180:
+            gt_yaw += 360
+            
     results = np.array([
         [gt_x, gt_y, gt_z, gt_yaw],
         [est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle],
