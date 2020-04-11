@@ -1,30 +1,62 @@
 # master_project
 
 
-ROS package names:
+ROS package names alternatives:
 * master
 * auto_lander
 * drone_vision
 * lander_vision
 * uav_lander
 
-* uav_vision
+* uav_vision!
+
+
 
 ## Installation
 
-### uuv_simulator
-sudo apt install ros-kinetic-uuv-simulator
+Prerequisites:
+* Ubuntu Kinetic (16.04)
+
+
+### Install ROS Kinetic
+Follow this guide: http://wiki.ros.org/kinetic/Installation/Ubuntu
 
 ### gazebo_ros
 sudo apt-get install ros-kinetic-gazebo-ros
 
+### uuv_simulator
+sudo apt install ros-kinetic-uuv-simulator
 
 ## Packages used:
-* uuv_simulator (https://github.com/uuvsimulator/uuv_simulator)
+* ardrone_autonomy (https://ardrone-autonomy.readthedocs.io/en/latest/installation.html)
+```
+sudo apt-get install ros-kinetic-ardrone-autonomy
+```
 
 * tum_simulator on Kinetic and Gazebo 7 (https://github.com/eborghi10/AR.Drone-ROS)
+    (Download files and place them in folder /ardrone_simulator_gazebo7)
+
+* uuv_simulator (https://github.com/uuvsimulator/uuv_simulator)
+```
+sudo apt install ros-kinetic-uuv-simulator
+```
 
 * key_teleop (https://github.com/ros-teleop/teleop_tools)
+
+
+## Add the necessary models
+* Add models to the hidden folder .gazebo/models
+
+### Other useful things:
+```
+sudo apt-get install python-pip
+python -m pip install --user numpy scipy matplotlib 
+```
+
+* Terminator
+```
+sudo apt-get install terminator
+```
 
 ## TO DO 14. February:
 * Collect a larger dataset:
