@@ -25,6 +25,7 @@ Follow this guide: http://wiki.ros.org/kinetic/Installation/Ubuntu
 sudo apt-get install ros-kinetic-gazebo-ros
 
 ### uuv_simulator
+* uuv_simulator (https://github.com/uuvsimulator/uuv_simulator)
 sudo apt install ros-kinetic-uuv-simulator
 
 ## Packages used:
@@ -36,12 +37,6 @@ sudo apt-get install ros-kinetic-ardrone-autonomy
 * tum_simulator on Kinetic and Gazebo 7 (https://github.com/eborghi10/AR.Drone-ROS)
     (Download files and place them in folder /ardrone_simulator_gazebo7)
 
-* uuv_simulator (https://github.com/uuvsimulator/uuv_simulator)
-```
-sudo apt install ros-kinetic-uuv-simulator
-```
-
-* key_teleop (https://github.com/ros-teleop/teleop_tools)
 
 
 ## Add the necessary models
