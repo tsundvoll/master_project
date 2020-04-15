@@ -2,30 +2,43 @@ import numpy as np
 import cv2
 import math
 
-HSV_YELLOW_COLOR = [30, 255, 255]
-HSV_GREEN_COLOR = [60, 255, 64]
-HSV_LIGHT_ORANGE_COLOR = [15, 255, 255]
-HSV_WHITE_COLOR = [180, 0, 255]
-
-HSV_BLUE_COLOR = [100, 255, 128]
-
-HSV_BACKGROUND = HSV_BLUE_COLOR
 
 
 # Dimentions
 D_H_SHORT = 1.0
 D_H_LONG = 9.0
-D_ARROW = 25.0
-D_RADIUS = 35.0
+D_ARROW = 30.0
+D_RADIUS = 40.0
 
 SIZE_ARROW = 4.0
 SIZE_ORANGE_CIRCLE = 2.0
 
-RADIUS_PX = 300.0
+RADIUS_PX = 1200.0
 
 IMG_SIZE = np.int0(RADIUS_PX*2+1)
 
 IMG_CENTER = (np.int0(RADIUS_PX), np.int0(RADIUS_PX))
+
+
+def hsv_to_opencv_hsv(hue, saturation, value):
+    """ 
+    Function that takes in hue, saturation and value in the ranges
+        hue: [0, 360] degrees,  saturation: [0, 100] %,     value: [0, 100] %
+    and converts it to OpenCV hsv which operates with the ranges
+        hue: [0, 180],          saturation: [0, 255],       value: [0, 255]
+    """
+    converting_constant = np.array([0.5, 2.55, 2.55]) 
+    return np.array([ hue, saturation, value])*converting_constant
+
+
+HSV_GREEN_COLOR = hsv_to_opencv_hsv(120, 100, 40)
+HSV_LIGHT_ORANGE_COLOR = hsv_to_opencv_hsv(35, 100, 100)
+HSV_WHITE_COLOR = hsv_to_opencv_hsv(0, 0, 100)
+HSV_BLUE_COLOR = hsv_to_opencv_hsv(240, 60, 70)
+
+
+HSV_BACKGROUND = HSV_WHITE_COLOR
+
 
 
 def hsv_save_image(image, label='helipad', is_gray=False):

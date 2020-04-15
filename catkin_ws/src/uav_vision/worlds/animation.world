@@ -232,16 +232,16 @@
           <collision name='collision_01'>
             <geometry>
               <mesh>
-                <uri>model://helipad_ar/meshes/pad.dae</uri>
-                <scale>0.386 0.386 1</scale>
+                <uri>model://helipad/meshes/helipad.dae</uri>
+                <scale>1 1 1</scale>
               </mesh>
             </geometry>
           </collision>
           <visual name='visual_01'>
             <geometry>
               <mesh>
-                <uri>model://helipad_ar/meshes/pad.dae</uri>
-                <scale>0.386 0.386 1</scale>
+                <uri>model://helipad/meshes/helipad.dae</uri>
+                <scale>1 1 1</scale>
               </mesh>
             </geometry>
           </visual>
