@@ -380,6 +380,9 @@ def find_white_centroid(hsv):
     hsv_inside_orange = get_pixels_inside_orange(hsv)
 
     hsv_white_only = get_white_mask(hsv_inside_orange)
+    if hsv_white_only is None:
+        rospy.loginfo("hsv_white_only is none")
+        return None
     hsv_white_only = make_gaussian_blurry(hsv_white_only, 5)
 
 	# calculate moments of binary image
@@ -983,6 +986,7 @@ def run(img_count = 0):
 
 
 def ros_run(hsv, count):
+    hsv_save_image(hsv, '0_hsv')
     hsv_inside_green = get_pixels_inside_green(hsv)
 
     center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
