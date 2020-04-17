@@ -38,9 +38,14 @@ sudo apt-get install ros-kinetic-ardrone-autonomy
     (Download files and place them in folder /ardrone_simulator_gazebo7)
 
 
-
 ## Add the necessary models
 * Add models to the hidden folder .gazebo/models
+
+
+## Scipy
+Scipy 1.4.1 seems to be necessary to have to run pid_controller.py.
+However, it is a bit hard to install with python 2.7, and I have not yet solved this problem.
+Scipy 1.2.1 works
 
 ### Other useful things:
 ```

@@ -5,7 +5,7 @@ import math
 
 
 # Dimentions
-D_H_SHORT = 1.0
+D_H_SHORT = 3.0
 D_H_LONG = 9.0
 D_ARROW = 30.0
 D_RADIUS = 40.0
