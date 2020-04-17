@@ -713,6 +713,8 @@ def evaluate_ellipse(hsv):
 
 
     ellipse_parameters = get_ellipse_parameters(bw_green_ellipse)
+    if ellipse_parameters is None:
+        return None, None, None
 
     # Choose the largest of the a and b parameter for the radius
     # Choose angle = 0 since it is not possible to estimate from the ellipse
