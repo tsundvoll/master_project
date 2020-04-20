@@ -15,9 +15,11 @@ import config as cfg
 
 
 
-relative_position = None
+gt_relative_position = None
+est_relative_position = None
+
 def gt_callback(data):
-    global relative_position
+    global gt_relative_position
     gt_pose = data.pose.pose
 
     # Transform ground truth in body frame wrt. world frame to body frame wrt. landing platform
@@ -83,17 +85,12 @@ def gt_callback(data):
     # This is more intuitive for the controller
     d_2_1_inv = -d_2_1
 
-
-
-    relative_position = np.concatenate((d_2_1_inv, r_2_1.as_euler('xyz')))
-    # rospy.loginfo("x: " + str(relative_position[0]))
-    # rospy.loginfo("y: " + str(relative_position[1]))
-    # rospy.loginfo("z: " + str(relative_position[2]))
+    gt_relative_position = np.concatenate((d_2_1_inv, r_2_1.as_euler('xyz')))
 
 
 def estimate_callback(data):
-    global relative_position
-    relative_position = np.array([data.x, data.y, data.z, 0, 0, 0])
+    global est_relative_position
+    est_relative_position = np.array([data.x, data.y, data.z, 0, 0, 0])
 
 
 # Setup for the PID controller
@@ -157,10 +154,9 @@ def main():
 
     if use_estimate:
         rospy.Subscriber('/drone_estimate_filtered', Point, estimate_callback)
-    else:
-        rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
     
-
+    rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
+    
     rospy.Subscriber('/set_point', Point, set_point_callback)
 
     
@@ -190,6 +186,11 @@ def main():
     rate = rospy.Rate(20) # Hz
     while not rospy.is_shutdown():
 
+        if use_estimate:
+            relative_position = est_relative_position
+        else:
+            relative_position = gt_relative_position
+
         if relative_position is not None:
             actuation = controller(relative_position)
             msg = Twist()
@@ -203,12 +204,12 @@ def main():
             # Publish values for tuning
             reference_pub.publish(reference_msg)
 
-            pose_msg.linear.x = relative_position[0]
-            pose_msg.linear.y = relative_position[1]
-            pose_msg.linear.z = relative_position[2]
-            pose_msg.angular.x = relative_position[3]
-            pose_msg.angular.y = relative_position[4]
-            pose_msg.angular.z = relative_position[5]
+            pose_msg.linear.x = gt_relative_position[0]
+            pose_msg.linear.y = gt_relative_position[1]
+            pose_msg.linear.z = gt_relative_position[2]
+            pose_msg.angular.x = gt_relative_position[3]
+            pose_msg.angular.y = gt_relative_position[4]
+            pose_msg.angular.z = gt_relative_position[5]
             pose_pub.publish(pose_msg)
 
             error_msg.linear.x = error_prev[0]

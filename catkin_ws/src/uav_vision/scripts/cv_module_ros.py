@@ -861,9 +861,9 @@ def ros_run(hsv, count):
     hsv_save_image(hsv_canvas_all, "5_canvas_all_"+str(count))
 
     result = np.array([
-        # [est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle],
+        [est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle],
         [est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle],
-        # [est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle]        
+        [est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle]        
     ])
 
     return result
@@ -891,6 +891,15 @@ def main():
     rospy.Subscriber('/drone_pose', Twist, rel_gt_callback)
 
     pub_heartbeat = rospy.Publisher("/heartbeat", Empty, queue_size=10)
+    
+    pub_est_ellipse = rospy.Publisher("/estimate/ellipse", Twist, queue_size=10)
+    pub_est_arrow = rospy.Publisher("/estimate/arrow", Twist, queue_size=10)
+    pub_est_corners = rospy.Publisher("/estimate/corners", Twist, queue_size=10)
+    
+
+    est_ellipse_msg = Twist()
+    est_arrow_msg = Twist()
+    est_corners_msg = Twist()
     heartbeat_msg = Empty()
 
     rospy.loginfo("Starting CV module")
@@ -904,8 +913,26 @@ def main():
 
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
             est = ros_run(hsv, count)
-            gt = rel_gt_converter(global_rel_gt)
-            result = np.concatenate((est, gt))
+            # gt = rel_gt_converter(global_rel_gt)
+            # result = np.concatenate((est, gt))
+
+            est_ellipse_msg.linear.x = est[0][0]
+            est_ellipse_msg.linear.y = est[0][1]
+            est_ellipse_msg.linear.z = est[0][2]
+            est_ellipse_msg.angular.z = est[0][3]
+            pub_est_ellipse.publish(est_ellipse_msg)
+
+            est_arrow_msg.linear.x = est[1][0]
+            est_arrow_msg.linear.y = est[1][1]
+            est_arrow_msg.linear.z = est[1][2]
+            est_arrow_msg.angular.z = est[1][3]
+            pub_est_ellipse.publish(est_arrow_msg)
+
+            est_corners_msg.linear.x = est[2][0]
+            est_corners_msg.linear.y = est[2][1]
+            est_corners_msg.linear.z = est[2][2]
+            est_corners_msg.angular.z = est[2][3]
+            pub_est_ellipse.publish(est_corners_msg)
 
             # print rel_gt_converter(global_rel_gt)
             # print result
