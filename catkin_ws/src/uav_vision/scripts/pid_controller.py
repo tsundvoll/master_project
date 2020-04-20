@@ -196,6 +196,7 @@ def main():
             msg.linear.x = actuation[0]
             msg.linear.y = actuation[1]
             msg.linear.z = actuation[2]
+            msg.angular.z = 0.1 # For testing
 
             control_pub.publish(msg)
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
+from std_msgs.msg import Empty
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 
@@ -15,7 +16,7 @@ bridge = CvBridge()
 drone_image_raw = None
 global_image = None
 global_rel_gt = None
-
+save_images = False
 
 # Constants
 D_H_SHORT = 3.0
@@ -70,10 +71,11 @@ def make_circle_average_blurry(image, blur_size):
 def hsv_save_image(image, label='image', is_gray=False):
     # folder = 'image_processing/detect_h/'
     folder = './image_processing/'
-    if is_gray:
-        cv2.imwrite(folder+label+".png", image)
-    else:
-        cv2.imwrite(folder+label+".png", cv2.cvtColor(image, cv2.COLOR_HSV2BGR))
+    if save_images:
+        if is_gray:
+            cv2.imwrite(folder+label+".png", image)
+        else:
+            cv2.imwrite(folder+label+".png", cv2.cvtColor(image, cv2.COLOR_HSV2BGR))
     return image
 
 
@@ -170,6 +172,7 @@ def get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side):
     hsv_normals = bw_white_mask.copy()
 
     vector_between_a_b = corner_a - corner_b
+
     vector_length = np.linalg.norm(vector_between_a_b)
     unit_vector_between_a_b = normalize_vector(vector_between_a_b)
 
@@ -844,7 +847,7 @@ def evaluate_inner_corners(hsv):
     hsv_save_image(bw_white_mask, "0_white_only", is_gray=True)
 
     inner_corners, intensities = find_right_angled_corners(bw_white_mask)
-    
+
     average_filter_size = 19
     img_average_intensity = make_circle_average_blurry(bw_white_mask, average_filter_size)
 
@@ -853,11 +856,13 @@ def evaluate_inner_corners(hsv):
         # print "n_inner_corners:", n_inner_corners
 
         if (n_inner_corners > 1) and (n_inner_corners <= 5):
-        
-            for corner in inner_corners:
+            
+            unique_corners = np.vstack({tuple(row) for row in inner_corners}) # Removes duplicate corners
+            
+            for corner in unique_corners:
                 draw_dot(hsv_canvas, corner, HSV_YELLOW_COLOR)
 
-            corner_a, corner_b = get_relevant_corners(inner_corners)
+            corner_a, corner_b = get_relevant_corners(unique_corners)
 
             draw_dot(hsv_canvas, corner_a, HSV_RED_COLOR)
             draw_dot(hsv_canvas, corner_b, HSV_LIGHT_ORANGE_COLOR)
@@ -865,8 +870,7 @@ def evaluate_inner_corners(hsv):
             c_m = get_mid_point(corner_a, corner_b)
             draw_dot(hsv_canvas, c_m, HSV_BLUE_COLOR)
 
-            # hsv_save_image(hsv_canvas, "3_canvas")
-
+            hsv_save_image(hsv_canvas, "3_canvas")
 
             c_m_value = img_average_intensity[np.int0(c_m[0])][np.int0(c_m[1])]
             # print "c_m_value", c_m_value
@@ -885,7 +889,7 @@ def evaluate_inner_corners(hsv):
                 forward_unit_vector = normal_unit_vector
 
             else: # The points are on a long side
-                # print "Long side"
+                print "Long side"
                 is_short_side = False
                 normal_vector = get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side)
                 normal_unit_vector = normalize_vector(normal_vector)
@@ -1232,13 +1236,18 @@ def main():
     rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
     rospy.Subscriber('/drone_pose', Twist, rel_gt_callback)
 
+    pub_heartbeat = rospy.Publisher("/heartbeat", Empty, queue_size=10)
+    heartbeat_msg = Empty()
+
     rospy.loginfo("Starting CV module")
 
     count = 0
-    rate = rospy.Rate(2) # Hz
+    rate = rospy.Rate(20) # Hz
     while not rospy.is_shutdown():
 
         if (global_image is not None):
+            pub_heartbeat.publish(heartbeat_msg)
+
             # rospy.loginfo("Received image")
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
             est = ros_run(hsv, count)
@@ -1246,8 +1255,8 @@ def main():
             result = np.concatenate((est, gt))
 
             # print rel_gt_converter(global_rel_gt)
-            print result
-            print ""
+            # print result
+            # print ""
             count += 1
         
         else:
