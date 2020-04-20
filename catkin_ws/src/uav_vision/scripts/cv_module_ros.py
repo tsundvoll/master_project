@@ -224,38 +224,69 @@ HSV_BLACK_COLOR = rgb_color_to_hsv(0,0,0)
 HSV_YELLOW_COLOR = [30, 255, 255]
 HSV_LIGHT_ORANGE_COLOR = [15, 255, 255]
 
+HSV_REAL_WHITE = [0, 0, 74]
+HSV_REAL_ORANGE = [36, 100, 74]
+HSV_REAL_GREEN = [120, 100, 30]
+
+hue_margin = 15
+sat_margin = 15
+val_margin = 15
+
 
 ##################
 # Main functions #
 ##################
-def get_white_mask(hsv):    
-    lower_white = hsv_to_opencv_hsv(0, 0, 50)
-    upper_white = hsv_to_opencv_hsv(360, 50, 100)
+def get_mask(hsv, hue_low, hue_high, sat_low, sat_high, val_low, val_high):
+    lower_color = hsv_to_opencv_hsv(hue_low, sat_low, val_low)
+    upper_color = hsv_to_opencv_hsv(hue_high, sat_high, val_high)
 
-    mask = cv2.inRange(hsv, lower_white, upper_white)
-    _ , img_binary = cv2.threshold(mask, 128, 255, cv2.THRESH_BINARY)
-    
-    white_x, white_y = np.where(img_binary==255)
-    if len(white_x) == 0: # No white visible
-        return None
-    else:
-        return img_binary
+    mask = cv2.inRange(hsv, lower_color, upper_color) 
+
+    # white_x, white_y = np.where(mask==255)
+    # if len(white_x) == 0: # No color visible
+    #     return None
+    # else:
+    #     return mask
+    return mask
+
+
+def get_white_mask(hsv):
+    hue_low = 0
+    hue_high = 360
+
+    sat_low = max(0, HSV_REAL_WHITE[1] - sat_margin) 
+    sat_high = min(100, HSV_REAL_WHITE[1] + sat_margin)
+
+    val_low = max(0, HSV_REAL_WHITE[2] - val_margin) 
+    val_high = min(100, HSV_REAL_WHITE[2] + sat_margin)
+
+    return get_mask(hsv, hue_low, hue_high, sat_low, sat_high, val_low, val_high)
 
 
 def get_orange_mask(hsv):
-    lower_orange = hsv_to_opencv_hsv(25, 50, 50)
-    upper_orange = hsv_to_opencv_hsv(35, 100, 100)
+    hue_low = max(0, HSV_REAL_ORANGE[0] - hue_margin) 
+    hue_high = min(360, HSV_REAL_ORANGE[0] + hue_margin)
+    
+    sat_low = max(0, HSV_REAL_ORANGE[1] - sat_margin) 
+    sat_high = min(100, HSV_REAL_ORANGE[1] + sat_margin)
 
-    orange_mask = cv2.inRange(hsv, lower_orange, upper_orange) 
-    return orange_mask
+    val_low = max(0, HSV_REAL_ORANGE[2] - val_margin) 
+    val_high = min(100, HSV_REAL_ORANGE[2] + sat_margin)
+
+    return get_mask(hsv, hue_low, hue_high, sat_low, sat_high, val_low, val_high)
 
 
 def get_green_mask(hsv):
-    lower_green = hsv_to_opencv_hsv(100, 50, 25)
-    upper_green = hsv_to_opencv_hsv(135, 75, 75)
+    hue_low = max(0, HSV_REAL_GREEN[0] - hue_margin) 
+    hue_high = min(360, HSV_REAL_GREEN[0] + hue_margin)
 
-    green_mask = cv2.inRange(hsv, lower_green, upper_green) 
-    return green_mask
+    sat_low = max(0, HSV_REAL_GREEN[1] - sat_margin) 
+    sat_high = min(100, HSV_REAL_GREEN[1] + sat_margin)
+
+    val_low = max(0, HSV_REAL_GREEN[2] - val_margin) 
+    val_high = min(100, HSV_REAL_GREEN[2] + sat_margin)
+
+    return get_mask(hsv, hue_low, hue_high, sat_low, sat_high, val_low, val_high)
 
 
 def flood_fill(img, start=(0,0)):
@@ -989,6 +1020,16 @@ def run(img_count = 0):
 
 def ros_run(hsv, count):
     hsv_save_image(hsv, '0_hsv')
+
+
+    white_mask = get_white_mask(hsv)
+    orange_mask = get_orange_mask(hsv)
+    green_mask = get_green_mask(hsv)
+    hsv_save_image(white_mask, '1_white_mask', is_gray=True)
+    hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
+    hsv_save_image(green_mask, '1_green_mask', is_gray=True)
+
+
     hsv_inside_green = get_pixels_inside_green(hsv)
 
     center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
