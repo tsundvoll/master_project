@@ -1107,9 +1107,9 @@ def ros_run(hsv, count):
     hsv_save_image(hsv_canvas_all, "5_canvas_all_"+str(count))
 
     result = np.array([
-        [est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle],
+        # [est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle],
         [est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle],
-        [est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle]        
+        # [est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle]        
     ])
 
     return result
@@ -1217,12 +1217,12 @@ def rel_gt_converter(rel_gt):
     gt_x = rel_gt.linear.x * 1000
     gt_y = rel_gt.linear.y * 1000
     gt_z = rel_gt.linear.z * 1000
-    yaw = -np.degrees(rel_gt.angular.z)
+    yaw = -np.degrees(rel_gt.angular.z) - 90
     
-    if yaw > 0:
-        gt_yaw = yaw - 90
+    if yaw < -180:
+        gt_yaw = 360 + yaw
     else:
-        gt_yaw = yaw + 270
+        gt_yaw = yaw
 
     return np.array([[gt_x, gt_y, gt_z, gt_yaw]])
 
@@ -1235,11 +1235,11 @@ def main():
     rospy.loginfo("Starting CV module")
 
     count = 0
-    rate = rospy.Rate(0.5) # Hz
+    rate = rospy.Rate(2) # Hz
     while not rospy.is_shutdown():
 
         if (global_image is not None):
-            rospy.loginfo("Received image")
+            # rospy.loginfo("Received image")
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
             est = ros_run(hsv, count)
             gt = rel_gt_converter(global_rel_gt)
@@ -1247,6 +1247,7 @@ def main():
 
             # print rel_gt_converter(global_rel_gt)
             print result
+            print ""
             count += 1
         
         else:
