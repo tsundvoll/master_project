@@ -166,8 +166,8 @@ def get_mid_point(a, b):
     return (a+b)/2.0
 
 
-def get_normal_vector(hsv_white_only, corner_a, corner_b, is_short_side):
-    hsv_normals = hsv_white_only.copy()
+def get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side):
+    hsv_normals = bw_white_mask.copy()
 
     vector_between_a_b = corner_a - corner_b
     vector_length = np.linalg.norm(vector_between_a_b)
@@ -200,10 +200,10 @@ def get_normal_vector(hsv_white_only, corner_a, corner_b, is_short_side):
         sign*unit_vector_between_a_b*check_length + \
         normal_unit_vector_right*check_length)
 
-    value_left_a = hsv_white_only[check_left_a[0]][check_left_a[1]]
-    value_left_b = hsv_white_only[check_left_b[0]][check_left_b[1]]
-    value_right_a = hsv_white_only[check_right_a[0]][check_right_a[1]]
-    value_right_b = hsv_white_only[check_right_b[0]][check_right_b[1]]
+    value_left_a = bw_white_mask[check_left_a[0]][check_left_a[1]]
+    value_left_b = bw_white_mask[check_left_b[0]][check_left_b[1]]
+    value_right_a = bw_white_mask[check_right_a[0]][check_right_a[1]]
+    value_right_b = bw_white_mask[check_right_b[0]][check_right_b[1]]
 
     avr_left = value_left_a/2.0 + value_left_b/2.0
     avr_right = value_right_a/2.0 + value_right_b/2.0
@@ -328,31 +328,32 @@ def get_pixels_inside_green(hsv):
 
     hsv_inside_green = hsv.copy()
 
-    # hsv_green_mask = get_green_mask(hsv)  
-    # hsv_save_image(hsv_green_mask, "1b_green_mask", is_gray=True)
+    # bw_green_mask = get_green_mask(hsv)  
+    # hsv_save_image(bw_green_mask, "1b_green_mask", is_gray=True)
 
-    # hsv_green_mask = make_gaussian_blurry(hsv_green_mask, 5)
+    # bw_green_mask = make_gaussian_blurry(bw_green_mask, 5)
 
-    # hsv_green_mask_flood_01 = flood_fill(hsv_green_mask, start=(0,0))
-    # hsv_green_mask_flood_02 = flood_fill(hsv_green_mask, start=(IMG_WIDTH-1,0))
-    # hsv_green_mask_flood_03 = flood_fill(hsv_green_mask, start=(0,IMG_HEIGHT-1))
-    # hsv_green_mask_flood_04 = flood_fill(hsv_green_mask, start=(IMG_WIDTH-1,IMG_HEIGHT-1))
+    # bw_green_mask_flood_01 = flood_fill(bw_green_mask, start=(0,0))
+    # bw_green_mask_flood_02 = flood_fill(bw_green_mask, start=(IMG_WIDTH-1,0))
+    # bw_green_mask_flood_03 = flood_fill(bw_green_mask, start=(0,IMG_HEIGHT-1))
+    # bw_green_mask_flood_04 = flood_fill(bw_green_mask, start=(IMG_WIDTH-1,IMG_HEIGHT-1))
 
-    # hsv_green_mask_flood_combined = cv2.bitwise_or(hsv_green_mask_flood_01, hsv_green_mask_flood_02, hsv_green_mask_flood_03, hsv_green_mask_flood_04)
+    # bw_green_mask_flood_combined = cv2.bitwise_or(bw_green_mask_flood_01, bw_green_mask_flood_02, bw_green_mask_flood_03, bw_green_mask_flood_04)
 
-    # mask = cv2.bitwise_not(hsv_green_mask_flood_combined)
+    # mask = cv2.bitwise_not(bw_green_mask_flood_combined)
     # hsv_inside_green = cv2.bitwise_or(hsv_inside_green, hsv, mask=mask)
 
     ## Ellipse method
-    hsv_green_mask = get_green_mask(hsv)  
-    hsv_ellipse_mask = np.zeros((IMG_HEIGHT, IMG_WIDTH))
-    hsv_ellipse = hsv.copy()
-
-    green_x, green_y = np.where(hsv_green_mask==255)
+    bw_green_mask = get_green_mask(hsv)  
     # If no green in image: return original image
-    if len(green_x) == 0:
+    if bw_green_mask is None:
         return hsv
 
+
+    bw_ellipse_mask = np.zeros((IMG_HEIGHT, IMG_WIDTH))
+    hsv_ellipse = hsv.copy()
+
+    green_x, green_y = np.where(bw_green_mask==255)
     x_min = np.amin(green_x)
     x_max = np.amax(green_x)
     y_min = np.amin(green_y)
@@ -364,11 +365,11 @@ def get_pixels_inside_green(hsv):
     l_x = np.int0(x_max - center_x)+1
     l_y = np.int0(y_max - center_y)+1
 
-    cv2.ellipse(img=hsv_ellipse_mask, center=(center_y, center_x),
+    cv2.ellipse(img=bw_ellipse_mask, center=(center_y, center_x),
         axes=(l_y, l_x), angle=0, startAngle=0, endAngle=360,
         color=(255), thickness=-1, lineType=8, shift=0)
 
-    hsv_ellipse[hsv_ellipse_mask==0] = HSV_BLACK_COLOR
+    hsv_ellipse[bw_ellipse_mask==0] = HSV_BLACK_COLOR
 
     return hsv_ellipse
 
@@ -382,13 +383,13 @@ def get_pixels_inside_orange(hsv):
      """
     
     hsv_inside_orange = hsv.copy()
-    hsv_ellipse_mask = np.zeros((IMG_HEIGHT, IMG_WIDTH))
-    hsv_ellipse = hsv.copy()
 
-    hsv_orange_only = get_orange_mask(hsv)  
-    hsv_save_image(hsv_orange_only, "2b_orange_mask", is_gray=True)
+    bw_orange_mask = get_orange_mask(hsv) 
+    if bw_orange_mask is None:
+        return hsv
+    hsv_save_image(bw_orange_mask, "2b_orange_mask", is_gray=True)
 
-    orange_x, orange_y = np.where(hsv_orange_only==255)
+    orange_x, orange_y = np.where(bw_orange_mask==255)
     # If no orange in image: return original image
     if len(orange_x) == 0:
         x_min = 0
@@ -417,14 +418,14 @@ def find_white_centroid(hsv):
 
     hsv_inside_orange = get_pixels_inside_orange(hsv)
 
-    hsv_white_only = get_white_mask(hsv_inside_orange)
-    if hsv_white_only is None:
-        rospy.loginfo("hsv_white_only is none")
+    bw_white_mask = get_white_mask(hsv_inside_orange)
+    if bw_white_mask is None:
+        rospy.loginfo("bw_white_mask is none")
         return None
-    hsv_white_only = make_gaussian_blurry(hsv_white_only, 5)
+    bw_white_mask = make_gaussian_blurry(bw_white_mask, 5)
 
 	# calculate moments of binary image
-    M = cv2.moments(hsv_white_only)
+    M = cv2.moments(bw_white_mask)
 
     # calculate x,y coordinate of center
     cX = int(M["m10"] / M["m00"])
@@ -568,15 +569,18 @@ def find_right_angled_corners(img):
 
 
 def find_orange_arrowhead(hsv):
-    hsv_orange_mask = get_orange_mask(hsv)
-    hsv_orange_mask = make_gaussian_blurry(hsv_orange_mask, 5) 
+    bw_orange_mask = get_orange_mask(hsv)
+    if bw_orange_mask is None:
+        return None
 
-    hsv_orange_mask_inverted = cv2.bitwise_not(hsv_orange_mask)
+    bw_orange_mask = make_gaussian_blurry(bw_orange_mask, 5) 
 
-    hsv_save_image(hsv_orange_mask_inverted, "0_orange_mask_inverted", is_gray=True)
+    bw_orange_mask_inverted = cv2.bitwise_not(bw_orange_mask)
+
+    hsv_save_image(bw_orange_mask_inverted, "0_orange_mask_inverted", is_gray=True)
 
 
-    orange_corners, intensities = find_right_angled_corners(hsv_orange_mask_inverted)
+    orange_corners, intensities = find_right_angled_corners(bw_orange_mask_inverted)
 
     if orange_corners is None:
         return None
@@ -728,6 +732,9 @@ def evaluate_ellipse(hsv):
         center, radius, angle 
     """
     bw_green_mask = get_green_mask(hsv)
+    if bw_green_mask is None:
+        return None, None, None
+
     hsv_save_image(bw_green_mask, "2_green_mask", is_gray=True)
 
     top_border =    bw_green_mask[0,:]
@@ -829,15 +836,17 @@ def evaluate_inner_corners(hsv):
     """
     hsv_canvas = hsv.copy()
 
-    hsv_white_only_before_blur = get_white_mask(hsv)
-    hsv_white_only = make_gaussian_blurry(hsv_white_only_before_blur, 5)
+    bw_white_mask = get_white_mask(hsv)
+    if bw_white_mask is None:
+        return None, None, None
+    bw_white_mask = make_gaussian_blurry(bw_white_mask, 5)
 
-    hsv_save_image(hsv_white_only, "0_white_only", is_gray=True)
+    hsv_save_image(bw_white_mask, "0_white_only", is_gray=True)
 
-    inner_corners, intensities = find_right_angled_corners(hsv_white_only)
+    inner_corners, intensities = find_right_angled_corners(bw_white_mask)
     
     average_filter_size = 19
-    img_average_intensity = make_circle_average_blurry(hsv_white_only, average_filter_size)
+    img_average_intensity = make_circle_average_blurry(bw_white_mask, average_filter_size)
 
     if (inner_corners is not None):
         n_inner_corners = len(inner_corners)
@@ -865,7 +874,7 @@ def evaluate_inner_corners(hsv):
             if c_m_value > 190: # The points are on a short side
                 # print "Short side"
                 is_short_side = True
-                normal_vector = get_normal_vector(hsv_white_only, corner_a, corner_b, is_short_side)
+                normal_vector = get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side)
                 normal_unit_vector = normalize_vector(normal_vector)
 
                 length_short_side = np.linalg.norm(corner_a - corner_b)
@@ -878,7 +887,7 @@ def evaluate_inner_corners(hsv):
             else: # The points are on a long side
                 # print "Long side"
                 is_short_side = False
-                normal_vector = get_normal_vector(hsv_white_only, corner_a, corner_b, is_short_side)
+                normal_vector = get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side)
                 normal_unit_vector = normalize_vector(normal_vector)
 
                 length_long_side = np.linalg.norm(corner_a - corner_b)
@@ -1030,11 +1039,16 @@ def ros_run(hsv, count):
 
 
     white_mask = get_white_mask(hsv)
+    if white_mask is not None:
+        hsv_save_image(white_mask, '1_white_mask', is_gray=True)
+
     orange_mask = get_orange_mask(hsv)
+    if orange_mask is not None:
+        hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
+
     green_mask = get_green_mask(hsv)
-    hsv_save_image(white_mask, '1_white_mask', is_gray=True)
-    hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
-    hsv_save_image(green_mask, '1_green_mask', is_gray=True)
+    if green_mask is not None:
+        hsv_save_image(green_mask, '1_green_mask', is_gray=True)
 
 
     hsv_inside_green = get_pixels_inside_green(hsv)
