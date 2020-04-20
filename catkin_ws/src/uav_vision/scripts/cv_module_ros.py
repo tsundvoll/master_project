@@ -108,16 +108,18 @@ def hsv_to_opencv_hsv(hue, saturation, value):
 
 
 def draw_dot(img, position, color, size=3):
-    cX = np.int0(position[1])
-    cY = np.int0(position[0])
-    cv2.circle(img, (cX, cY), size, color, -1)
+    if save_images:
+        cX = np.int0(position[1])
+        cY = np.int0(position[0])
+        cv2.circle(img, (cX, cY), size, color, -1)
 
 
 def draw_arrow(img, start, end):
-    return cv2.arrowedLine(img,
-        (np.int0(start[1]), np.int0(start[0])),
-        (np.int0(end[1]), np.int0(end[0])),
-        color = (75,0,0), thickness = 1, tipLength = 0.4)
+    if save_images:
+        return cv2.arrowedLine(img,
+            (np.int0(start[1]), np.int0(start[0])),
+            (np.int0(end[1]), np.int0(end[0])),
+            color = (75,0,0), thickness = 1, tipLength = 0.4)
 
 
 def calc_angle_between_vectors(vector_1, vector_2):
@@ -238,9 +240,34 @@ HSV_REAL_WHITE = [0, 0, 74]
 HSV_REAL_ORANGE = [36, 100, 74]
 HSV_REAL_GREEN = [120, 100, 30]
 
-hue_margin = 15
-sat_margin = 15
-val_margin = 15
+# Setup for color finding
+HUE_MARGIN = 15
+SAT_MARGIN = 15
+VAL_MARGIN = 15
+
+# White
+HUE_LOW_WHITE = 0
+HUE_HIGH_WHITE = 360
+SAT_LOW_WHITE = max(0, HSV_REAL_WHITE[1] - SAT_MARGIN) 
+SAT_HIGH_WHITE = min(100, HSV_REAL_WHITE[1] + SAT_MARGIN)
+VAL_LOW_WHITE = max(0, HSV_REAL_WHITE[2] - VAL_MARGIN) 
+VAL_HIGH_WHITE = min(100, HSV_REAL_WHITE[2] + VAL_MARGIN)
+
+# Orange
+HUE_LOW_ORANGE = max(0, HSV_REAL_ORANGE[0] - HUE_MARGIN) 
+HUE_HIGH_ORANGE = min(360, HSV_REAL_ORANGE[0] + HUE_MARGIN)
+SAT_LOW_ORANGE = max(0, HSV_REAL_ORANGE[1] - SAT_MARGIN) 
+SAT_HIGH_ORANGE = min(100, HSV_REAL_ORANGE[1] + SAT_MARGIN)
+VAL_LOW_ORANGE = max(0, HSV_REAL_ORANGE[2] - VAL_MARGIN) 
+VAL_HIGH_ORANGE = min(100, HSV_REAL_ORANGE[2] + VAL_MARGIN)
+
+# Green
+HUE_LOW_GREEN = max(0, HSV_REAL_GREEN[0] - HUE_MARGIN) 
+HUE_HIGH_GREEN = min(360, HSV_REAL_GREEN[0] + HUE_MARGIN)
+SAT_LOW_GREEN = max(0, HSV_REAL_GREEN[1] - SAT_MARGIN) 
+SAT_HIGH_GREEN = min(100, HSV_REAL_GREEN[1] + SAT_MARGIN)
+VAL_LOW_GREEN = max(0, HSV_REAL_GREEN[2] - VAL_MARGIN) 
+VAL_HIGH_GREEN = min(100, HSV_REAL_GREEN[2] + VAL_MARGIN)
 
 
 ##################
@@ -261,42 +288,15 @@ def get_mask(hsv, hue_low, hue_high, sat_low, sat_high, val_low, val_high):
 
 
 def get_white_mask(hsv):
-    hue_low = 0
-    hue_high = 360
-
-    sat_low = max(0, HSV_REAL_WHITE[1] - sat_margin) 
-    sat_high = min(100, HSV_REAL_WHITE[1] + sat_margin)
-
-    val_low = max(0, HSV_REAL_WHITE[2] - val_margin) 
-    val_high = min(100, HSV_REAL_WHITE[2] + sat_margin)
-
-    return get_mask(hsv, hue_low, hue_high, sat_low, sat_high, val_low, val_high)
+    return get_mask(hsv, HUE_LOW_WHITE, HUE_HIGH_WHITE,SAT_LOW_WHITE, SAT_HIGH_WHITE, VAL_LOW_WHITE, VAL_HIGH_WHITE)
 
 
 def get_orange_mask(hsv):
-    hue_low = max(0, HSV_REAL_ORANGE[0] - hue_margin) 
-    hue_high = min(360, HSV_REAL_ORANGE[0] + hue_margin)
-
-    sat_low = max(0, HSV_REAL_ORANGE[1] - sat_margin) 
-    sat_high = min(100, HSV_REAL_ORANGE[1] + sat_margin)
-
-    val_low = max(0, HSV_REAL_ORANGE[2] - val_margin) 
-    val_high = min(100, HSV_REAL_ORANGE[2] + sat_margin)
-
-    return get_mask(hsv, hue_low, hue_high, sat_low, sat_high, val_low, val_high)
+    return get_mask(hsv, HUE_LOW_ORANGE, HUE_HIGH_ORANGE, SAT_LOW_ORANGE, SAT_HIGH_ORANGE, VAL_LOW_ORANGE, VAL_HIGH_ORANGE)
 
 
 def get_green_mask(hsv):
-    hue_low = max(0, HSV_REAL_GREEN[0] - hue_margin) 
-    hue_high = min(360, HSV_REAL_GREEN[0] + hue_margin)
-
-    sat_low = max(0, HSV_REAL_GREEN[1] - sat_margin) 
-    sat_high = min(100, HSV_REAL_GREEN[1] + sat_margin)
-
-    val_low = max(0, HSV_REAL_GREEN[2] - val_margin) 
-    val_high = min(100, HSV_REAL_GREEN[2] + sat_margin)
-
-    return get_mask(hsv, hue_low, hue_high, sat_low, sat_high, val_low, val_high)
+    return get_mask(hsv, HUE_LOW_GREEN, HUE_HIGH_GREEN, SAT_LOW_GREEN, SAT_HIGH_GREEN, VAL_LOW_GREEN, VAL_HIGH_GREEN)
 
 
 def flood_fill(img, start=(0,0)):
