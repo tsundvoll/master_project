@@ -7,13 +7,11 @@ from geometry_msgs.msg import Twist
 
 import numpy as np
 import math
-import json
-
 
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
-drone_image_raw = None
+
 global_image = None
 global_rel_gt = None
 save_images = False
@@ -48,28 +46,21 @@ def rel_gt_callback(data):
 ##################
 # Help functions #
 ##################
-def make_median_blurry(image, blur_size):
-    return cv2.medianBlur(image, blur_size)
-
-
 def make_gaussian_blurry(image, blur_size):
     return cv2.GaussianBlur(image, (blur_size, blur_size), 0)
 
 
 def make_circle_average_blurry(image, blur_size):
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (blur_size,blur_size))
-    # print ""
-    # print kernel
+
     n_elements = np.float64(np.count_nonzero(kernel))
     kernel_norm = (kernel/n_elements)
     
     img_blurred = cv2.filter2D(image,-1,kernel_norm)
-
     return img_blurred
 
 
 def hsv_save_image(image, label='image', is_gray=False):
-    # folder = 'image_processing/detect_h/'
     folder = './image_processing/'
     if save_images:
         if is_gray:
@@ -79,13 +70,6 @@ def hsv_save_image(image, label='image', is_gray=False):
     return image
 
 
-def load_hsv_image(filename):
-    img = cv2.imread(filename) # import as BGR
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) # convert to HSV
-    hsv_save_image(hsv, "1a_hsv") # Save image
-    return hsv
-
-
 def rgb_color_to_hsv(red, green, blue):
     bgr_color = np.uint8([[[blue,green,red]]])
     hsv_color = cv2.cvtColor(bgr_color,cv2.COLOR_BGR2HSV)
@@ -93,7 +77,7 @@ def rgb_color_to_hsv(red, green, blue):
 
 
 def normalize_vector(vector):
-    return vector / np.linalg.norm(vector) #, ord=1)
+    return vector / np.linalg.norm(vector)
 
 
 def hsv_to_opencv_hsv(hue, saturation, value):
@@ -129,45 +113,7 @@ def calc_angle_between_vectors(vector_1, vector_2):
     v2_x = vector_2[0]
     v2_y = vector_2[1]
 
-    angle = np.arctan2( v1_x*v2_y - v1_y*v2_x, v1_x*v2_x + v1_y*v2_y)
-
-    # unit_vector_1 = vector_1 / np.linalg.norm(vector_1)
-    # unit_vector_2 = vector_2 / np.linalg.norm(vector_2)
-    # dot_product = np.dot(unit_vector_1, unit_vector_2)
-    # angle = np.arccos(dot_product)
-    return angle
-
-
-def limit_point_to_be_inside_image(point):
-    """ Make sure the point is inside the image 
-        if it is not, move it to the closest border
-    """
-    smallest_x = 0
-    smallest_y = 0
-    largest_x = IMG_HEIGHT-1
-    largest_y = IMG_WIDTH-1
-
-    limited_point = np.int0(np.array([
-        max(smallest_x, min(point[0], largest_x)),
-        max(smallest_y, min(point[1], largest_y))
-    ]))
-
-    return limited_point
-
-
-def print_header(text):
-    text_length = len(text)
-    border_line = "#"*(text_length+4)
-    text_line = "# " + text + " #"
-
-    # print ""
-    print border_line
-    print text_line
-    print border_line
-
-
-def get_mid_point(a, b):
-    return (a+b)/2.0
+    return np.arctan2( v1_x*v2_y - v1_y*v2_x, v1_x*v2_x + v1_y*v2_y)
 
 
 def get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side):
@@ -212,9 +158,6 @@ def get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side):
 
     avr_left = value_left_a/2.0 + value_left_b/2.0
     avr_right = value_right_a/2.0 + value_right_b/2.0
-
-    # print "avr_left:", avr_left
-    # print "avr_right:", avr_right
 
     draw_dot(hsv_normals, check_left_a, (225))
     draw_dot(hsv_normals, check_left_b, (225))
@@ -284,7 +227,6 @@ def get_mask(hsv, hue_low, hue_high, sat_low, sat_high, val_low, val_high):
         return None
     else:
         return mask
-    # return mask
 
 
 def get_white_mask(hsv):
@@ -310,7 +252,6 @@ def flood_fill(img, start=(0,0)):
         return mask
 
     floodflags = 8
-    # floodflags |= cv2.FLOODFILL_FIXED_RANGE
     floodflags |= cv2.FLOODFILL_MASK_ONLY
     floodflags |= (255 << 8)
 
@@ -329,32 +270,9 @@ def get_pixels_inside_green(hsv):
         Returns the painted image and a boolean stating wheather any green was found.
      """
 
-    hsv_inside_green = hsv.copy()
-
-    # bw_green_mask = get_green_mask(hsv)  
-    # hsv_save_image(bw_green_mask, "1b_green_mask", is_gray=True)
-
-    # bw_green_mask = make_gaussian_blurry(bw_green_mask, 5)
-
-    # bw_green_mask_flood_01 = flood_fill(bw_green_mask, start=(0,0))
-    # bw_green_mask_flood_02 = flood_fill(bw_green_mask, start=(IMG_WIDTH-1,0))
-    # bw_green_mask_flood_03 = flood_fill(bw_green_mask, start=(0,IMG_HEIGHT-1))
-    # bw_green_mask_flood_04 = flood_fill(bw_green_mask, start=(IMG_WIDTH-1,IMG_HEIGHT-1))
-
-    # bw_green_mask_flood_combined = cv2.bitwise_or(bw_green_mask_flood_01, bw_green_mask_flood_02, bw_green_mask_flood_03, bw_green_mask_flood_04)
-
-    # mask = cv2.bitwise_not(bw_green_mask_flood_combined)
-    # hsv_inside_green = cv2.bitwise_or(hsv_inside_green, hsv, mask=mask)
-
-    ## Ellipse method
     bw_green_mask = get_green_mask(hsv)  
-    # If no green in image: return original image
     if bw_green_mask is None:
         return hsv
-
-
-    bw_ellipse_mask = np.zeros((IMG_HEIGHT, IMG_WIDTH))
-    hsv_ellipse = hsv.copy()
 
     green_x, green_y = np.where(bw_green_mask==255)
     x_min = np.amin(green_x)
@@ -368,10 +286,12 @@ def get_pixels_inside_green(hsv):
     l_x = np.int0(x_max - center_x)+1
     l_y = np.int0(y_max - center_y)+1
 
+    bw_ellipse_mask = np.zeros((IMG_HEIGHT, IMG_WIDTH))
     cv2.ellipse(img=bw_ellipse_mask, center=(center_y, center_x),
         axes=(l_y, l_x), angle=0, startAngle=0, endAngle=360,
         color=(255), thickness=-1, lineType=8, shift=0)
 
+    hsv_ellipse = hsv.copy()
     hsv_ellipse[bw_ellipse_mask==0] = HSV_BLACK_COLOR
 
     return hsv_ellipse
@@ -384,41 +304,28 @@ def get_pixels_inside_orange(hsv):
 
         Returns the painted image and a boolean stating wheather any orange was found.
      """
-    
-    hsv_inside_orange = hsv.copy()
-
     bw_orange_mask = get_orange_mask(hsv) 
     if bw_orange_mask is None:
         return hsv
     hsv_save_image(bw_orange_mask, "2b_orange_mask", is_gray=True)
 
     orange_x, orange_y = np.where(bw_orange_mask==255)
-    # If no orange in image: return original image
-    if len(orange_x) == 0:
-        x_min = 0
-        x_max = IMG_HEIGHT - 1
-        y_min = 0
-        y_max = IMG_WIDTH - 1
-    else:
-        x_min = np.amin(orange_x)
-        x_max = np.amax(orange_x)
-        y_min = np.amin(orange_y)
-        y_max = np.amax(orange_y)
+    x_min = np.amin(orange_x)
+    x_max = np.amax(orange_x)
+    y_min = np.amin(orange_y)
+    y_max = np.amax(orange_y)
     
-
+    hsv_inside_orange = hsv.copy()
     hsv_inside_orange[0:x_min,] = HSV_BLACK_COLOR
     hsv_inside_orange[x_max+1:,] = HSV_BLACK_COLOR
-
     hsv_inside_orange[:,0:y_min] = HSV_BLACK_COLOR
     hsv_inside_orange[:,y_max+1:] = HSV_BLACK_COLOR
-
     hsv_save_image(hsv_inside_orange, '3_inside_orange')
 
     return hsv_inside_orange
 
 
 def find_white_centroid(hsv):
-
     hsv_inside_orange = get_pixels_inside_orange(hsv)
 
     bw_white_mask = get_white_mask(hsv_inside_orange)
@@ -427,14 +334,13 @@ def find_white_centroid(hsv):
         return None
     bw_white_mask = make_gaussian_blurry(bw_white_mask, 5)
 
-	# calculate moments of binary image
-    M = cv2.moments(bw_white_mask)
+    M = cv2.moments(bw_white_mask) # calculate moments of binary image
 
     # calculate x,y coordinate of center
     cX = int(M["m10"] / M["m00"])
     cY = int(M["m01"] / M["m00"])
     
-    # Returned the transposed point,
+    # Returnes the transposed point,
     #  because of difference from OpenCV axis
     return np.array([cY, cX])
 
@@ -560,12 +466,10 @@ def find_right_angled_corners(img):
     corners = find_harris_corners(img, corner_harris_block_size)
     corners = clip_corners_on_border(corners, ignore_border_size)
     if corners is None:
-        # Found no corners
         return None, None
 
     corners, intensities = clip_corners_on_intensity(corners, img, average_filter_size)
     if corners is None:
-        # Found no corners
         return None, None
 
     return corners, intensities
@@ -577,14 +481,11 @@ def find_orange_arrowhead(hsv):
         return None
 
     bw_orange_mask = make_gaussian_blurry(bw_orange_mask, 5) 
-
     bw_orange_mask_inverted = cv2.bitwise_not(bw_orange_mask)
 
     hsv_save_image(bw_orange_mask_inverted, "0_orange_mask_inverted", is_gray=True)
 
-
     orange_corners, intensities = find_right_angled_corners(bw_orange_mask_inverted)
-
     if orange_corners is None:
         return None
 
@@ -612,7 +513,6 @@ def find_orange_arrowhead(hsv):
 def calculate_position(center_px, radius_px):
     focal_length = 374.67
     real_radius = 375 # mm (750mm in diameter / 2)
-    # real_radius = 288 # previous value
 
     # Center of image
     x_0 = IMG_HEIGHT/2.0
@@ -621,7 +521,6 @@ def calculate_position(center_px, radius_px):
     # Find distances from center of image to center of LP
     d_x = x_0 - center_px[0]
     d_y = y_0 - center_px[1]
-
 
     est_z = real_radius*focal_length / radius_px # - 59.4 # (adjustment)
     
@@ -704,7 +603,6 @@ def get_ellipse_parameters(green_ellipse):
     E = ellipse[4]
     F = ellipse[5]
 
-    # print(A)
     if B**2 - 4*A*C >= 0:
         print("get_ellipse_parameters(): Shape found is not an ellipse")
         return None
@@ -716,17 +614,11 @@ def get_ellipse_parameters(green_ellipse):
 
     x_raw = (2.0*C*D - B*E) / (B*B - 4.0*A*C) 
     y_raw = (2.0*A*E - B*D) / (B*B - 4.0*A*C)
-
-    # y_0 = (2.0*C*D - B*E) / (B*B - 4.0*A*C) 
-    # x_0 = IMG_HEIGHT - (2.0*A*E - B*D) / (B*B - 4.0*A*C) - 1
     
     x_0 = (IMG_HEIGHT - 1) - y_raw
     y_0 = x_raw
 
-    # print(a)
-    # ellipse_and_a_b = np.array([A,B,C,D,E,F,a,b])
     ellipse_and_a_b = np.array([x_0,y_0,a,b])
-
     return ellipse_and_a_b
 
 
@@ -750,15 +642,12 @@ def evaluate_ellipse(hsv):
         np.sum(left_border) + \
         np.sum(right_border)
 
-    # print sum_top_border
-
     if sum_top_border != 0: 
         # Then the green ellipse is toughing the border
         return None, None, None
     
     bw_green_ellipse = flood_fill(bw_green_mask, start=(0,0))
     hsv_save_image(bw_green_ellipse, "3_green_ellipse", is_gray=True)
-
 
     ellipse_parameters = get_ellipse_parameters(bw_green_ellipse)
     if ellipse_parameters is None:
@@ -769,8 +658,6 @@ def evaluate_ellipse(hsv):
     center_px = ellipse_parameters[0:2]
     radius_px = np.amax(np.abs(ellipse_parameters[2:4]))
     angle = 0
-
-    # print "center_px:", center_px
 
     hsv_canvas_ellipse = hsv.copy()
     draw_dot(hsv_canvas_ellipse, center_px, HSV_BLUE_COLOR)
@@ -798,7 +685,6 @@ def evaluate_arrow(hsv):
         # Use known relation between the real radius and the real arrow length
         # to find the radius length in pixels
 
-        # (old way) radius_length_px = arrow_length_px * RELATION_R_L3
         radius_length_px = arrow_length_px * D_RADIUS / D_ARROW
 
         hsv_canvas_arrow = hsv.copy()
@@ -853,30 +739,22 @@ def evaluate_inner_corners(hsv):
 
     if (inner_corners is not None):
         n_inner_corners = len(inner_corners)
-        # print "n_inner_corners:", n_inner_corners
-
         if (n_inner_corners > 1) and (n_inner_corners <= 5):
-            
             unique_corners = np.vstack({tuple(row) for row in inner_corners}) # Removes duplicate corners
             
             for corner in unique_corners:
                 draw_dot(hsv_canvas, corner, HSV_YELLOW_COLOR)
 
             corner_a, corner_b = get_relevant_corners(unique_corners)
+            c_m = (corner_a + corner_b)/2.0 # Finds the mid point between the corners
+            c_m_value = img_average_intensity[np.int0(c_m[0])][np.int0(c_m[1])]
 
             draw_dot(hsv_canvas, corner_a, HSV_RED_COLOR)
             draw_dot(hsv_canvas, corner_b, HSV_LIGHT_ORANGE_COLOR)
-
-            c_m = get_mid_point(corner_a, corner_b)
             draw_dot(hsv_canvas, c_m, HSV_BLUE_COLOR)
-
             hsv_save_image(hsv_canvas, "3_canvas")
 
-            c_m_value = img_average_intensity[np.int0(c_m[0])][np.int0(c_m[1])]
-            # print "c_m_value", c_m_value
-
             if c_m_value > 190: # The points are on a short side
-                # print "Short side"
                 is_short_side = True
                 normal_vector = get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side)
                 normal_unit_vector = normalize_vector(normal_vector)
@@ -889,7 +767,6 @@ def evaluate_inner_corners(hsv):
                 forward_unit_vector = normal_unit_vector
 
             else: # The points are on a long side
-                print "Long side"
                 is_short_side = False
                 normal_vector = get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side)
                 normal_unit_vector = normalize_vector(normal_vector)
@@ -921,126 +798,8 @@ def evaluate_inner_corners(hsv):
     return None, None, None
 
 
-def print_data_on_a_line(title, data_gt, data_est_e, data_est_a, data_est_i):
-    rjust = 12
-    rjust_2 = 10
-    # print "|     || Ground Truth ||   Method 1 |   Method 2 |   Method 3 ||"
-    print "||-----||--------------||------------|------------|------------||"
-
-    text_gt = '{:.2f}'.format(round(data_gt, 2)).rjust(rjust)
-    text_est_e = '{:.2f}'.format(round(data_est_e, 2)).rjust(rjust_2)
-    text_est_a = '{:.2f}'.format(round(data_est_a, 2)).rjust(rjust_2)
-    text_est_i = '{:.2f}'.format(round(data_est_i, 2)).rjust(rjust_2)
-
-    print "||", title.rjust(3), "||", text_gt, "||",text_est_e, \
-            "|", text_est_a, "|",text_est_i, "||"
-
-
-def print_data_on_a_line_2(title, data):
-    rjust_gt = 12
-    rjust_est = 10
-    # print "|     || Ground Truth ||   Method 1 |   Method 2 |   Method 3 ||"
-    print "||-----||--------------||------------|------------|------------||"
-
-    text_gt = data[0].rjust(rjust_gt)
-    text_est_e = data[1].rjust(rjust_est)
-    text_est_a = data[2].rjust(rjust_est)
-    text_est_i = data[3].rjust(rjust_est)
-
-    print "||", title.rjust(3), "||", text_gt, "||",text_est_e, \
-            "|", text_est_a, "|",text_est_i, "||"
-
-
-
-
-def run(img_count = 0):
-    dataset_id = 2
-    filepath = "dataset/low_flight_dataset_0"+str(dataset_id)+"/image_"+str(img_count)+".png"
-    # filepath = "dataset/image_2_corners_long_side.jpg"
-    # filepath = "dataset/white_corner_test.png"
-    
-    hsv = load_hsv_image(filepath)
-
-    hsv_inside_green = get_pixels_inside_green(hsv)
-
-    center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
-    center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
-    center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
-
-
-    hsv_canvas_all = hsv.copy()
-
-
-    ############
-    # Method 1 #
-    ############
-    if (center_px_from_ellipse is not None):
-        center_px, radius_length_px, angle_rad = center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse
-        est_ellipse_x, est_ellipse_y, est_ellipse_z = calculate_position(center_px, radius_length_px)
-        est_ellipse_angle = np.degrees(angle_rad)
-
-        draw_dot(hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=5)
-        # print "Position from ellipse:", est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle
-    else:
-        # est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle = None, None, None, None
-        est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle = 0.0, 0.0, 0.0, 0.0
-        # print "Position from ellipse: [Not available]"
-
-    ############
-    # Method 2 #
-    ############
-    if (center_px_from_arrow is not None):
-        center_px, radius_length_px, angle_rad = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
-        est_arrow_x, est_arrow_y, est_arrow_z = calculate_position(center_px, radius_length_px)
-        est_arrow_angle = np.degrees(angle_rad)
-
-        draw_dot(hsv_canvas_all, center_px, HSV_RED_COLOR, size=4)
-        # print "Position from arrow:", est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle
-    else:
-        # est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle = None, None, None, None
-        est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle = 0.0, 0.0, 0.0, 0.0
-        # print "Position from arrow: [Not available]"
-
-    ############
-    # Method 3 #
-    ############
-    if (center_px_from_inner_corners is not None):
-        center_px, radius_length_px, angle_rad = center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners
-        est_inner_corners_x, est_inner_corners_y, est_inner_corners_z = calculate_position(center_px, radius_length_px)
-        est_inner_corners_angle = np.degrees(angle_rad)
-
-        draw_dot(hsv_canvas_all, center_px, HSV_LIGHT_ORANGE_COLOR, size=3)
-        # print "Position from inner corners:", est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle
-    else:
-        # est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle = None, None, None, None
-        est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle = 0.0, 0.0, 0.0, 0.0
-        # print "Position from inner corners: [Not available]"
-
-    hsv_save_image(hsv_canvas_all, "5_canvas_all")
-
-    json_filepath = "dataset/low_flight_dataset_0"+str(dataset_id)+"/low_flight_dataset.json"
-    with open(json_filepath) as json_file:
-        data = json.load(json_file)
-        gt_x, gt_y, gt_z = np.array(data[str(img_count)]['ground_truth'][0:3])*1000
-        gt_yaw_raw = np.degrees(np.array(data[str(img_count)]['ground_truth'][3]))
-        
-        # Counter-clockwise is positive angle and zero degrees is rotated 90 degrees to the left
-        gt_yaw = gt_yaw_raw*(-1) - 90
-
-        if gt_yaw <= -180:
-            gt_yaw += 360
-
-    results = np.array([
-        [gt_x, gt_y, gt_z, gt_yaw],
-        [est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle],
-        [est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle],
-        [est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle]])
-
-
-
 def ros_run(hsv, count):
     hsv_save_image(hsv, '0_hsv')
-
 
     white_mask = get_white_mask(hsv)
     if white_mask is not None:
@@ -1072,11 +831,8 @@ def ros_run(hsv, count):
         est_ellipse_angle = np.degrees(angle_rad)
 
         draw_dot(hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=5)
-        # print "Position from ellipse:", est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle
     else:
-        # est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle = None, None, None, None
         est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle = 0.0, 0.0, 0.0, 0.0
-        # print "Position from ellipse: [Not available]"
 
     ############
     # Method 2 #
@@ -1087,11 +843,8 @@ def ros_run(hsv, count):
         est_arrow_angle = np.degrees(angle_rad)
 
         draw_dot(hsv_canvas_all, center_px, HSV_RED_COLOR, size=4)
-        # print "Position from arrow:", est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle
     else:
-        # est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle = None, None, None, None
         est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle = 0.0, 0.0, 0.0, 0.0
-        # print "Position from arrow: [Not available]"
 
     ############
     # Method 3 #
@@ -1102,11 +855,8 @@ def ros_run(hsv, count):
         est_inner_corners_angle = np.degrees(angle_rad)
 
         draw_dot(hsv_canvas_all, center_px, HSV_LIGHT_ORANGE_COLOR, size=3)
-        # print "Position from inner corners:", est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle
     else:
-        # est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle = None, None, None, None
         est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle = 0.0, 0.0, 0.0, 0.0
-        # print "Position from inner corners: [Not available]"
 
     hsv_save_image(hsv_canvas_all, "5_canvas_all_"+str(count))
 
@@ -1117,103 +867,6 @@ def ros_run(hsv, count):
     ])
 
     return result
-    
-
-############
-# Examples #
-############
-
-# In dataset_01 (20 images)
-# 18 for two traverse corners
-#
-#
-# In dataset_02 (42 images)
-# 3 for three corners, where the two traversal is pointing down
-# 29 arrowhead not visible (should be)
-# 1 three corners showing
-
-
-# single_image_index = 40
-# single_image = False
-# len_dataset = 40
-
-# results_gt = []
-# results_est = []
-
-# if single_image:
-#     print "###########################"
-#     print "# Now testing on image", str(single_image_index).rjust(2), "#"
-#     print "###########################"
-#     # text = "Now testing on image " + str(single_image_index).rjust(2)
-#     # print_header(str())
-#     run(single_image_index)
-# else:
-#     for image_index in range(len_dataset):
-#         text = "Now testing on image " + str(image_index).rjust(2)
-#         print_header(text)
-#         # print "###########################"
-#         # print "# Now testing on image", str(image_index).rjust(2), "#"
-#         # print "###########################"
-#         run(image_index)
-#         # answer = raw_input("Press enter for next image")
-#         answer = raw_input("")
-
-
-# else:
-#     for i in range(3):
-#         # answer = raw_input("Press enter for next image")
-#         print ""
-#         print "###########################"
-#         print "# Running CV module on image", i, "#"
-#         print "###########################"
-#         length, centroid = run(i)
-#         print ""
-#         print "# Preprocessing"
-#         print "length, centroid:", length, centroid
-#         print ""
-
-#         if length is not None:
-#             json_filepath = "dataset/low_flight_dataset_02/low_flight_dataset.json"
-#             with open(json_filepath) as json_file:
-#                 data = json.load(json_file)
-#                 gt_x, gt_y, gt_z = np.array(data[str(i)]['ground_truth'][0:3])*1000
-#                 results_gt.append([gt_x, gt_y, gt_z])
-#                 print "GT: ", gt_x, gt_y, gt_z
-
-#             est_x, est_y, est_z = calculate_position(centroid, length)
-
-#             print "Est:", est_x, est_y, est_z
-#             results_est.append([est_x, est_y, est_z])
-
-
-#     np_results_gt = np.array(results_gt)
-#     np_results_est = np.array(results_est)
-#     # print "Results ground truth"
-#     # print np_results_gt
-#     # print "Results estimate"
-#     # print np_results_est
-
-#     print_header("Showing results")
-
-#     n_results = len(np_results_gt)
-#     print "n_results:", n_results
-#     rjust = 7
-#     print "||  gt_x   |  est_x  ||  gt_y   |  est_y  ||  gt_z   |  est_z  ||"
-#     print "-----------------------------------------------------------------"
-#     for i in range(n_results):
-
-#         text_gt_x = '{:.2f}'.format(round(np_results_gt[i][0], 2)).rjust(rjust)
-#         text_est_x = '{:.2f}'.format(round(np_results_est[i][0], 2)).rjust(rjust)
-
-#         text_gt_y = '{:.2f}'.format(round(np_results_gt[i][1], 2)).rjust(rjust)
-#         text_est_y = '{:.2f}'.format(round(np_results_est[i][1], 2)).rjust(rjust)
-
-#         text_gt_z = '{:.2f}'.format(round(np_results_gt[i][2], 2)).rjust(rjust)
-#         text_est_z = '{:.2f}'.format(round(np_results_est[i][2], 2)).rjust(rjust)
-
-#         print "||", text_gt_x, "|",text_est_x, \
-#             "||", text_gt_y, "|",text_est_y, \
-#             "||", text_gt_z, "|",text_est_z, "||"
 
 
 def rel_gt_converter(rel_gt):
@@ -1229,6 +882,7 @@ def rel_gt_converter(rel_gt):
         gt_yaw = yaw
 
     return np.array([[gt_x, gt_y, gt_z, gt_yaw]])
+
 
 def main():
     rospy.init_node('cv_module', anonymous=True)
@@ -1248,7 +902,6 @@ def main():
         if (global_image is not None):
             pub_heartbeat.publish(heartbeat_msg)
 
-            # rospy.loginfo("Received image")
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
             est = ros_run(hsv, count)
             gt = rel_gt_converter(global_rel_gt)
@@ -1258,7 +911,6 @@ def main():
             # print result
             # print ""
             count += 1
-        
         else:
             rospy.loginfo("Waiting for image")
 
