@@ -38,6 +38,8 @@ sudo apt-get install ros-kinetic-ardrone-autonomy
     (Download files and place them in folder /ardrone_simulator_gazebo7)
 
 
+* Matplotlib 2.2.4
+
 ## Add the necessary models
 * Add models to the hidden folder .gazebo/models
 

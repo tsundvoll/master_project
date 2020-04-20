@@ -931,13 +931,13 @@ def main():
             est_arrow_msg.linear.y = est[1][1] / 1000.0
             est_arrow_msg.linear.z = est[1][2] / 1000.0
             est_arrow_msg.angular.z = est[1][3]
-            pub_est_ellipse.publish(est_arrow_msg)
+            pub_est_arrow.publish(est_arrow_msg)
 
             est_corners_msg.linear.x = est[2][0] / 1000.0
             est_corners_msg.linear.y = est[2][1] / 1000.0
             est_corners_msg.linear.z = est[2][2] / 1000.0
             est_corners_msg.angular.z = est[2][3]
-            pub_est_ellipse.publish(est_corners_msg)
+            pub_est_corners.publish(est_corners_msg)
 
             # print rel_gt_converter(global_rel_gt)
             print result
