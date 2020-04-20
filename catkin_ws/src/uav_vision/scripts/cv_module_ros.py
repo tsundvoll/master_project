@@ -2,6 +2,7 @@
 
 import rospy
 from sensor_msgs.msg import Image
+from geometry_msgs.msg import Twist
 
 import numpy as np
 import math
@@ -13,6 +14,7 @@ from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 drone_image_raw = None
 global_image = None
+global_rel_gt = None
 
 
 # Constants
@@ -35,6 +37,11 @@ def image_callback(data):
         global_image = bridge.imgmsg_to_cv2(data, 'bgr8') # {'bgr8' or 'rgb8}
     except CvBridgeError as e:
         rospy.loginfo(e)
+
+
+def rel_gt_callback(data):
+    global global_rel_gt
+    global_rel_gt = data
 
 
 ##################
@@ -242,12 +249,12 @@ def get_mask(hsv, hue_low, hue_high, sat_low, sat_high, val_low, val_high):
 
     mask = cv2.inRange(hsv, lower_color, upper_color) 
 
-    # white_x, white_y = np.where(mask==255)
-    # if len(white_x) == 0: # No color visible
-    #     return None
-    # else:
-    #     return mask
-    return mask
+    mask_x, mask_y = np.where(mask==255)
+    if len(mask_x) == 0: # No color visible
+        return None
+    else:
+        return mask
+    # return mask
 
 
 def get_white_mask(hsv):
@@ -266,7 +273,7 @@ def get_white_mask(hsv):
 def get_orange_mask(hsv):
     hue_low = max(0, HSV_REAL_ORANGE[0] - hue_margin) 
     hue_high = min(360, HSV_REAL_ORANGE[0] + hue_margin)
-    
+
     sat_low = max(0, HSV_REAL_ORANGE[1] - sat_margin) 
     sat_high = min(100, HSV_REAL_ORANGE[1] + sat_margin)
 
@@ -1085,6 +1092,13 @@ def ros_run(hsv, count):
 
     hsv_save_image(hsv_canvas_all, "5_canvas_all_"+str(count))
 
+    result = np.array([
+        [est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle],
+        [est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle],
+        [est_inner_corners_x, est_inner_corners_y, est_inner_corners_z, est_inner_corners_angle]        
+    ])
+
+    return result
     
 
 ############
@@ -1184,10 +1198,25 @@ def ros_run(hsv, count):
 #             "||", text_gt_z, "|",text_est_z, "||"
 
 
+def rel_gt_converter(rel_gt):
+    """ Convert from twist message data to x, y, z, yaw in cm and degrees """
+    gt_x = rel_gt.linear.x * 1000
+    gt_y = rel_gt.linear.y * 1000
+    gt_z = rel_gt.linear.z * 1000
+    yaw = -np.degrees(rel_gt.angular.z)
+    
+    if yaw > 0:
+        gt_yaw = yaw - 90
+    else:
+        gt_yaw = yaw + 270
+
+    return np.array([[gt_x, gt_y, gt_z, gt_yaw]])
+
 def main():
     rospy.init_node('cv_module', anonymous=True)
 
     rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
+    rospy.Subscriber('/drone_pose', Twist, rel_gt_callback)
 
     rospy.loginfo("Starting CV module")
 
@@ -1198,7 +1227,12 @@ def main():
         if (global_image is not None):
             rospy.loginfo("Received image")
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
-            ros_run(hsv, count)
+            est = ros_run(hsv, count)
+            gt = rel_gt_converter(global_rel_gt)
+            result = np.concatenate((est, gt))
+
+            # print rel_gt_converter(global_rel_gt)
+            print result
             count += 1
         
         else:
