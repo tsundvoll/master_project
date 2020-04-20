@@ -874,12 +874,17 @@ def rel_gt_converter(rel_gt):
     gt_x = rel_gt.linear.x * 1000
     gt_y = rel_gt.linear.y * 1000
     gt_z = rel_gt.linear.z * 1000
-    yaw = -np.degrees(rel_gt.angular.z) - 90
+    # yaw = -np.degrees(rel_gt.angular.z) - 90
     
-    if yaw < -180:
-        gt_yaw = 360 + yaw
-    else:
-        gt_yaw = yaw
+    # if yaw < -180:
+    #     gt_yaw = 360 + yaw
+    # else:
+    #     gt_yaw = yaw
+
+    # gt_x = rel_gt.linear.x
+    # gt_y = rel_gt.linear.y
+    # gt_z = rel_gt.linear.z
+    gt_yaw = rel_gt.angular.z
 
     return np.array([[gt_x, gt_y, gt_z, gt_yaw]])
 
@@ -913,30 +918,30 @@ def main():
 
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
             est = ros_run(hsv, count)
-            # gt = rel_gt_converter(global_rel_gt)
-            # result = np.concatenate((est, gt))
+            gt = rel_gt_converter(global_rel_gt)
+            result = np.concatenate((est, gt))
 
-            est_ellipse_msg.linear.x = est[0][0]
-            est_ellipse_msg.linear.y = est[0][1]
-            est_ellipse_msg.linear.z = est[0][2]
+            est_ellipse_msg.linear.x = est[0][0] / 1000.0
+            est_ellipse_msg.linear.y = est[0][1] / 1000.0
+            est_ellipse_msg.linear.z = est[0][2] / 1000.0
             est_ellipse_msg.angular.z = est[0][3]
             pub_est_ellipse.publish(est_ellipse_msg)
 
-            est_arrow_msg.linear.x = est[1][0]
-            est_arrow_msg.linear.y = est[1][1]
-            est_arrow_msg.linear.z = est[1][2]
+            est_arrow_msg.linear.x = est[1][0] / 1000.0
+            est_arrow_msg.linear.y = est[1][1] / 1000.0
+            est_arrow_msg.linear.z = est[1][2] / 1000.0
             est_arrow_msg.angular.z = est[1][3]
             pub_est_ellipse.publish(est_arrow_msg)
 
-            est_corners_msg.linear.x = est[2][0]
-            est_corners_msg.linear.y = est[2][1]
-            est_corners_msg.linear.z = est[2][2]
+            est_corners_msg.linear.x = est[2][0] / 1000.0
+            est_corners_msg.linear.y = est[2][1] / 1000.0
+            est_corners_msg.linear.z = est[2][2] / 1000.0
             est_corners_msg.angular.z = est[2][3]
             pub_est_ellipse.publish(est_corners_msg)
 
             # print rel_gt_converter(global_rel_gt)
-            # print result
-            # print ""
+            print result
+            print ""
             count += 1
         else:
             rospy.loginfo("Waiting for image")

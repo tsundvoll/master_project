@@ -207,9 +207,21 @@ def main():
             pose_msg.linear.x = gt_relative_position[0]
             pose_msg.linear.y = gt_relative_position[1]
             pose_msg.linear.z = gt_relative_position[2]
-            pose_msg.angular.x = gt_relative_position[3]
-            pose_msg.angular.y = gt_relative_position[4]
-            pose_msg.angular.z = gt_relative_position[5]
+            pose_msg.angular.x = 0
+            pose_msg.angular.y = 0
+
+            yaw = -np.degrees(gt_relative_position[5]) - 90
+            if yaw < -180:
+                gt_yaw = 360 + yaw
+            else:
+                gt_yaw = yaw
+
+            if yaw < -180:
+                gt_yaw = 360 + yaw
+            else:
+                gt_yaw = yaw
+
+            pose_msg.angular.z = gt_yaw
             pose_pub.publish(pose_msg)
 
             error_msg.linear.x = error_prev[0]
