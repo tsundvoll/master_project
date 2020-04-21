@@ -889,6 +889,23 @@ def rel_gt_converter(rel_gt):
     return np.array([[gt_x, gt_y, gt_z, gt_yaw]])
 
 
+def filter_estimate(estimate, estimate_history, median_filter_size, average_filter_size):
+    """
+        Filters the estimate with a sliding window median and average filter.
+    """
+
+    estimate_history = np.concatenate((estimate_history[1:], [estimate]))
+
+    strides = np.array(
+        [estimate_history[i:median_filter_size+i] for i in range(average_filter_size)]
+    )
+
+    median_filtered = np.median(strides, axis = 1)
+    average_filtered = np.average(median_filtered[-average_filter_size:], axis=0)
+
+    return average_filtered, estimate_history
+
+
 def main():
     rospy.init_node('cv_module', anonymous=True)
 
@@ -898,14 +915,34 @@ def main():
     pub_heartbeat = rospy.Publisher("/heartbeat", Empty, queue_size=10)
     
     pub_est_ellipse = rospy.Publisher("/estimate/ellipse", Twist, queue_size=10)
+    pub_est_ellipse_filtered = rospy.Publisher("/estimate_filtered/ellipse", Twist, queue_size=10)
+
     pub_est_arrow = rospy.Publisher("/estimate/arrow", Twist, queue_size=10)
+    pub_est_arrow_filtered = rospy.Publisher("/estimate_filtered/arrow", Twist, queue_size=10)
+
     pub_est_corners = rospy.Publisher("/estimate/corners", Twist, queue_size=10)
+    pub_est_corners_filtered = rospy.Publisher("/estimate_filtered/corners", Twist, queue_size=10)
     
 
     est_ellipse_msg = Twist()
+    est_filtered_ellipse_msg = Twist()
+
     est_arrow_msg = Twist()
+    est_filtered_arrow_msg = Twist()
+
     est_corners_msg = Twist()
+    est_filtered_corners_msg = Twist()
+
     heartbeat_msg = Empty()
+
+    # Set up filter
+    median_filter_size = 3
+    average_filter_size = 3
+
+    estimate_history_size = median_filter_size + average_filter_size - 1
+    estimate_history_ellipse = np.zeros((estimate_history_size,4))
+    estimate_history_arrow = np.zeros((estimate_history_size,4))
+    estimate_history_corners = np.zeros((estimate_history_size,4))
 
     rospy.loginfo("Starting CV module")
 
@@ -918,30 +955,57 @@ def main():
 
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
             est = ros_run(hsv, count)
-            gt = rel_gt_converter(global_rel_gt)
-            result = np.concatenate((est, gt))
+            # gt = rel_gt_converter(global_rel_gt)
+            # result = np.concatenate((est, gt))
 
-            est_ellipse_msg.linear.x = est[0][0] / 1000.0
-            est_ellipse_msg.linear.y = est[0][1] / 1000.0
-            est_ellipse_msg.linear.z = est[0][2] / 1000.0
-            est_ellipse_msg.angular.z = est[0][3]
+            est_ellipse = est[0]
+            est_arrow = est[1]
+            est_corners = est[2]
+
+            est_ellipse_filtered, estimate_history_ellipse = filter_estimate(est_ellipse, estimate_history_ellipse, median_filter_size, average_filter_size)
+            est_arrow_filtered, estimate_history_arrow = filter_estimate(est_arrow, estimate_history_arrow, median_filter_size, average_filter_size)
+            est_corners_filtered, estimate_history_corners = filter_estimate(est_corners, estimate_history_corners, median_filter_size, average_filter_size)
+
+            # Publish the results #
+            # Ellipse
+            est_ellipse_msg.linear.x = est_ellipse[0] / 1000.0
+            est_ellipse_msg.linear.y = est_ellipse[1] / 1000.0
+            est_ellipse_msg.linear.z = est_ellipse[2] / 1000.0
+            est_ellipse_msg.angular.z = est_ellipse[3]
             pub_est_ellipse.publish(est_ellipse_msg)
 
-            est_arrow_msg.linear.x = est[1][0] / 1000.0
-            est_arrow_msg.linear.y = est[1][1] / 1000.0
-            est_arrow_msg.linear.z = est[1][2] / 1000.0
-            est_arrow_msg.angular.z = est[1][3]
+            est_filtered_ellipse_msg.linear.x = est_ellipse_filtered[0] / 1000.0
+            est_filtered_ellipse_msg.linear.y = est_ellipse_filtered[1] / 1000.0
+            est_filtered_ellipse_msg.linear.z = est_ellipse_filtered[2] / 1000.0
+            est_filtered_ellipse_msg.angular.z = est_ellipse_filtered[3]
+            pub_est_ellipse_filtered.publish(est_filtered_ellipse_msg)
+
+            # Arrow
+            est_arrow_msg.linear.x = est_arrow[0] / 1000.0
+            est_arrow_msg.linear.y = est_arrow[1] / 1000.0
+            est_arrow_msg.linear.z = est_arrow[2] / 1000.0
+            est_arrow_msg.angular.z = est_arrow[3]
             pub_est_arrow.publish(est_arrow_msg)
 
-            est_corners_msg.linear.x = est[2][0] / 1000.0
-            est_corners_msg.linear.y = est[2][1] / 1000.0
-            est_corners_msg.linear.z = est[2][2] / 1000.0
-            est_corners_msg.angular.z = est[2][3]
+            est_filtered_arrow_msg.linear.x = est_arrow_filtered[0] / 1000.0
+            est_filtered_arrow_msg.linear.y = est_arrow_filtered[1] / 1000.0
+            est_filtered_arrow_msg.linear.z = est_arrow_filtered[2] / 1000.0
+            est_filtered_arrow_msg.angular.z = est_arrow_filtered[3]
+            pub_est_arrow_filtered.publish(est_filtered_arrow_msg)
+
+            # Corners
+            est_corners_msg.linear.x = est_corners[0] / 1000.0
+            est_corners_msg.linear.y = est_corners[1] / 1000.0
+            est_corners_msg.linear.z = est_corners[2] / 1000.0
+            est_corners_msg.angular.z = est_corners[3]
             pub_est_corners.publish(est_corners_msg)
 
-            # print rel_gt_converter(global_rel_gt)
-            print result
-            print ""
+            est_filtered_corners_msg.linear.x = est_corners_filtered[0] / 1000.0
+            est_filtered_corners_msg.linear.y = est_corners_filtered[1] / 1000.0
+            est_filtered_corners_msg.linear.z = est_corners_filtered[2] / 1000.0
+            est_filtered_corners_msg.angular.z = est_corners_filtered[3]
+            pub_est_corners_filtered.publish(est_filtered_corners_msg)
+
             count += 1
         else:
             rospy.loginfo("Waiting for image")

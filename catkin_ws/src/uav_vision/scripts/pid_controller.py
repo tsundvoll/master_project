@@ -90,7 +90,7 @@ def gt_callback(data):
 
 def estimate_callback(data):
     global est_relative_position
-    est_relative_position = np.array([data.x, data.y, data.z, 0, 0, 0])
+    est_relative_position = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
 
 
 # Setup for the PID controller
@@ -150,10 +150,13 @@ def main():
     rospy.init_node('pid_controller', anonymous=True)
 
 
-    use_estimate = False
+    use_estimate = True
 
     if use_estimate:
-        rospy.Subscriber('/drone_estimate_filtered', Point, estimate_callback)
+        # rospy.Subscriber('/drone_estimate_filtered', Point, estimate_callback)
+        # rospy.Subscriber('/estimate_filtered/ellipse', Twist, estimate_callback)
+        rospy.Subscriber('/estimate_filtered/arrow', Twist, estimate_callback)
+        # rospy.Subscriber('/estimate_filtered/corners', Twist, estimate_callback)
     
     rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
     
