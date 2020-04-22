@@ -177,3 +177,9 @@ float64[9] angular_velocity_covariance # Row major about x, y, z axes
 
 geometry_msgs/Vector3 linear_acceleration
 float64[9] linear_acceleration_covariance # Row major x, y z
+
+
+# Joystick:
+* Connect to PS4 controller via Bluetooth
+* run rosrun joy joy_node
+* run rosrun uav_vision joy_teleop.py
