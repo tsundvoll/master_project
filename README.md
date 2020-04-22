@@ -164,3 +164,16 @@ Topics from the Sphinx simulator:
 /gazebo/default/world_stats
 /gazebo/server/control
 /gazebo/world/modify
+
+# Sensor msg imu
+# Accelerations should be in m/s^2 (not in g's), and rotational velocity should be in rad/sec
+Header header
+
+geometry_msgs/Quaternion orientation
+float64[9] orientation_covariance # Row major about x, y, z axes
+
+geometry_msgs/Vector3 angular_velocity
+float64[9] angular_velocity_covariance # Row major about x, y, z axes
+
+geometry_msgs/Vector3 linear_acceleration
+float64[9] linear_acceleration_covariance # Row major x, y z

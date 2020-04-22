@@ -54,7 +54,7 @@ def gt_callback(data):
     # Translation of the world frame to landing frame wrt. the world frame
     offset_x = 1.0
     offset_y = 0.0
-    offset_z = 0.54
+    offset_z = 0.495
     d_0_1 = np.array([offset_x, offset_y, offset_z])
 
     # Rotation of the world frame to landing frame wrt. the world frame
@@ -150,7 +150,7 @@ def main():
     rospy.init_node('pid_controller', anonymous=True)
 
 
-    use_estimate = True
+    use_estimate = False
 
     if use_estimate:
         # rospy.Subscriber('/drone_estimate_filtered', Point, estimate_callback)
