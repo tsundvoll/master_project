@@ -5,8 +5,10 @@ from std_msgs.msg import String, Empty, Float32
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 
-
-sensitivity = 0.5
+# Higher sensitivity, higher speed
+sensitivity_x_y = 2.0
+sensitivity_z = 2.0
+sensitivity_yaw = 1.0
 
 def teleop_callback(data):
     # axes [8] = [left_js left-right(0), left_js up-down(1), L2(2), right_js left-right(3), right_js up-down(4), R2(5), upper_js left-right(6), upper_js up-down(7)]
@@ -27,10 +29,10 @@ def teleop_callback(data):
         pub_land.publish(Empty())
 
     control_msg = Twist()
-    control_msg.linear.x = right_js_vertical*sensitivity
-    control_msg.linear.y = right_js_horizontal*sensitivity
-    control_msg.linear.z = left_js_vertical
-    control_msg.angular.z = left_js_horizontal
+    control_msg.linear.x = right_js_vertical*sensitivity_x_y
+    control_msg.linear.y = right_js_horizontal*sensitivity_x_y
+    control_msg.linear.z = left_js_vertical*sensitivity_z
+    control_msg.angular.z = left_js_horizontal*sensitivity_yaw
     pub_controller.publish(control_msg)
 
 

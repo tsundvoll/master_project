@@ -202,7 +202,7 @@ def main():
             msg.linear.z = actuation[2]
             msg.angular.z = 0.1 # For testing
 
-            control_pub.publish(msg)
+            # control_pub.publish(msg)
 
             # Publish values for tuning
             reference_pub.publish(reference_msg)

@@ -870,7 +870,7 @@ def ros_run(hsv, count):
 
 
 def rel_gt_converter(rel_gt):
-    """ Convert from twist message data to x, y, z, yaw in cm and degrees """
+    """ Convert from twist message data to x, y, z, yaw in mm and degrees """
     gt_x = rel_gt.linear.x * 1000
     gt_y = rel_gt.linear.y * 1000
     gt_z = rel_gt.linear.z * 1000

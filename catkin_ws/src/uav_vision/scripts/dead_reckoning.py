@@ -5,8 +5,9 @@ from ardrone_autonomy.msg import Navdata
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Twist
 
-
 import numpy as np
+from scipy.spatial.transform import Rotation as R
+
 
 ONE_G = 9.80665
 
@@ -18,11 +19,14 @@ def imu_callback(data):
 
 global_velocities = None
 global_acceleration = None
+global_yaw = None
 def navdata_callback(data):
     global global_velocities
     global global_acceleration
+    global global_yaw
     global_velocities = np.array([data.vx, data.vy, data.vz])
     global_acceleration = np.array([data.ax*ONE_G*1000, data.ay*ONE_G*1000, data.az*ONE_G*1000])
+    global_yaw = data.rotZ # Rotation about the Z axis, measured in degrees
 
 
 def filter_measurement(measurement, measurement_history, median_filter_size, average_filter_size):
@@ -67,6 +71,7 @@ def main():
 
     pos_prev = np.zeros(3)
     vel_prev = np.zeros(3)
+    yaw_prev = 0.0
 
     # Set up filter
     median_filter_size = 1
@@ -83,6 +88,7 @@ def main():
         if global_velocities is not None:
             new_vel = global_velocities
             new_acc = global_acceleration
+            new_yaw = global_yaw
             if count == 0:
                 start_time = rospy.get_time()
             elif count < N_CALIBRATION_STEPS:
@@ -103,12 +109,12 @@ def main():
 
                 vel = new_vel - calibration_vel
                 acc = new_acc - calibration_acc
+                delta_yaw = new_yaw - yaw_prev
+                yaw_prev = new_yaw
 
                 # vel, vel_history = filter_measurement(vel, vel_history, median_filter_size, average_filter_size)
                 # acc, acc_history = filter_measurement(acc, acc_history, median_filter_size, average_filter_size)
                 
-
-
                 small_values_filter_val = np.logical_and(np.less(vel, vel_max), np.greater(vel, vel_min))
                 small_values_filter_acc = np.logical_and(np.less(acc, acc_max), np.greater(acc, acc_min))
                 vel[small_values_filter_val] = 0.0
@@ -118,6 +124,11 @@ def main():
                 # print "Acceleration :", acc
 
                 pos_curr = pos_prev + duration*vel + 0.5*acc*duration**2
+
+                rotation = R.from_euler('z', -np.radians(delta_yaw))
+                pos_curr = rotation.apply(pos_curr)
+                print pos_curr
+
                 pos_prev = pos_curr
 
                 # print ""
