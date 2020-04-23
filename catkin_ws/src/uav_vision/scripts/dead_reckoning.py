@@ -26,7 +26,12 @@ def navdata_callback(data):
     global global_yaw
     global_velocities = np.array([data.vx, data.vy, data.vz])
     global_acceleration = np.array([data.ax*ONE_G*1000, data.ay*ONE_G*1000, data.az*ONE_G*1000])
-    global_yaw = data.rotZ # Rotation about the Z axis, measured in degrees
+    yaw = data.rotZ-90 # Rotation about the Z axis, measured in degrees
+
+    if yaw < -180:
+        global_yaw = 360 + yaw
+    else:
+        global_yaw = yaw
 
 
 def filter_measurement(measurement, measurement_history, median_filter_size, average_filter_size):
@@ -60,9 +65,10 @@ def main():
     N_CALIBRATION_STEPS = 100
     calibration_sum_vel = np.zeros(3)
     calibration_sum_acc = np.zeros(3)
-    calibration_vel = None
-    calibration_acc = None
+    calibration_vel = 0.0
+    calibration_acc = 0.0
 
+    # Avoid small fluxtuations by removing small values
     vel_min = -3.0
     vel_max = 3.0
 
@@ -91,6 +97,7 @@ def main():
             new_yaw = global_yaw
             if count == 0:
                 start_time = rospy.get_time()
+                prev_time = start_time
             elif count < N_CALIBRATION_STEPS:
                 calibration_sum_vel += new_vel
                 calibration_sum_acc += new_acc
@@ -127,8 +134,6 @@ def main():
 
                 rotation = R.from_euler('z', -np.radians(delta_yaw))
                 pos_curr = rotation.apply(pos_curr)
-                print pos_curr
-
                 pos_prev = pos_curr
 
                 # print ""
@@ -139,6 +144,7 @@ def main():
                 dead_reckoning_msg.linear.x = pos_curr[0] / 1000
                 dead_reckoning_msg.linear.y = pos_curr[1] / 1000
                 dead_reckoning_msg.linear.z = pos_curr[2] / 1000
+                dead_reckoning_msg.angular.z = new_yaw
                 pub_dead_reckoning.publish(dead_reckoning_msg)
 
             

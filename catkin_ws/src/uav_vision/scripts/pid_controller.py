@@ -219,11 +219,6 @@ def main():
             else:
                 gt_yaw = yaw
 
-            if yaw < -180:
-                gt_yaw = 360 + yaw
-            else:
-                gt_yaw = yaw
-
             pose_msg.angular.z = gt_yaw
             pose_pub.publish(pose_msg)
 
