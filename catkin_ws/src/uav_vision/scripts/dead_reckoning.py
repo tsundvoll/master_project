@@ -8,7 +8,6 @@ from geometry_msgs.msg import Twist
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
-
 ONE_G = 9.80665
 
 global_imu = None
