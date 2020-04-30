@@ -21,7 +21,7 @@ Prerequisites:
 ### Install ROS Kinetic
 Follow this guide: http://wiki.ros.org/kinetic/Installation/Ubuntu
 
-### gazebo_ros
+### gazebo_ros (Gazebo 7.0)
 sudo apt-get install ros-kinetic-gazebo-ros
 
 ### uuv_simulator

@@ -45,6 +45,8 @@ def main():
     pub_land = rospy.Publisher("/ardrone/land", Empty, queue_size=10)
     pub_controller = rospy.Publisher("/cmd_vel", Twist, queue_size=1000)
 
+    pub_set_point = rospy.Publisher("/set_point")
+
     rospy.Subscriber("joy", Joy, teleop_callback)
 
 

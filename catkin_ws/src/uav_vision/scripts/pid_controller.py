@@ -150,13 +150,14 @@ def main():
     rospy.init_node('pid_controller', anonymous=True)
 
 
-    use_estimate = False
+    use_estimate = True
 
     if use_estimate:
         # rospy.Subscriber('/drone_estimate_filtered', Point, estimate_callback)
         # rospy.Subscriber('/estimate_filtered/ellipse', Twist, estimate_callback)
-        rospy.Subscriber('/estimate_filtered/arrow', Twist, estimate_callback)
+        # rospy.Subscriber('/estimate_filtered/arrow', Twist, estimate_callback)
         # rospy.Subscriber('/estimate_filtered/corners', Twist, estimate_callback)
+        rospy.Subscriber('/estimate', Twist, estimate_callback)
     
     rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
     
@@ -200,9 +201,9 @@ def main():
             msg.linear.x = actuation[0]
             msg.linear.y = actuation[1]
             msg.linear.z = actuation[2]
-            msg.angular.z = 0.1 # For testing
+            msg.angular.z = actuation[5] #0.1 # For testing
 
-            # control_pub.publish(msg)
+            control_pub.publish(msg)
 
             # Publish values for tuning
             reference_pub.publish(reference_msg)
