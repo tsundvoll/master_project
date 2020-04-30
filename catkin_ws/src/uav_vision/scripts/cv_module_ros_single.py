@@ -886,6 +886,8 @@ def main():
 
     rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
 
+    pub_processed_image = rospy.Publisher('/preprocessed_image', Image, queue_size=10)
+
     pub_est = rospy.Publisher("/estimate", Twist, queue_size=10)
     est_msg = Twist()
 

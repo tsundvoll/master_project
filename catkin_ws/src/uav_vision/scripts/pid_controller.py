@@ -112,9 +112,12 @@ error_integral_limit = cfg.error_integral_limit
 
 def set_point_callback(data):
     global desired_pose
-    desired_pose[0] = data.x + cfg.offset_setpoint_x
-    desired_pose[1] = data.y
-    desired_pose[2] = data.z
+    desired_pose[0] = data.linear.x + cfg.offset_setpoint_x
+    desired_pose[1] = data.linear.y
+    desired_pose[2] = data.linear.z
+    desired_pose[3] = data.angular.x
+    desired_pose[4] = data.angular.y
+    desired_pose[5] = data.angular.z
 
 
 def controller(state):
@@ -161,7 +164,7 @@ def main():
     
     rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
     
-    rospy.Subscriber('/set_point', Point, set_point_callback)
+    rospy.Subscriber('/set_point', Twist, set_point_callback)
 
     
     reference_pub = rospy.Publisher('/drone_reference', Twist, queue_size=10)
@@ -206,6 +209,12 @@ def main():
             control_pub.publish(msg)
 
             # Publish values for tuning
+            reference_msg.linear.x = desired_pose[0]
+            reference_msg.linear.y = desired_pose[1]
+            reference_msg.linear.z = desired_pose[2]
+            reference_msg.angular.x = desired_pose[3]
+            reference_msg.angular.y = desired_pose[4]
+            reference_msg.angular.z = desired_pose[5]
             reference_pub.publish(reference_msg)
 
             pose_msg.linear.x = gt_relative_position[0]
