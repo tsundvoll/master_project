@@ -21,6 +21,7 @@ bridge = CvBridge()
 
 global_image = None
 save_images = False
+draw_on_images = True
 
 # Constants
 D_H_SHORT = 3.0
@@ -93,14 +94,14 @@ def hsv_to_opencv_hsv(hue, saturation, value):
 
 
 def draw_dot(img, position, color, size=3):
-    if save_images:
+    if draw_on_images:
         cX = np.int0(position[1])
         cY = np.int0(position[0])
         cv2.circle(img, (cX, cY), size, color, -1)
 
 
 def draw_arrow(img, start, end):
-    if save_images:
+    if draw_on_images:
         return cv2.arrowedLine(img,
             (np.int0(start[1]), np.int0(start[0])),
             (np.int0(end[1]), np.int0(end[0])),
@@ -876,9 +877,17 @@ def get_estimate(hsv, count):
 
     hsv_save_image(hsv_canvas_all, "5_canvas_all_"+str(count))
 
+    bgr_canvas_all = cv2.cvtColor(hsv_canvas_all, cv2.COLOR_HSV2BGR) # convert to HSV
+
+    try:
+        processed_image = bridge.cv2_to_imgmsg(bgr_canvas_all, "bgr8")
+    except CvBridgeError as e:
+        rospy.loginfo(e)
+
+
     result = np.array([est_x, est_y, est_z, est_angle])
 
-    return result, method_of_choice
+    return result, method_of_choice, processed_image
 
 
 def main():
@@ -886,7 +895,7 @@ def main():
 
     rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
 
-    pub_processed_image = rospy.Publisher('/preprocessed_image', Image, queue_size=10)
+    pub_processed_image = rospy.Publisher('/processed_image', Image, queue_size=10)
 
     pub_est = rospy.Publisher("/estimate", Twist, queue_size=10)
     est_msg = Twist()
@@ -900,7 +909,9 @@ def main():
         if (global_image is not None):
 
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
-            est, method = get_estimate(hsv, count)
+            est, method, processed_image = get_estimate(hsv, count)
+
+            pub_processed_image.publish(processed_image)
 
             rospy.loginfo("Method: " + method)
 
