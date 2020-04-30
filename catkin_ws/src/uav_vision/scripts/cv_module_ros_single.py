@@ -700,7 +700,9 @@ def evaluate_arrow(hsv):
 
         hsv_canvas_arrow = hsv.copy()
         draw_dot(hsv_canvas_arrow, center_px, HSV_RED_COLOR)
-        draw_dot(hsv_canvas_arrow, arrowhead_px, HSV_RED_COLOR)
+        # draw_dot(hsv_canvas_arrow, arrowhead_px, HSV_RED_COLOR)
+        draw_dot(hsv_canvas_all, arrowhead_px, HSV_RED_COLOR)
+
         hsv_save_image(hsv_canvas_arrow, "4_canvas_arrow")
 
         return center_px, radius_length_px, angle
@@ -739,7 +741,7 @@ def evaluate_inner_corners(hsv):
     bw_white_mask = get_white_mask(hsv)
     if bw_white_mask is None:
         return None, None, None
-    bw_white_mask = make_gaussian_blurry(bw_white_mask, 5)
+    bw_white_mask = make_gaussian_blurry(bw_white_mask, 9) #5
 
     hsv_save_image(bw_white_mask, "0_white_only", is_gray=True)
 
@@ -790,10 +792,11 @@ def evaluate_inner_corners(hsv):
                 forward_unit_vector = normalize_vector(corner_a - corner_b)
             
             end = c_m + forward_unit_vector*10
-            draw_arrow(hsv_canvas, c_m, end)
+            # draw_arrow(hsv_canvas, c_m, end)
+            draw_arrow(hsv_canvas_all, c_m, end)
 
             center = c_m + normal_unit_vector*length_to_center
-            draw_dot(hsv_canvas, center, HSV_BLUE_COLOR)
+            # draw_dot(hsv_canvas, center, HSV_BLUE_COLOR)
 
             # hsv_save_image(hsv_canvas, "3_canvas")
                       
@@ -813,6 +816,8 @@ def get_estimate(hsv, count):
     method_of_choice = None # Updated to show which method is used for each timestep
 
     hsv_save_image(hsv, '0_hsv')
+    hsv_canvas_all = hsv.copy()
+    global hsv_canvas_all
 
     white_mask = get_white_mask(hsv)
     if white_mask is not None:
@@ -833,7 +838,6 @@ def get_estimate(hsv, count):
     center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
     center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
 
-    hsv_canvas_all = hsv.copy()
 
     ############
     # Method 2 #
