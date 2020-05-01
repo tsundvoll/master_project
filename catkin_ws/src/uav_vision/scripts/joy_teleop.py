@@ -46,7 +46,7 @@ def teleop_callback(data):
     control_msg.angular.z = left_js_horizontal*sensitivity_yaw
     # pub_controller.publish(control_msg)
 
-    const = 0.01
+    const = 0.001
 
     set_points += np.array([const*right_js_vertical*sensitivity_x_y,  const*right_js_horizontal*sensitivity_x_y,   const*left_js_vertical*sensitivity_z,
                             0.0,                                0.0,                                    const*left_js_horizontal*sensitivity_yaw])

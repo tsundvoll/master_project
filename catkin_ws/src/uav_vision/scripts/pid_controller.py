@@ -160,7 +160,9 @@ def main():
         # rospy.Subscriber('/estimate_filtered/ellipse', Twist, estimate_callback)
         # rospy.Subscriber('/estimate_filtered/arrow', Twist, estimate_callback)
         # rospy.Subscriber('/estimate_filtered/corners', Twist, estimate_callback)
-        rospy.Subscriber('/estimate', Twist, estimate_callback)
+
+        # rospy.Subscriber('/estimate', Twist, estimate_callback)
+        rospy.Subscriber('/filtered_estimate', Twist, estimate_callback)
     
     rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
     

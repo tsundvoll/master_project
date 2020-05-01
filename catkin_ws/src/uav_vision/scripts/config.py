@@ -48,7 +48,7 @@ if pid_with_estimate:
     Ki_position_z = 0.01
     Kd_position_z = 0.3
     ####################
-    Kp_orientation = 0.05
+    Kp_orientation = 0.01
     Ki_orientation = 0.0
     Kd_orientation = 0.0
     ####################
