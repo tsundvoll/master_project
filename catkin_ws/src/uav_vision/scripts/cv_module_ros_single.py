@@ -21,7 +21,7 @@ bridge = CvBridge()
 
 global_image = None
 save_images = False
-draw_on_images = True
+draw_on_images = False
 
 # Constants
 D_H_SHORT = 3.0
@@ -122,10 +122,8 @@ def limit_point(point):
     limits_min = [0,0]
     limits_max = [IMG_HEIGHT-1, IMG_WIDTH-1]
     clipped = np.int0(np.clip(point, limits_min, limits_max))
-
-    if not np.array_equal(clipped, np.int0(point)):
-        print "Different"
     return clipped
+    
 
 def get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side):
     hsv_normals = bw_white_mask.copy()
@@ -289,42 +287,6 @@ def flood_fill(img, start=(0,0)):
     mask = mask[1:h+1,1:w+1] # Removing the padding
     
     return mask
-
-
-def get_pixels_inside_green_old(hsv):
-    """ 
-        Function that finds the green in an image, make a bounding box around it,
-        fits an ellipse in the bounding box
-        and paints everything outside the ellipse in black.
-
-        Returns the painted image.
-     """
-
-    bw_green_mask = get_green_mask(hsv)  
-    if bw_green_mask is None:
-        return hsv
-
-    green_x, green_y = np.where(bw_green_mask==255)
-    x_min = np.amin(green_x)
-    x_max = np.amax(green_x)
-    y_min = np.amin(green_y)
-    y_max = np.amax(green_y)
-
-    center_x = np.int0((x_min + x_max) / 2.0)
-    center_y = np.int0((y_min + y_max) / 2.0)
-
-    l_x = np.int0(x_max - center_x)+1
-    l_y = np.int0(y_max - center_y)+1
-
-    bw_ellipse_mask = np.zeros((IMG_HEIGHT, IMG_WIDTH))
-    cv2.ellipse(img=bw_ellipse_mask, center=(center_y, center_x),
-        axes=(l_y, l_x), angle=0, startAngle=0, endAngle=360,
-        color=(255), thickness=-1, lineType=8, shift=0)
-
-    hsv_ellipse = hsv.copy()
-    hsv_ellipse[bw_ellipse_mask==0] = HSV_BLACK_COLOR
-
-    return hsv_ellipse
 
 
 def get_pixels_inside_green(hsv):
@@ -691,14 +653,14 @@ def evaluate_ellipse(hsv):
     if bw_green_mask is None:
         return None, None, None
 
-    hsv_save_image(bw_green_mask, "2_green_mask", is_gray=True)
+    # hsv_save_image(bw_green_mask, "2_green_mask", is_gray=True)
 
     if is_mask_touching_border(bw_green_mask):
         # Then the green ellipse is toughing the border
         return None, None, None
 
     bw_green_ellipse = flood_fill(bw_green_mask, start=(0,0))
-    hsv_save_image(bw_green_ellipse, "3_green_ellipse", is_gray=True)
+    # hsv_save_image(bw_green_ellipse, "3_green_ellipse", is_gray=True)
 
     ellipse_parameters = get_ellipse_parameters(bw_green_ellipse)
     if ellipse_parameters is None:
@@ -710,9 +672,9 @@ def evaluate_ellipse(hsv):
     radius_px = np.amax(np.abs(ellipse_parameters[2:4]))
     angle = 0
 
-    hsv_canvas_ellipse = hsv.copy()
-    draw_dot(hsv_canvas_ellipse, center_px, HSV_BLUE_COLOR)
-    hsv_save_image(hsv_canvas_ellipse, "4_canvas_ellipse") #, is_gray=True)
+    # hsv_canvas_ellipse = hsv.copy()
+    # draw_dot(hsv_canvas_ellipse, center_px, HSV_BLUE_COLOR)
+    # hsv_save_image(hsv_canvas_ellipse, "4_canvas_ellipse") #, is_gray=True)
 
     return center_px, radius_px, angle
 
@@ -866,17 +828,17 @@ def get_estimate(hsv, count):
     hsv_save_image(hsv, '0_hsv')
     global_hsv_canvas_all = hsv.copy()
 
-    white_mask = get_white_mask(hsv)
-    if white_mask is not None:
-        hsv_save_image(white_mask, '1_white_mask', is_gray=True)
+    # white_mask = get_white_mask(hsv)
+    # if white_mask is not None:
+    #     hsv_save_image(white_mask, '1_white_mask', is_gray=True)
 
-    orange_mask = get_orange_mask(hsv)
-    if orange_mask is not None:
-        hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
+    # orange_mask = get_orange_mask(hsv)
+    # if orange_mask is not None:
+    #     hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
 
-    green_mask = get_green_mask(hsv)
-    if green_mask is not None:
-        hsv_save_image(green_mask, '1_green_mask', is_gray=True)
+    # green_mask = get_green_mask(hsv)
+    # if green_mask is not None:
+    #     hsv_save_image(green_mask, '1_green_mask', is_gray=True)
 
 
     hsv_inside_green = get_pixels_inside_green(hsv)
@@ -885,7 +847,6 @@ def get_estimate(hsv, count):
     center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
     center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
     center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
-
 
     ############
     # Method 2 #
@@ -933,11 +894,11 @@ def get_estimate(hsv, count):
 
     bgr_canvas_all = cv2.cvtColor(global_hsv_canvas_all, cv2.COLOR_HSV2BGR) # convert to HSV
 
-    try:
-        processed_image = bridge.cv2_to_imgmsg(bgr_canvas_all, "bgr8")
-    except CvBridgeError as e:
-        rospy.loginfo(e)
-
+    # try:
+    #     processed_image = bridge.cv2_to_imgmsg(bgr_canvas_all, "bgr8")
+    # except CvBridgeError as e:
+    #     rospy.loginfo(e)
+    processed_image = None
 
     result = np.array([est_x, est_y, est_z, est_angle])
 
@@ -965,9 +926,9 @@ def main():
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
             est, method, processed_image = get_estimate(hsv, count)
 
-            pub_processed_image.publish(processed_image)
+            # pub_processed_image.publish(processed_image)
 
-            rospy.loginfo("Method: " + method)
+            # rospy.loginfo("Method: " + method)
 
             # Publish the estimate
             est_msg.linear.x = est[0] / 1000.0
