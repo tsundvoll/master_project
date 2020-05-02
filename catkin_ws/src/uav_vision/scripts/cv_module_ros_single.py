@@ -183,10 +183,29 @@ def get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side):
         return normal_unit_vector_right
 
 
+def is_mask_touching_border(bw_mask):
+    top_border =    bw_mask[0,:]
+    bottom_border = bw_mask[IMG_HEIGHT-1,:]
+    left_border =   bw_mask[:,0]
+    right_border =  bw_mask[:,IMG_WIDTH-1]
+    
+    sum_top_border = np.sum(top_border) + \
+        np.sum(bottom_border) + \
+        np.sum(left_border) + \
+        np.sum(right_border)
+
+    if sum_top_border != 0: 
+        # Then the mask is toughing the border
+        return True
+    else:
+        return False
+
+
 # Colors to draw with
 HSV_RED_COLOR = rgb_color_to_hsv(255,0,0)
 HSV_BLUE_COLOR = rgb_color_to_hsv(0,0,255)
 HSV_BLACK_COLOR = rgb_color_to_hsv(0,0,0)
+
 HSV_YELLOW_COLOR = [30, 255, 255]
 HSV_LIGHT_ORANGE_COLOR = [15, 255, 255]
 
@@ -343,6 +362,10 @@ def find_white_centroid(hsv):
     if bw_white_mask is None:
         # rospy.loginfo("bw_white_mask is none")
         return None
+
+    if is_mask_touching_border(bw_white_mask):
+        return None
+
     bw_white_mask = make_gaussian_blurry(bw_white_mask, 5)
 
     M = cv2.moments(bw_white_mask) # calculate moments of binary image
@@ -358,7 +381,7 @@ def find_white_centroid(hsv):
 
 def find_harris_corners(img):
     """ Using sub-pixel method from OpenCV """
-    block_size = 7      # It is the size of neighbourhood considered for corner detection
+    block_size = 5      # It is the size of neighbourhood considered for corner detection
     aperture_param = 5  # Aperture parameter of Sobel derivative used.
     k_param = 0.04      # Harris detector free parameter in the equation. range: [0.04, 0.06]
     dst = cv2.cornerHarris(img, block_size, aperture_param, k_param)
@@ -471,20 +494,11 @@ def clip_corners_on_intensity(corners, img, average_filter_size):
 
 def find_right_angled_corners(img):
     # Parameters ###########################
-    average_filter_size = 19 # 19
     ignore_border_size = 3
-    # corner_harris_block_size = 4
-
-    # Define valid intensity range for the median of a corner
-    # min_intensity_average = 170
-    # max_intensity_average = 240
+    average_filter_size = 19
     ########################################
 
     corners = find_harris_corners(img)
-    # if corners is not None:
-    #     for ic in corners:
-    #         draw_dot(global_hsv_canvas_all, ic, HSV_BLUE_COLOR, size=5)
-
 
     corners = clip_corners_on_border(corners, ignore_border_size)
     if corners is None:
@@ -502,7 +516,7 @@ def find_orange_arrowhead(hsv):
     if bw_orange_mask is None:
         return None
 
-    bw_orange_mask = make_gaussian_blurry(bw_orange_mask, 5) 
+    bw_orange_mask = make_gaussian_blurry(bw_orange_mask, 9) 
     bw_orange_mask_inverted = cv2.bitwise_not(bw_orange_mask)
 
     hsv_save_image(bw_orange_mask_inverted, "0_orange_mask_inverted", is_gray=True)
@@ -654,20 +668,10 @@ def evaluate_ellipse(hsv):
 
     hsv_save_image(bw_green_mask, "2_green_mask", is_gray=True)
 
-    top_border =    bw_green_mask[0,:]
-    bottom_border = bw_green_mask[IMG_HEIGHT-1,:]
-    left_border =   bw_green_mask[:,0]
-    right_border =  bw_green_mask[:,IMG_WIDTH-1]
-    
-    sum_top_border = np.sum(top_border) + \
-        np.sum(bottom_border) + \
-        np.sum(left_border) + \
-        np.sum(right_border)
-
-    if sum_top_border != 0: 
+    if is_mask_touching_border(bw_green_mask):
         # Then the green ellipse is toughing the border
         return None, None, None
-    
+
     bw_green_ellipse = flood_fill(bw_green_mask, start=(0,0))
     hsv_save_image(bw_green_ellipse, "3_green_ellipse", is_gray=True)
 
@@ -778,8 +782,8 @@ def evaluate_inner_corners(hsv):
 
             # draw_dot(hsv_canvas, corner_a, HSV_RED_COLOR)
             # draw_dot(hsv_canvas, corner_b, HSV_LIGHT_ORANGE_COLOR)
-            draw_dot(global_hsv_canvas_all, corner_a, HSV_RED_COLOR)
-            draw_dot(global_hsv_canvas_all, corner_b, HSV_LIGHT_ORANGE_COLOR)
+            draw_dot(global_hsv_canvas_all, corner_a, HSV_YELLOW_COLOR)
+            draw_dot(global_hsv_canvas_all, corner_b, HSV_YELLOW_COLOR)
 
 
             draw_dot(hsv_canvas, c_m, HSV_BLUE_COLOR)
@@ -866,7 +870,7 @@ def get_estimate(hsv, count):
         est_x, est_y, est_z = calculate_position(center_px, radius_length_px)
         est_angle = np.degrees(angle_rad)
 
-        draw_dot(global_hsv_canvas_all, center_px, HSV_RED_COLOR, size=4)    
+        draw_dot(global_hsv_canvas_all, center_px, HSV_RED_COLOR, size=5)    
 
     ############
     # Method 1 #
@@ -877,7 +881,7 @@ def get_estimate(hsv, count):
         est_x, est_y, est_z = calculate_position(center_px, radius_length_px)
         est_angle = np.degrees(angle_rad)
 
-        draw_dot(global_hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=4)
+        draw_dot(global_hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=5)
 
     ############
     # Method 3 #
@@ -888,7 +892,7 @@ def get_estimate(hsv, count):
         est_x, est_y, est_z = calculate_position(center_px, radius_length_px)
         est_angle = np.degrees(angle_rad)
 
-        draw_dot(global_hsv_canvas_all, center_px, HSV_LIGHT_ORANGE_COLOR, size=4)
+        draw_dot(global_hsv_canvas_all, center_px, HSV_YELLOW_COLOR, size=5)
     
     #########################
     # No estimate available #
