@@ -291,13 +291,13 @@ def flood_fill(img, start=(0,0)):
     return mask
 
 
-def get_pixels_inside_green(hsv):
+def get_pixels_inside_green_old(hsv):
     """ 
         Function that finds the green in an image, make a bounding box around it,
         fits an ellipse in the bounding box
         and paints everything outside the ellipse in black.
 
-        Returns the painted image and a boolean stating wheather any green was found.
+        Returns the painted image.
      """
 
     bw_green_mask = get_green_mask(hsv)  
@@ -323,6 +323,31 @@ def get_pixels_inside_green(hsv):
 
     hsv_ellipse = hsv.copy()
     hsv_ellipse[bw_ellipse_mask==0] = HSV_BLACK_COLOR
+
+    return hsv_ellipse
+
+
+def get_pixels_inside_green(hsv):
+    """ 
+        Function that finds the green in an image
+        and paints everything outside the ellipse in black.
+
+        Returns the painted image.
+     """
+
+    bw_green_mask = get_green_mask(hsv)  
+    if bw_green_mask is None:
+        return hsv
+
+
+    kernel_dilate = np.ones((15,15),np.uint8)
+    kernel_erode = np.ones((15,15),np.uint8)
+
+    bw_closed_mask = cv2.dilate(bw_green_mask, kernel_dilate, iterations = 5)
+    bw_closed_mask = cv2.erode(bw_closed_mask, kernel_erode, iterations = 5, borderValue=0)
+
+    hsv_ellipse = hsv.copy()
+    hsv_ellipse[bw_closed_mask==0] = HSV_BLACK_COLOR
 
     return hsv_ellipse
 
@@ -856,6 +881,7 @@ def get_estimate(hsv, count):
 
     hsv_inside_green = get_pixels_inside_green(hsv)
 
+
     center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
     center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
     center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
@@ -902,6 +928,8 @@ def get_estimate(hsv, count):
         est_x, est_y, est_z, est_angle = 0.0, 0.0, 0.0, 0.0
 
     hsv_save_image(global_hsv_canvas_all, "5_canvas_all_"+str(count))
+
+    # global_hsv_canvas_all = hsv_inside_green
 
     bgr_canvas_all = cv2.cvtColor(global_hsv_canvas_all, cv2.COLOR_HSV2BGR) # convert to HSV
 
