@@ -126,12 +126,18 @@ def controller(state):
     global error_derivative
     global freeze_integral
 
+    time_interval = 0.01
+
     error = desired_pose - state
-    error_integral += error*np.invert(freeze_integral)
+    # error_integral += error*np.invert(freeze_integral)
+
+    error_integral += (time_interval * (error_prev + error)/2.0)*np.invert(freeze_integral)
+
+
     error_derivative = error - error_prev
     error_prev = error
 
-    error_integral = np.clip(error_integral, -error_integral_limit, error_integral_limit)
+    # error_integral = np.clip(error_integral, -error_integral_limit, error_integral_limit)
 
     actuation = (Kp*error + Kd*error_derivative + Ki*error_integral)
     
@@ -192,7 +198,7 @@ def main():
     error_msg = Twist()
     error_integral_msg = Twist()
 
-    rate = rospy.Rate(20) # Hz
+    rate = rospy.Rate(100) # Hz
     while not rospy.is_shutdown():
 
         if use_estimate:

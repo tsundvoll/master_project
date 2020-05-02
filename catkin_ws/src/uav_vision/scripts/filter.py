@@ -45,15 +45,13 @@ def main():
     rospy.Subscriber('/estimate', Twist, estimate_callback)
     filtered_estimate_pub = rospy.Publisher('/filtered_estimate', Twist, queue_size=10)
 
-
-
     rospy.loginfo("Starting filter for estimate (and later also dead reckoning)")
 
     filtered_estimate_msg = Twist()
 
     # Set up filter
-    median_filter_size = 1
-    average_filter_size = 15
+    median_filter_size = 10
+    average_filter_size = 25
 
     estimate_history_size = median_filter_size + average_filter_size - 1
     estimate_history = np.zeros((estimate_history_size,6))

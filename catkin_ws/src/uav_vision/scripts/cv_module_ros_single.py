@@ -241,7 +241,7 @@ def get_mask(hsv, hue_low, hue_high, sat_low, sat_high, val_low, val_high):
 
 
 def get_white_mask(hsv):
-    return get_mask(hsv, HUE_LOW_WHITE, HUE_HIGH_WHITE,SAT_LOW_WHITE, SAT_HIGH_WHITE, VAL_LOW_WHITE, VAL_HIGH_WHITE)
+    return get_mask(hsv, HUE_LOW_WHITE, HUE_HIGH_WHITE, SAT_LOW_WHITE, SAT_HIGH_WHITE, VAL_LOW_WHITE, VAL_HIGH_WHITE)
 
 
 def get_orange_mask(hsv):
@@ -356,11 +356,16 @@ def find_white_centroid(hsv):
     return np.array([cY, cX])
 
 
-def find_harris_corners(img, block_size):
+def find_harris_corners(img):
     """ Using sub-pixel method from OpenCV """
-    dst = cv2.cornerHarris(img, block_size, 3, 0.04)
+    block_size = 7      # It is the size of neighbourhood considered for corner detection
+    aperture_param = 5  # Aperture parameter of Sobel derivative used.
+    k_param = 0.04      # Harris detector free parameter in the equation. range: [0.04, 0.06]
+    dst = cv2.cornerHarris(img, block_size, aperture_param, k_param)
     dst = cv2.dilate(dst, None)
-    ret, dst = cv2.threshold(dst,0.01*dst.max(), 255, 0)
+
+    # global_hsv_canvas_all[dst>0.01*dst.max()]=[0,0,255]
+    ret, dst = cv2.threshold(dst, 0.01*dst.max(), 255, 0)
     dst = np.uint8(dst)
 
     # find centroids
@@ -368,12 +373,13 @@ def find_harris_corners(img, block_size):
 
     # define the criteria to stop and refine the corners
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-    corners = cv2.cornerSubPix(img,np.float32(centroids),(5,5),(-1,-1),criteria)
+    corners = cv2.cornerSubPix(img, np.float32(centroids), (5,5), (-1,-1), criteria)
 
     # Flip axis
     corners[:,[0, 1]] = corners[:,[1, 0]]
 
-    return corners
+    # Remove the first corner, as this always becomes the center (the reason for this is currently unknown)
+    return corners[1:]
 
 
 def clip_corners_on_border(corners, border_size):
@@ -467,14 +473,19 @@ def find_right_angled_corners(img):
     # Parameters ###########################
     average_filter_size = 19 # 19
     ignore_border_size = 3
-    corner_harris_block_size = 4
+    # corner_harris_block_size = 4
 
     # Define valid intensity range for the median of a corner
-    min_intensity_average = 170
-    max_intensity_average = 240
+    # min_intensity_average = 170
+    # max_intensity_average = 240
     ########################################
 
-    corners = find_harris_corners(img, corner_harris_block_size)
+    corners = find_harris_corners(img)
+    # if corners is not None:
+    #     for ic in corners:
+    #         draw_dot(global_hsv_canvas_all, ic, HSV_BLUE_COLOR, size=5)
+
+
     corners = clip_corners_on_border(corners, ignore_border_size)
     if corners is None:
         return None, None
@@ -701,7 +712,7 @@ def evaluate_arrow(hsv):
         hsv_canvas_arrow = hsv.copy()
         draw_dot(hsv_canvas_arrow, center_px, HSV_RED_COLOR)
         # draw_dot(hsv_canvas_arrow, arrowhead_px, HSV_RED_COLOR)
-        draw_dot(hsv_canvas_all, arrowhead_px, HSV_RED_COLOR)
+        draw_dot(global_hsv_canvas_all, arrowhead_px, HSV_RED_COLOR)
 
         hsv_save_image(hsv_canvas_arrow, "4_canvas_arrow")
 
@@ -751,6 +762,9 @@ def evaluate_inner_corners(hsv):
     img_average_intensity = make_circle_average_blurry(bw_white_mask, average_filter_size)
 
     if (inner_corners is not None):
+        # for ic in inner_corners:
+        #     draw_dot(global_hsv_canvas_all, ic, HSV_BLUE_COLOR, size=5)
+
         n_inner_corners = len(inner_corners)
         if (n_inner_corners > 1) and (n_inner_corners <= 5):
             unique_corners = np.vstack({tuple(row) for row in inner_corners}) # Removes duplicate corners
@@ -762,8 +776,12 @@ def evaluate_inner_corners(hsv):
             c_m = (corner_a + corner_b)/2.0 # Finds the mid point between the corners
             c_m_value = img_average_intensity[np.int0(c_m[0])][np.int0(c_m[1])]
 
-            draw_dot(hsv_canvas, corner_a, HSV_RED_COLOR)
-            draw_dot(hsv_canvas, corner_b, HSV_LIGHT_ORANGE_COLOR)
+            # draw_dot(hsv_canvas, corner_a, HSV_RED_COLOR)
+            # draw_dot(hsv_canvas, corner_b, HSV_LIGHT_ORANGE_COLOR)
+            draw_dot(global_hsv_canvas_all, corner_a, HSV_RED_COLOR)
+            draw_dot(global_hsv_canvas_all, corner_b, HSV_LIGHT_ORANGE_COLOR)
+
+
             draw_dot(hsv_canvas, c_m, HSV_BLUE_COLOR)
             hsv_save_image(hsv_canvas, "3_canvas")
 
@@ -793,7 +811,7 @@ def evaluate_inner_corners(hsv):
             
             end = c_m + forward_unit_vector*10
             # draw_arrow(hsv_canvas, c_m, end)
-            draw_arrow(hsv_canvas_all, c_m, end)
+            draw_arrow(global_hsv_canvas_all, c_m, end)
 
             center = c_m + normal_unit_vector*length_to_center
             # draw_dot(hsv_canvas, center, HSV_BLUE_COLOR)
@@ -813,11 +831,11 @@ def evaluate_inner_corners(hsv):
 
 
 def get_estimate(hsv, count):
+    global global_hsv_canvas_all
     method_of_choice = None # Updated to show which method is used for each timestep
 
     hsv_save_image(hsv, '0_hsv')
-    hsv_canvas_all = hsv.copy()
-    global hsv_canvas_all
+    global_hsv_canvas_all = hsv.copy()
 
     white_mask = get_white_mask(hsv)
     if white_mask is not None:
@@ -848,7 +866,7 @@ def get_estimate(hsv, count):
         est_x, est_y, est_z = calculate_position(center_px, radius_length_px)
         est_angle = np.degrees(angle_rad)
 
-        draw_dot(hsv_canvas_all, center_px, HSV_RED_COLOR, size=4)    
+        draw_dot(global_hsv_canvas_all, center_px, HSV_RED_COLOR, size=4)    
 
     ############
     # Method 1 #
@@ -859,7 +877,7 @@ def get_estimate(hsv, count):
         est_x, est_y, est_z = calculate_position(center_px, radius_length_px)
         est_angle = np.degrees(angle_rad)
 
-        draw_dot(hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=4)
+        draw_dot(global_hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=4)
 
     ############
     # Method 3 #
@@ -870,7 +888,7 @@ def get_estimate(hsv, count):
         est_x, est_y, est_z = calculate_position(center_px, radius_length_px)
         est_angle = np.degrees(angle_rad)
 
-        draw_dot(hsv_canvas_all, center_px, HSV_LIGHT_ORANGE_COLOR, size=4)
+        draw_dot(global_hsv_canvas_all, center_px, HSV_LIGHT_ORANGE_COLOR, size=4)
     
     #########################
     # No estimate available #
@@ -879,9 +897,9 @@ def get_estimate(hsv, count):
         method_of_choice = "none"
         est_x, est_y, est_z, est_angle = 0.0, 0.0, 0.0, 0.0
 
-    hsv_save_image(hsv_canvas_all, "5_canvas_all_"+str(count))
+    hsv_save_image(global_hsv_canvas_all, "5_canvas_all_"+str(count))
 
-    bgr_canvas_all = cv2.cvtColor(hsv_canvas_all, cv2.COLOR_HSV2BGR) # convert to HSV
+    bgr_canvas_all = cv2.cvtColor(global_hsv_canvas_all, cv2.COLOR_HSV2BGR) # convert to HSV
 
     try:
         processed_image = bridge.cv2_to_imgmsg(bgr_canvas_all, "bgr8")

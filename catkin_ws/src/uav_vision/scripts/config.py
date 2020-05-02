@@ -36,15 +36,15 @@ if pid_with_estimate:
     ####################
     #  PID parameters  #
     ####################
-    Kp_position_x = 0.15
-    Ki_position_x = 0.001
-    Kd_position_x = 0.03
+    Kp_position_x = 1.0
+    Ki_position_x = 0.005
+    Kd_position_x = 0.3
     ####################
     Kp_position_y = Kp_position_x
     Ki_position_y = Ki_position_x
     Kd_position_y = Kd_position_x
     ####################
-    Kp_position_z = 1.5
+    Kp_position_z = 1.0
     Ki_position_z = 0.01
     Kd_position_z = 0.3
     ####################
@@ -75,5 +75,26 @@ else:
     ####################
 
 # actuation_saturation = 5 # % of maximum velocity
-actuation_saturation = 1 # % of maximum velocity
+actuation_saturation = 2 # % of maximum velocity
 error_integral_limit = 40
+
+
+# ##########################
+# #  (Old) PID parameters  #
+# ##########################
+# Kp_position_x = 0.15
+# Ki_position_x = 0.001
+# Kd_position_x = 0.03
+# ####################
+# Kp_position_y = Kp_position_x
+# Ki_position_y = Ki_position_x
+# Kd_position_y = Kd_position_x
+# ####################
+# Kp_position_z = 1.5
+# Ki_position_z = 0.01
+# Kd_position_z = 0.3
+# ####################
+# Kp_orientation = 0.01
+# Ki_orientation = 0.0
+# Kd_orientation = 0.0
+# ####################
