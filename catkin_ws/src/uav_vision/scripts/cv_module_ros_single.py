@@ -20,7 +20,7 @@ from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 
 global_image = None
-save_images = False
+save_images = True
 draw_on_images = False
 
 # Constants
@@ -219,26 +219,39 @@ VAL_MARGIN = 15
 # White
 HUE_LOW_WHITE = 0
 HUE_HIGH_WHITE = 360
-SAT_LOW_WHITE = max(0, HSV_REAL_WHITE[1] - SAT_MARGIN) 
-SAT_HIGH_WHITE = min(100, HSV_REAL_WHITE[1] + SAT_MARGIN)
-VAL_LOW_WHITE = max(0, HSV_REAL_WHITE[2] - VAL_MARGIN) 
-VAL_HIGH_WHITE = min(100, HSV_REAL_WHITE[2] + VAL_MARGIN)
+
+SAT_LOW_WHITE = 0
+SAT_HIGH_WHITE = 15
+
+VAL_LOW_WHITE = 30 
+VAL_HIGH_WHITE = 100
 
 # Orange
 HUE_LOW_ORANGE = max(0, HSV_REAL_ORANGE[0] - HUE_MARGIN) 
 HUE_HIGH_ORANGE = min(360, HSV_REAL_ORANGE[0] + HUE_MARGIN)
-SAT_LOW_ORANGE = max(0, HSV_REAL_ORANGE[1] - SAT_MARGIN) 
-SAT_HIGH_ORANGE = min(100, HSV_REAL_ORANGE[1] + SAT_MARGIN)
-VAL_LOW_ORANGE = max(0, HSV_REAL_ORANGE[2] - VAL_MARGIN) 
-VAL_HIGH_ORANGE = min(100, HSV_REAL_ORANGE[2] + VAL_MARGIN)
+
+SAT_LOW_ORANGE = 85
+SAT_HIGH_ORANGE = 100
+
+VAL_LOW_ORANGE = 30
+VAL_HIGH_ORANGE = 100
 
 # Green
 HUE_LOW_GREEN = max(0, HSV_REAL_GREEN[0] - HUE_MARGIN) 
 HUE_HIGH_GREEN = min(360, HSV_REAL_GREEN[0] + HUE_MARGIN)
-SAT_LOW_GREEN = max(0, HSV_REAL_GREEN[1] - SAT_MARGIN) 
-SAT_HIGH_GREEN = min(100, HSV_REAL_GREEN[1] + SAT_MARGIN)
-VAL_LOW_GREEN = max(0, HSV_REAL_GREEN[2] - VAL_MARGIN) 
-VAL_HIGH_GREEN = min(100, HSV_REAL_GREEN[2] + VAL_MARGIN)
+
+SAT_LOW_GREEN = 85 
+SAT_HIGH_GREEN = 100
+
+VAL_LOW_GREEN = 15
+VAL_HIGH_GREEN = 60
+
+# HUE_LOW_GREEN = max(0, HSV_REAL_GREEN[0] - HUE_MARGIN) 
+# HUE_HIGH_GREEN = min(360, HSV_REAL_GREEN[0] + HUE_MARGIN)
+# SAT_LOW_GREEN = max(0, HSV_REAL_GREEN[1] - SAT_MARGIN) 
+# SAT_HIGH_GREEN = min(100, HSV_REAL_GREEN[1] + SAT_MARGIN)
+# VAL_LOW_GREEN = max(0, HSV_REAL_GREEN[2] - VAL_MARGIN) 
+# VAL_HIGH_GREEN = min(100, HSV_REAL_GREEN[2] + VAL_MARGIN)
 
 
 ##################
@@ -292,7 +305,7 @@ def flood_fill(img, start=(0,0)):
 def get_pixels_inside_green(hsv):
     """ 
         Function that finds the green in an image
-        and paints everything outside the ellipse in black.
+        and paints everything else black.
 
         Returns the painted image.
      """
@@ -314,38 +327,40 @@ def get_pixels_inside_green(hsv):
     return hsv_ellipse
 
 
-def get_pixels_inside_orange(hsv):
-    """ 
-        Function that finds the orange in an image, make a bounding box around it,
-        and paints everything outside the box in black.
+# def get_pixels_inside_orange(hsv):
+#     """ 
+#         Function that finds the orange in an image, make a bounding box around it,
+#         and paints everything outside the box in black.
 
-        Returns the painted image and a boolean stating wheather any orange was found.
-     """
-    bw_orange_mask = get_orange_mask(hsv) 
-    if bw_orange_mask is None:
-        return hsv
-    hsv_save_image(bw_orange_mask, "2b_orange_mask", is_gray=True)
+#         Returns the painted image and a boolean stating wheather any orange was found.
+#      """
+#     bw_orange_mask = get_orange_mask(hsv) 
+#     if bw_orange_mask is None:
+#         return hsv
+#     hsv_save_image(bw_orange_mask, "2b_orange_mask", is_gray=True)
 
-    orange_x, orange_y = np.where(bw_orange_mask==255)
-    x_min = np.amin(orange_x)
-    x_max = np.amax(orange_x)
-    y_min = np.amin(orange_y)
-    y_max = np.amax(orange_y)
+#     orange_x, orange_y = np.where(bw_orange_mask==255)
+#     x_min = np.amin(orange_x)
+#     x_max = np.amax(orange_x)
+#     y_min = np.amin(orange_y)
+#     y_max = np.amax(orange_y)
     
-    hsv_inside_orange = hsv.copy()
-    hsv_inside_orange[0:x_min,] = HSV_BLACK_COLOR
-    hsv_inside_orange[x_max+1:,] = HSV_BLACK_COLOR
-    hsv_inside_orange[:,0:y_min] = HSV_BLACK_COLOR
-    hsv_inside_orange[:,y_max+1:] = HSV_BLACK_COLOR
-    hsv_save_image(hsv_inside_orange, '3_inside_orange')
+#     hsv_inside_orange = hsv.copy()
+#     hsv_inside_orange[0:x_min,] = HSV_BLACK_COLOR
+#     hsv_inside_orange[x_max+1:,] = HSV_BLACK_COLOR
+#     hsv_inside_orange[:,0:y_min] = HSV_BLACK_COLOR
+#     hsv_inside_orange[:,y_max+1:] = HSV_BLACK_COLOR
+#     hsv_save_image(hsv_inside_orange, '3_inside_orange')
 
-    return hsv_inside_orange
+#     return hsv_inside_orange
 
 
 def find_white_centroid(hsv):
-    hsv_inside_orange = get_pixels_inside_orange(hsv)
+    # hsv_inside_orange = get_pixels_inside_orange(hsv)
+    # bw_white_mask = get_white_mask(hsv_inside_orange)
 
-    bw_white_mask = get_white_mask(hsv_inside_orange)
+    bw_white_mask = get_white_mask(hsv)
+    hsv_save_image(bw_white_mask, "3_white_mask", is_gray=True)
     if bw_white_mask is None:
         # rospy.loginfo("bw_white_mask is none")
         return None
@@ -506,7 +521,7 @@ def find_orange_arrowhead(hsv):
     bw_orange_mask = make_gaussian_blurry(bw_orange_mask, 9) 
     bw_orange_mask_inverted = cv2.bitwise_not(bw_orange_mask)
 
-    hsv_save_image(bw_orange_mask_inverted, "0_orange_mask_inverted", is_gray=True)
+    hsv_save_image(bw_orange_mask_inverted, "3_orange_mask_inverted", is_gray=True)
 
     orange_corners, intensities = find_right_angled_corners(bw_orange_mask_inverted)
     if orange_corners is None:
@@ -745,7 +760,7 @@ def evaluate_inner_corners(hsv):
         return None, None, None
     bw_white_mask = make_gaussian_blurry(bw_white_mask, 9) #5
 
-    hsv_save_image(bw_white_mask, "0_white_only", is_gray=True)
+    hsv_save_image(bw_white_mask, "2_white_only", is_gray=True)
 
     inner_corners, intensities = find_right_angled_corners(bw_white_mask)
 
@@ -828,24 +843,25 @@ def get_estimate(hsv, count):
     hsv_save_image(hsv, '0_hsv')
     global_hsv_canvas_all = hsv.copy()
 
-    # white_mask = get_white_mask(hsv)
-    # if white_mask is not None:
-    #     hsv_save_image(white_mask, '1_white_mask', is_gray=True)
-
-    # orange_mask = get_orange_mask(hsv)
-    # if orange_mask is not None:
-    #     hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
-
-    # green_mask = get_green_mask(hsv)
-    # if green_mask is not None:
-    #     hsv_save_image(green_mask, '1_green_mask', is_gray=True)
-
-
     hsv_inside_green = get_pixels_inside_green(hsv)
 
 
+    white_mask = get_white_mask(hsv_inside_green)
+    if white_mask is not None:
+        hsv_save_image(white_mask, '1_white_mask', is_gray=True)
+
+    orange_mask = get_orange_mask(hsv_inside_green)
+    if orange_mask is not None:
+        hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
+
+    green_mask = get_green_mask(hsv_inside_green)
+    if green_mask is not None:
+        hsv_save_image(green_mask, '1_green_mask', is_gray=True)
+
+
+
     center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
-    center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv) # or use hsv_inside_green
+    center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv_inside_green) # or use hsv_inside_green
     center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
 
     ############
@@ -888,7 +904,7 @@ def get_estimate(hsv, count):
         method_of_choice = "none"
         est_x, est_y, est_z, est_angle = 0.0, 0.0, 0.0, 0.0
 
-    hsv_save_image(global_hsv_canvas_all, "5_canvas_all_"+str(count))
+    # hsv_save_image(global_hsv_canvas_all, "5_canvas_all_"+str(count))
 
     # global_hsv_canvas_all = hsv_inside_green
 
