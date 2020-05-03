@@ -36,7 +36,7 @@
 
     <!-- Start place for the drone -->
         
-    <model name='ground_plane'>
+    <!-- <model name='ground_plane'>
       <static>1</static>
       <link name='link'>
         <collision name='collision'>
@@ -72,8 +72,6 @@
             <script>
               <uri>file://media/materials/scripts/gazebo.material</uri>
               <name>Gazebo/Blue</name>
-              <!-- <name>Gazebo/Turquoise</name> -->
-              <!-- <name>Gazebo/Indigo</name> -->
             </script>
           </material>
         </visual>
@@ -85,7 +83,7 @@
         <kinematic>0</kinematic>
         <gravity>1</gravity>
       </link>
-    </model>
+    </model> -->
 
     <!-- Landing platform -->
     <!-- <model name='helipad_ar'>
@@ -195,9 +193,9 @@
 
 
     <!-- Bounding box with sea surface -->
-    <!-- <include>
+    <include>
       <uri>model://ocean</uri>
-    </include> -->
+    </include>
 
 
     <!-- Animated revolt -->

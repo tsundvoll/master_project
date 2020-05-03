@@ -928,7 +928,7 @@ def main():
 
             # pub_processed_image.publish(processed_image)
 
-            # rospy.loginfo("Method: " + method)
+            rospy.loginfo("Method: " + method)
 
             # Publish the estimate
             est_msg.linear.x = est[0] / 1000.0

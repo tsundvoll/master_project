@@ -10,15 +10,12 @@ from scipy.spatial.transform import Rotation as R
 
 ONE_G = 9.80665
 
-global_imu = None
-def imu_callback(data):
-    global global_imu
-    global_imu = data
-
-
 global_velocities = None
 global_acceleration = None
 global_yaw = None
+
+global_last_estimate = None
+
 def navdata_callback(data):
     global global_velocities
     global global_acceleration
@@ -31,6 +28,16 @@ def navdata_callback(data):
         global_yaw = 360 + yaw
     else:
         global_yaw = yaw
+
+
+def estimate_callback(data):
+    global global_last_estimate
+
+    position = np.array([data.linear.x, data.linear.y, data.linear.z])*1000
+
+    if not np.array_equal(position, np.zeros(3)):
+        # Only save last estimate, if there is an estimate available
+        global_last_estimate = position
 
 
 def filter_measurement(measurement, measurement_history, median_filter_size, average_filter_size):
@@ -51,17 +58,18 @@ def filter_measurement(measurement, measurement_history, median_filter_size, ave
 
 
 def main():
+    global global_last_estimate
     rospy.init_node('dead_reckoning', anonymous=True)
 
-    # rospy.Subscriber('/ardrone/imu', Imu, imu_callback)
     rospy.Subscriber('/ardrone/navdata', Navdata, navdata_callback)
+    rospy.Subscriber('/filtered_estimate', Twist, estimate_callback)
     pub_dead_reckoning = rospy.Publisher("/estimate/dead_reckoning", Twist, queue_size=10)
 
 
     rospy.loginfo("Starting Dead Reckoning module")
 
     count = 0
-    N_CALIBRATION_STEPS = 100
+    N_CALIBRATION_STEPS = 1000
     calibration_sum_vel = np.zeros(3)
     calibration_sum_acc = np.zeros(3)
     calibration_vel = 0.0
@@ -88,7 +96,7 @@ def main():
 
     dead_reckoning_msg = Twist()
     
-    rate = rospy.Rate(20) # Hz
+    rate = rospy.Rate(100) # Hz
     while not rospy.is_shutdown():
         if global_velocities is not None:
             new_vel = global_velocities
@@ -109,36 +117,35 @@ def main():
                 print "Calibration ready. Duration:", duration
                 prev_time = end_time
             else: # Perform dead reckoning
-                curr_time = rospy.get_time()
-                duration = curr_time - prev_time
-                prev_time = curr_time
 
-                vel = new_vel - calibration_vel
-                acc = new_acc - calibration_acc
-                delta_yaw = new_yaw - yaw_prev
-                yaw_prev = new_yaw
+                # Get last estimate if available
+                if global_last_estimate is not None:
+                    pos_curr = global_last_estimate
+                    global_last_estimate = None
+                else:
+                    curr_time = rospy.get_time()
+                    duration = curr_time - prev_time
+                    prev_time = curr_time
 
-                # vel, vel_history = filter_measurement(vel, vel_history, median_filter_size, average_filter_size)
-                # acc, acc_history = filter_measurement(acc, acc_history, median_filter_size, average_filter_size)
-                
-                small_values_filter_val = np.logical_and(np.less(vel, vel_max), np.greater(vel, vel_min))
-                small_values_filter_acc = np.logical_and(np.less(acc, acc_max), np.greater(acc, acc_min))
-                vel[small_values_filter_val] = 0.0
-                acc[small_values_filter_acc] = 0.0
+                    vel = new_vel - calibration_vel
+                    acc = new_acc - calibration_acc
+                    delta_yaw = new_yaw - yaw_prev
+                    yaw_prev = new_yaw
 
-                # print "Velocity :", vel
-                # print "Acceleration :", acc
+                    # vel, vel_history = filter_measurement(vel, vel_history, median_filter_size, average_filter_size)
+                    # acc, acc_history = filter_measurement(acc, acc_history, median_filter_size, average_filter_size)
+                    
+                    small_values_filter_val = np.logical_and(np.less(vel, vel_max), np.greater(vel, vel_min))
+                    small_values_filter_acc = np.logical_and(np.less(acc, acc_max), np.greater(acc, acc_min))
+                    vel[small_values_filter_val] = 0.0
+                    acc[small_values_filter_acc] = 0.0
 
-                pos_curr = pos_prev + duration*vel + 0.5*acc*duration**2
+                    pos_curr = pos_prev + duration*vel + 0.5*acc*duration**2
 
-                rotation = R.from_euler('z', -np.radians(delta_yaw))
-                pos_curr = rotation.apply(pos_curr)
+                    rotation = R.from_euler('z', -np.radians(delta_yaw))
+                    pos_curr = rotation.apply(pos_curr)
+
                 pos_prev = pos_curr
-
-                # print ""
-                # print "Velocity :", vel
-                # print "Velocity after filtering:", vel_filtered
-                # print "Position :", pos_curr
 
                 dead_reckoning_msg.linear.x = pos_curr[0] / 1000
                 dead_reckoning_msg.linear.y = pos_curr[1] / 1000
@@ -146,7 +153,6 @@ def main():
                 dead_reckoning_msg.angular.z = new_yaw
                 pub_dead_reckoning.publish(dead_reckoning_msg)
 
-            
             count += 1
         rate.sleep()
     

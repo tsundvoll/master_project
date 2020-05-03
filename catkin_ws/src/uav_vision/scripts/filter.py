@@ -60,7 +60,11 @@ def main():
     while not rospy.is_shutdown():
 
         if est_relative_position is not None:
-            est_filtered, estimate_history = filter_estimate(est_relative_position, estimate_history, median_filter_size, average_filter_size)
+
+            if np.array_equal(est_relative_position, np.zeros(6)):
+                est_filtered = np.zeros(6)
+            else:
+                est_filtered, estimate_history = filter_estimate(est_relative_position, estimate_history, median_filter_size, average_filter_size)
 
             filtered_estimate_msg.linear.x = est_filtered[0]
             filtered_estimate_msg.linear.y = est_filtered[1]
