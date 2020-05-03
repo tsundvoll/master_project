@@ -167,13 +167,6 @@ def get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side):
 
     avr_left = value_left_a/2.0 + value_left_b/2.0
     avr_right = value_right_a/2.0 + value_right_b/2.0
-
-    draw_dot(hsv_normals, check_left_a, (225))
-    draw_dot(hsv_normals, check_left_b, (225))
-    draw_dot(hsv_normals, check_right_a, (75))
-    draw_dot(hsv_normals, check_right_b, (75))
-
-    # hsv_save_image(hsv_normals, "5_normals", is_gray=True)
     
     if avr_left > avr_right:
         return normal_unit_vector_left
@@ -246,13 +239,6 @@ SAT_HIGH_GREEN = 100
 VAL_LOW_GREEN = 15
 VAL_HIGH_GREEN = 60
 
-# HUE_LOW_GREEN = max(0, HSV_REAL_GREEN[0] - HUE_MARGIN) 
-# HUE_HIGH_GREEN = min(360, HSV_REAL_GREEN[0] + HUE_MARGIN)
-# SAT_LOW_GREEN = max(0, HSV_REAL_GREEN[1] - SAT_MARGIN) 
-# SAT_HIGH_GREEN = min(100, HSV_REAL_GREEN[1] + SAT_MARGIN)
-# VAL_LOW_GREEN = max(0, HSV_REAL_GREEN[2] - VAL_MARGIN) 
-# VAL_HIGH_GREEN = min(100, HSV_REAL_GREEN[2] + VAL_MARGIN)
-
 
 ##################
 # Main functions #
@@ -309,17 +295,14 @@ def get_pixels_inside_green(hsv):
 
         Returns the painted image.
      """
-
     bw_green_mask = get_green_mask(hsv)  
     if bw_green_mask is None:
         return hsv
 
+    kernel = np.ones((15,15),np.uint8)
 
-    kernel_dilate = np.ones((15,15),np.uint8)
-    kernel_erode = np.ones((15,15),np.uint8)
-
-    bw_closed_mask = cv2.dilate(bw_green_mask, kernel_dilate, iterations = 5)
-    bw_closed_mask = cv2.erode(bw_closed_mask, kernel_erode, iterations = 5, borderValue=0)
+    bw_closed_mask = cv2.dilate(bw_green_mask, kernel, iterations = 5)
+    bw_closed_mask = cv2.erode(bw_closed_mask, kernel, iterations = 5, borderValue=0)
 
     hsv_ellipse = hsv.copy()
     hsv_ellipse[bw_closed_mask==0] = HSV_BLACK_COLOR
@@ -327,42 +310,10 @@ def get_pixels_inside_green(hsv):
     return hsv_ellipse
 
 
-# def get_pixels_inside_orange(hsv):
-#     """ 
-#         Function that finds the orange in an image, make a bounding box around it,
-#         and paints everything outside the box in black.
-
-#         Returns the painted image and a boolean stating wheather any orange was found.
-#      """
-#     bw_orange_mask = get_orange_mask(hsv) 
-#     if bw_orange_mask is None:
-#         return hsv
-#     hsv_save_image(bw_orange_mask, "2b_orange_mask", is_gray=True)
-
-#     orange_x, orange_y = np.where(bw_orange_mask==255)
-#     x_min = np.amin(orange_x)
-#     x_max = np.amax(orange_x)
-#     y_min = np.amin(orange_y)
-#     y_max = np.amax(orange_y)
-    
-#     hsv_inside_orange = hsv.copy()
-#     hsv_inside_orange[0:x_min,] = HSV_BLACK_COLOR
-#     hsv_inside_orange[x_max+1:,] = HSV_BLACK_COLOR
-#     hsv_inside_orange[:,0:y_min] = HSV_BLACK_COLOR
-#     hsv_inside_orange[:,y_max+1:] = HSV_BLACK_COLOR
-#     hsv_save_image(hsv_inside_orange, '3_inside_orange')
-
-#     return hsv_inside_orange
-
-
 def find_white_centroid(hsv):
-    # hsv_inside_orange = get_pixels_inside_orange(hsv)
-    # bw_white_mask = get_white_mask(hsv_inside_orange)
-
     bw_white_mask = get_white_mask(hsv)
     hsv_save_image(bw_white_mask, "3_white_mask", is_gray=True)
     if bw_white_mask is None:
-        # rospy.loginfo("bw_white_mask is none")
         return None
 
     if is_mask_touching_border(bw_white_mask):
@@ -668,10 +619,7 @@ def evaluate_ellipse(hsv):
     if bw_green_mask is None:
         return None, None, None
 
-    # hsv_save_image(bw_green_mask, "2_green_mask", is_gray=True)
-
     if is_mask_touching_border(bw_green_mask):
-        # Then the green ellipse is toughing the border
         return None, None, None
 
     bw_green_ellipse = flood_fill(bw_green_mask, start=(0,0))
@@ -686,10 +634,6 @@ def evaluate_ellipse(hsv):
     center_px = ellipse_parameters[0:2]
     radius_px = np.amax(np.abs(ellipse_parameters[2:4]))
     angle = 0
-
-    # hsv_canvas_ellipse = hsv.copy()
-    # draw_dot(hsv_canvas_ellipse, center_px, HSV_BLUE_COLOR)
-    # hsv_save_image(hsv_canvas_ellipse, "4_canvas_ellipse") #, is_gray=True)
 
     return center_px, radius_px, angle
 
@@ -726,7 +670,6 @@ def evaluate_arrow(hsv):
         
     else:
         return None, None, None
-
 
 
 def get_relevant_corners(inner_corners):
@@ -768,9 +711,6 @@ def evaluate_inner_corners(hsv):
     img_average_intensity = make_circle_average_blurry(bw_white_mask, average_filter_size)
 
     if (inner_corners is not None):
-        # for ic in inner_corners:
-        #     draw_dot(global_hsv_canvas_all, ic, HSV_BLUE_COLOR, size=5)
-
         n_inner_corners = len(inner_corners)
         if (n_inner_corners > 1) and (n_inner_corners <= 5):
             unique_corners = np.vstack({tuple(row) for row in inner_corners}) # Removes duplicate corners
@@ -786,7 +726,6 @@ def evaluate_inner_corners(hsv):
             # draw_dot(hsv_canvas, corner_b, HSV_LIGHT_ORANGE_COLOR)
             draw_dot(global_hsv_canvas_all, corner_a, HSV_YELLOW_COLOR)
             draw_dot(global_hsv_canvas_all, corner_b, HSV_YELLOW_COLOR)
-
 
             draw_dot(hsv_canvas, c_m, HSV_BLUE_COLOR)
             hsv_save_image(hsv_canvas, "3_canvas")
@@ -905,8 +844,6 @@ def get_estimate(hsv, count):
         est_x, est_y, est_z, est_angle = 0.0, 0.0, 0.0, 0.0
 
     # hsv_save_image(global_hsv_canvas_all, "5_canvas_all_"+str(count))
-
-    # global_hsv_canvas_all = hsv_inside_green
 
     bgr_canvas_all = cv2.cvtColor(global_hsv_canvas_all, cv2.COLOR_HSV2BGR) # convert to HSV
 
