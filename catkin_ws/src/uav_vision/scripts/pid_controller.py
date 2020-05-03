@@ -17,6 +17,7 @@ import config as cfg
 
 gt_relative_position = None
 est_relative_position = None
+prev_time = None
 
 def gt_callback(data):
     global gt_relative_position
@@ -125,15 +126,14 @@ def controller(state):
     global error_integral
     global error_derivative
     global freeze_integral
+    global prev_time
 
-    time_interval = 0.01
+    curr_time = rospy.get_time()
+    time_interval = curr_time - prev_time
+    prev_time = curr_time
 
     error = desired_pose - state
-    # error_integral += error*np.invert(freeze_integral)
-
     error_integral += (time_interval * (error_prev + error)/2.0)*np.invert(freeze_integral)
-
-
     error_derivative = error - error_prev
     error_prev = error
 
@@ -156,6 +156,8 @@ def controller(state):
 
 
 def main():
+    global prev_time
+
     rospy.init_node('pid_controller', anonymous=True)
 
 
@@ -199,6 +201,8 @@ def main():
     pose_msg = Twist()
     error_msg = Twist()
     error_integral_msg = Twist()
+
+    prev_time = rospy.get_time()
 
     rate = rospy.Rate(100) # Hz
     while not rospy.is_shutdown():
