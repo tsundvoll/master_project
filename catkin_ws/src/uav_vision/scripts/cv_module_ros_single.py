@@ -20,14 +20,21 @@ from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 
 global_image = None
-save_images = True
+save_images = False
 draw_on_images = False
 
 # Constants
+# D_H_SHORT = 3.0
+# D_H_LONG = 9.0
+# D_ARROW = 30.0
+# D_RADIUS = 40.0
+
+
 D_H_SHORT = 3.0
 D_H_LONG = 9.0
-D_ARROW = 30.0
-D_RADIUS = 40.0
+D_ARROW = 25.0
+D_RADIUS = 32.0
+
 
 # Image size
 IMG_WIDTH = 640

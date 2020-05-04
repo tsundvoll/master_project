@@ -5,13 +5,23 @@ import math
 
 
 # Dimentions
+
+# D_H_SHORT = 3.0
+# D_H_LONG = 9.0
+# D_ARROW = 30.0
+# D_RADIUS = 40.0
+
+# SIZE_ARROW = 4.0
+# SIZE_ORANGE_CIRCLE = 2.0
+
 D_H_SHORT = 3.0
 D_H_LONG = 9.0
-D_ARROW = 30.0
-D_RADIUS = 40.0
+D_ARROW = 25.0
+D_RADIUS = 32.0
 
 SIZE_ARROW = 4.0
-SIZE_ORANGE_CIRCLE = 2.0
+SIZE_ORANGE_CIRCLE = 1.5
+
 
 RADIUS_PX = 1200.0
 
@@ -35,6 +45,8 @@ HSV_GREEN_COLOR = hsv_to_opencv_hsv(120, 100, 40)
 HSV_LIGHT_ORANGE_COLOR = hsv_to_opencv_hsv(35, 100, 100)
 HSV_WHITE_COLOR = hsv_to_opencv_hsv(0, 0, 100)
 HSV_BLUE_COLOR = hsv_to_opencv_hsv(240, 60, 70)
+
+HSV_GRAY_COLOR = hsv_to_opencv_hsv(0, 0, 50)
 
 
 HSV_BACKGROUND = HSV_WHITE_COLOR
@@ -157,6 +169,7 @@ def rotate_image(img):
 
 def make_helipad():
     canvas = np.zeros((IMG_SIZE, IMG_SIZE, 3), dtype=np.uint8)    
+    large_canvas = np.zeros((4969, 4969, 3), dtype=np.uint8)   
 
     draw_background(canvas)
     draw_green_circle(canvas)
@@ -164,7 +177,12 @@ def make_helipad():
     draw_arrowhead(canvas)
     draw_h(canvas)
 
+    large_canvas[:,:,:] = HSV_GRAY_COLOR
+
+    large_canvas[2529:4930,42:2443,] = canvas
+
     hsv_save_image(canvas)
+    hsv_save_image(large_canvas, "texture_helipad")
     
     # Rotate the image
     rotated = rotate_image(canvas)
