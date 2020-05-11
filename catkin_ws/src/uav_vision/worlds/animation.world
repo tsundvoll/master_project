@@ -191,7 +191,6 @@
     </light>
 
 
-
     <!-- Bounding box with sea surface -->
     <include>
       <uri>model://ocean</uri>
@@ -249,6 +248,22 @@
       <!-- <plugin name="push_animate" filename="libanimated_ship.so"/> -->
 
     </model>
+
+    <model name="frisbee">
+      <pose>2 2 0 0 0 0</pose>
+      <static>true</static>
+      <link name="body">
+       <visual name="visual">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+            <mesh>
+              <uri>model://frisbee/frisbee.dae</uri>
+            </mesh>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+
 
     <!-- <model name="swimmer">
       <pose>2 2 -1.2 0 0 0</pose>

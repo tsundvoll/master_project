@@ -34,10 +34,16 @@ def teleop_callback(data):
     right_js_vertical = axes[4]
 
     if buttons[0]:
+        # "Cross"-button
         pub_take_off.publish(Empty())
 
     if buttons[1]:
+        # "Circle"-button
         pub_land.publish(Empty())
+
+    if buttons[3]:
+        # "Square"-button
+        pub_take_still_photo.publish(Empty())
 
     control_msg = Twist()
     control_msg.linear.x = right_js_vertical*sensitivity_x_y
@@ -63,6 +69,7 @@ def main():
     global pub_take_off
     global pub_land
     global pub_controller
+    global pub_take_still_photo
 
     global pub_set_point
 
@@ -71,6 +78,8 @@ def main():
     pub_controller = rospy.Publisher("/cmd_vel", Twist, queue_size=1000)
 
     pub_set_point = rospy.Publisher("/set_point", Twist, queue_size=10)
+
+    pub_take_still_photo = rospy.Publisher("/take_still_photo", Empty, queue_size=10)
 
     rospy.Subscriber("joy", Joy, teleop_callback)
 

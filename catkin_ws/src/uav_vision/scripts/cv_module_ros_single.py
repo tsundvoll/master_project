@@ -551,7 +551,7 @@ def fit_ellipse(points):
 
     T = - np.dot(inv_S3, S2.T) # for getting a2 from a1
 
-    M = S1 + np.dot(S2, T)
+    M_inner = S1 + np.dot(S2, T)
 
     C1 = np.array([
         [0, 0, 0.5],
@@ -559,7 +559,7 @@ def fit_ellipse(points):
         [0.5, 0, 0]
     ])
 
-    M = np.dot(C1, M) # This premultiplication can possibly be made more efficient
+    M = np.dot(C1, M_inner) # This premultiplication can possibly be made more efficient
     
     eigenvalues, eigenvectors = np.linalg.eig(M)
     cond = 4*eigenvectors[0]*eigenvectors[2] - np.square(eigenvectors[0])
