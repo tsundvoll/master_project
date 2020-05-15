@@ -20,8 +20,8 @@ from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 
 global_image = None
-save_images = False
-draw_on_images = False
+save_images = True
+draw_on_images = True
 
 # Constants
 # D_H_SHORT = 3.0
@@ -341,9 +341,9 @@ def find_white_centroid(hsv):
 
 def find_harris_corners(img):
     """ Using sub-pixel method from OpenCV """
-    block_size = 5      # It is the size of neighbourhood considered for corner detection
-    aperture_param = 5  # Aperture parameter of Sobel derivative used.
-    k_param = 0.04      # Harris detector free parameter in the equation. range: [0.04, 0.06]
+    block_size = 7      # It is the size of neighbourhood considered for corner detection
+    aperture_param = 9  # Aperture parameter of Sobel derivative used.
+    k_param = 0.06      # Harris detector free parameter in the equation. range: [0.04, 0.06]
     dst = cv2.cornerHarris(img, block_size, aperture_param, k_param)
     dst = cv2.dilate(dst, None)
 
@@ -409,6 +409,7 @@ def clip_corners_on_intensity(corners, img, average_filter_size):
     """
     value_per_degree = 255.0/360.0
     min_degree, max_degree = 60, 120 # +- 30 from 90 degrees
+    min_degree, max_degree = 0, 2000
 
     # Since 255 is white and 0 is black, subtract from 255
     # to get black intensity instead of white intensity
@@ -454,7 +455,7 @@ def clip_corners_on_intensity(corners, img, average_filter_size):
 
 def find_right_angled_corners(img):
     # Parameters ###########################
-    ignore_border_size = 3
+    ignore_border_size = 7
     average_filter_size = 19
     ########################################
 
@@ -469,6 +470,16 @@ def find_right_angled_corners(img):
         return None, None
 
     return corners, intensities
+
+
+def new_find_right_angled_corners(img):
+    """
+        Implementation of paper by Ryu, Lee and Park
+    """
+    corners = find_harris_corners(img)
+
+
+    return corners
 
 
 def find_orange_arrowhead(hsv):
@@ -876,6 +887,28 @@ def main():
     est_msg = Twist()
 
     rospy.loginfo("Starting CV module")
+
+
+    global_image = cv2.imread("0_hsv.png")
+
+    bgr_angle_test = cv2.imread("corner_angle_test_numerated.png")
+    hsv_angle_test = cv2.cvtColor(bgr_angle_test, cv2.COLOR_BGR2HSV)
+    bw_angle_test = get_white_mask(hsv_angle_test)
+    # bw_angle_test = cv2.bitwise_not(bw_angle_test)
+    bw_angle_test = make_gaussian_blurry(bw_angle_test, 7)
+
+    hsv_save_image(bw_angle_test, "bw_angle_test", is_gray=True)
+    # corners, _ = find_right_angled_corners(bw_angle_test)
+    corners = new_find_right_angled_corners(bw_angle_test)
+    print corners
+
+    hsv_angle_test_canvas = hsv_angle_test.copy()
+    for corner in corners:
+        draw_dot(hsv_angle_test_canvas, corner, HSV_RED_COLOR, size=5)
+    hsv_save_image(hsv_angle_test_canvas, "angle_test")
+    
+    print "Done testing"
+    return 
 
     count = 0
     rate = rospy.Rate(20) # Hz
