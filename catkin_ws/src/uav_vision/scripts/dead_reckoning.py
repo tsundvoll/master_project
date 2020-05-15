@@ -114,7 +114,7 @@ def main():
 
                 end_time = rospy.get_time()
                 duration = end_time - start_time
-                print "Calibration ready. Duration:", duration
+                rospy.loginfo("Calibration ready. Duration: " + str(duration))
                 prev_time = end_time
             else: # Perform dead reckoning
 

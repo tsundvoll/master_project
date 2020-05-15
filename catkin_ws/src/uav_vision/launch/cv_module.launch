@@ -1,0 +1,7 @@
+
+<launch>
+    <node name="cv_module" pkg="uav_vision" type="cv_module.py" output="screen" />
+    <node name="filter" pkg="uav_vision" type="filter.py" output="screen" />
+    <node name="dead_reckoning" pkg="uav_vision" type="dead_reckoning.py" output="screen" />
+</launch>
+

@@ -116,8 +116,6 @@ def set_point_callback(data):
     desired_pose[0] = data.linear.x + cfg.offset_setpoint_x
     desired_pose[1] = data.linear.y
     desired_pose[2] = data.linear.z
-    desired_pose[3] = data.angular.x
-    desired_pose[4] = data.angular.y
     desired_pose[5] = data.angular.z
 
 
@@ -159,7 +157,6 @@ def main():
     global prev_time
 
     rospy.init_node('pid_controller', anonymous=True)
-
 
     use_estimate = True
 

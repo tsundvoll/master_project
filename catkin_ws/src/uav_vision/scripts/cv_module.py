@@ -20,8 +20,8 @@ from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 
 global_image = None
-save_images = True
-draw_on_images = True
+save_images = False
+draw_on_images = False
 
 # Constants
 # D_H_SHORT = 3.0
@@ -476,6 +476,7 @@ def new_find_right_angled_corners(img):
     """
         Implementation of paper by Ryu, Lee and Park
     """
+    
     corners = find_harris_corners(img)
 
 
@@ -876,19 +877,7 @@ def get_estimate(hsv, count):
     return result, method_of_choice, processed_image
 
 
-def main():
-    rospy.init_node('cv_module', anonymous=True)
-
-    rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
-
-    pub_processed_image = rospy.Publisher('/processed_image', Image, queue_size=10)
-
-    pub_est = rospy.Publisher("/estimate", Twist, queue_size=10)
-    est_msg = Twist()
-
-    rospy.loginfo("Starting CV module")
-
-
+def corner_test():
     global_image = cv2.imread("0_hsv.png")
 
     bgr_angle_test = cv2.imread("corner_angle_test_numerated.png")
@@ -908,7 +897,22 @@ def main():
     hsv_save_image(hsv_angle_test_canvas, "angle_test")
     
     print "Done testing"
-    return 
+    
+
+def main():
+    rospy.init_node('cv_module', anonymous=True)
+
+    rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
+
+    pub_processed_image = rospy.Publisher('/processed_image', Image, queue_size=10)
+
+    pub_est = rospy.Publisher("/estimate", Twist, queue_size=10)
+    est_msg = Twist()
+
+    rospy.loginfo("Starting CV module")
+
+    # corner_test()
+    # return 
 
     count = 0
     rate = rospy.Rate(20) # Hz
