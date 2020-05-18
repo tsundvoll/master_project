@@ -41,13 +41,14 @@ def teleop_callback(data):
         # "Circle"-button -> Land 
         pub_land.publish(Empty())
 
+    if buttons[2]:
+        # "Triangle"-botton -> Initiate mission
+        pub_initiate_mission.publish(Empty())
+    
     if buttons[3]:
         # "Square"-button -> Take still photo
         pub_take_still_photo.publish(Empty())
 
-    if buttons[2]:
-        # "Triangle"-botton -> Initiate mission
-        pub_initiate_mission.publish(Empty())
 
     control_msg = Twist()
     control_msg.linear.x = right_js_vertical*sensitivity_x_y

@@ -4,6 +4,7 @@ import rospy
 from ardrone_autonomy.msg import Navdata
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -15,6 +16,13 @@ global_acceleration = None
 global_yaw = None
 
 global_last_estimate = None
+
+cv_switch = True
+
+def cv_switch_callback(data):
+    global cv_switch
+    cv_switch = data
+
 
 def navdata_callback(data):
     global global_velocities
@@ -63,6 +71,9 @@ def main():
 
     rospy.Subscriber('/ardrone/navdata', Navdata, navdata_callback)
     rospy.Subscriber('/filtered_estimate', Twist, estimate_callback)
+    rospy.Subscriber('/switch_on_off_cv', Bool, cv_switch_callback)
+
+
     pub_dead_reckoning = rospy.Publisher("/estimate/dead_reckoning", Twist, queue_size=10)
 
 
@@ -119,7 +130,7 @@ def main():
             else: # Perform dead reckoning
 
                 # Get last estimate if available
-                if global_last_estimate is not None:
+                if cv_switch and (global_last_estimate is not None):
                     pos_curr = global_last_estimate
                     global_last_estimate = None
                 else:
