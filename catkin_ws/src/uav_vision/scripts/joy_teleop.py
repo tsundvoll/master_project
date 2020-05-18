@@ -48,7 +48,7 @@ def teleop_callback(data):
     if buttons[3]:
         # "Square"-button -> Take still photo
         pub_take_still_photo.publish(Empty())
-
+        
 
     control_msg = Twist()
     control_msg.linear.x = right_js_vertical*sensitivity_x_y
@@ -93,7 +93,7 @@ def main():
 
     rospy.init_node('joy_teleop', anonymous=True)
     rospy.loginfo("Joystick teleoperation ready")
-
+    
 
     rospy.spin()
 

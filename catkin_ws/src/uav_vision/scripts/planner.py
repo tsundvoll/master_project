@@ -64,12 +64,29 @@ def get_distance(point_a, point_b):
     return distance
 
 
+def is_position_close_to_goal(curr_position, goal, margin):
+    return np.all(np.abs(curr_position[3] - goal) < margin)
+
+
+
+def publish_set_point(pub_set_point, set_point):
+    set_point_msg = Twist()
+    set_point_msg.linear.x = set_point[0]
+    set_point_msg.linear.y = set_point[1]
+    set_point_msg.linear.z = set_point[2]
+    pub_set_point.publish(set_point_msg)
+
+
+
 def main():
     global global_state
     rospy.init_node('planner', anonymous=True)
 
     rospy.Subscriber('/estimate/dead_reckoning', Twist, estimate_callback)
     rospy.Subscriber('/initiate_mission', Empty, initiate_mission_callback)
+
+    pub_take_off = rospy.Publisher("/ardrone/takeoff", Empty, queue_size=10)
+    pub_land = rospy.Publisher("/ardrone/land", Empty, queue_size=10)
 
     pub_cv_switch = rospy.Publisher('/switch_on_off_cv', Bool, queue_size=10)
 
@@ -80,14 +97,9 @@ def main():
 
     speed = 0.5 # m/s
     publish_rate = 20 # Hz
-    distance_margin = 0.2 # m
+    distance_margin = 0.3 # m
+    margin = np.array([distance_margin]*3)
     pre_mission_time = 3 # seconds
-
-    mission_count = 0
-
-    prev_major_set_point = mission[0]
-    next_major_set_point = mission[1]
-    next_minor_set_point = next_major_set_point
 
     hover_height = 2.0
     mission_delta_x = 1.5
@@ -109,6 +121,16 @@ def main():
         [0.0                , 0.0               , mission_height]
     ])
 
+    ####################
+
+
+    mission_count = 0
+
+    prev_major_set_point = mission[0]
+    next_major_set_point = mission[1]
+    next_minor_set_point = next_major_set_point
+
+
     # S_INIT          = 0
     # S_ON_GROUND     = 1
     # S_TAKE_OFF      = 2
@@ -123,12 +145,23 @@ def main():
     while not rospy.is_shutdown():
         use_cv = True
 
-        if global_state == S_INIT:
-            est_relative_position[:3] - np.array([])
+        if global_state == S_INIT and (est_relative_position is not None):
+            start_goal = np.zeros(3)
+            start_margin = np.array([0.5, 0.5, 0.1])
+
+            if is_position_close_to_goal(est_relative_position, start_goal, start_margin):
+                pub_take_off.publish(Empty())
+                global_state = S_TAKE_OFF
 
 
+        elif global_state == S_TAKE_OFF:
+            publish_set_point(pub_set_point, hover_point)
+            hover_margin = np.array([0.2, 0.2, 0.2])
+            if is_position_close_to_goal(est_relative_position, hover_point, hover_margin):
+                global_state = S_HOVER
 
-        if global_state == S_PRE_MISSION:
+
+        elif global_state == S_PRE_MISSION:
             use_cv = False
             curr_time = rospy.get_time()
 
@@ -161,10 +194,12 @@ def main():
                 next_minor_set_point += step_distance
 
             # Publish set point
-            set_point_msg.linear.x = next_minor_set_point[0]
-            set_point_msg.linear.y = next_minor_set_point[1]
-            set_point_msg.linear.z = next_minor_set_point[2]
-            pub_set_point.publish(set_point_msg)
+            publish_set_point(pub_set_point, next_minor_set_point)
+
+            # set_point_msg.linear.x = next_minor_set_point[0]
+            # set_point_msg.linear.y = next_minor_set_point[1]
+            # set_point_msg.linear.z = next_minor_set_point[2]
+            # pub_set_point.publish(set_point_msg)
 
 
         pub_cv_switch.publish(Bool(use_cv))
