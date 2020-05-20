@@ -41,11 +41,14 @@ def navdata_callback(data):
 def estimate_callback(data):
     global global_last_estimate
 
-    position = np.array([data.linear.x, data.linear.y, data.linear.z])*1000
+    if cv_switch:
+        position = np.array([data.linear.x, data.linear.y, data.linear.z])*1000
 
-    if not np.array_equal(position, np.zeros(3)):
-        # Only save last estimate, if there is an estimate available
-        global_last_estimate = position
+        if not np.array_equal(position, np.zeros(3)):
+            # Only save last estimate, if there is an estimate available
+            global_last_estimate = position      
+    else:
+        global_last_estimate = None
 
 
 def filter_measurement(measurement, measurement_history, median_filter_size, average_filter_size):
@@ -130,8 +133,10 @@ def main():
             else: # Perform dead reckoning
 
                 # Get last estimate if available
-                if cv_switch and (global_last_estimate is not None):
-                    pos_curr = global_last_estimate
+                # if cv_switch and (global_last_estimate is not None):
+                if global_last_estimate is not None:
+                    if cv_switch:
+                        pos_curr = global_last_estimate
                     global_last_estimate = None
                 else:
                     curr_time = rospy.get_time()

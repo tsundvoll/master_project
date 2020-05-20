@@ -113,10 +113,17 @@ error_integral_limit = cfg.error_integral_limit
 
 def set_point_callback(data):
     global desired_pose
-    desired_pose[0] = data.linear.x + cfg.offset_setpoint_x
+    desired_pose[0] = data.linear.x # + cfg.offset_setpoint_x
     desired_pose[1] = data.linear.y
     desired_pose[2] = data.linear.z
     desired_pose[5] = data.angular.z
+
+
+def take_off_callback(data):
+    global error_integral
+
+    # Reset the error integral each take off, since error might have accumulated during stand-still
+    error_integral = np.array([0.0]*6)
 
 
 def controller(state):
@@ -174,6 +181,10 @@ def main():
     rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
     
     rospy.Subscriber('/set_point', Twist, set_point_callback)
+
+
+    rospy.Subscriber('/ardrone/takeoff', Empty, take_off_callback)
+
 
     
     reference_pub = rospy.Publisher('/drone_reference', Twist, queue_size=10)
