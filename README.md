@@ -53,12 +53,22 @@ Scipy 1.2.1 works
 ```
 sudo apt-get install python-pip
 python -m pip install --user numpy scipy matplotlib 
+pip install tqdm
+
+pip install tensorflow
+pip install Keras
 ```
+
+
 
 * Terminator
 ```
 sudo apt-get install terminator
 ```
+
+## DDPG package
+The DDPG package made by Daniel Tavakoli is added in a separate package.
+
 
 ## TO DO 14. February:
 * Collect a larger dataset:

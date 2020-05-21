@@ -55,7 +55,7 @@ def teleop_callback(data):
     control_msg.linear.y = right_js_horizontal*sensitivity_x_y
     control_msg.linear.z = left_js_vertical*sensitivity_z
     control_msg.angular.z = left_js_horizontal*sensitivity_yaw
-    # pub_controller.publish(control_msg)
+    pub_controller.publish(control_msg)
 
     const = 0.001
 
