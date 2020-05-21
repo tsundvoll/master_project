@@ -609,7 +609,7 @@ def run_episode(max_steps, training):
             state_reduced[2] = state_reduced[2] - env.z_goal_hover
             
             # rotate pos, vel and acc vectors -yaw degrees about z in state array so they are expressed in body coordinates
-            state_reduced[0:3] = env.rotate_vector(state_reduced[0:3], -yaw)
+            # state_reduced[0:3] = env.rotate_vector(state_reduced[0:3], -yaw)
 
             # normalize each vector inside the state array
             state_reduced = env.normalize_state_array_hover(state_reduced) 
