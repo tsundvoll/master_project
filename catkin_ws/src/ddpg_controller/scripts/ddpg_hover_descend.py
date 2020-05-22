@@ -425,11 +425,11 @@ class DroneState():
         env.print_state(next_state)
         
         # freeze simulator so the simulator state does not change during calculations 
-        rospy.wait_for_service('/gazebo/pause_physics')
-        try:
-            pause()
-        except (rospy.ServiceException) as e:
-            print "rospause failed!"
+        # rospy.wait_for_service('/gazebo/pause_physics')
+        # try:
+        #     pause()
+        # except (rospy.ServiceException) as e:
+        #     print "rospause failed!"
 
         reward, done, pos_error, pos_error_aug = self.get_reward_descend(action, next_state)
 
