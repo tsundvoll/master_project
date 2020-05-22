@@ -597,6 +597,7 @@ def run_episode(max_steps, training):
         env.print_state(state)
 
         if env.fsm_state == 1:
+            print "01 prev_pos_error:" + str(prev_pos_error)
 
             yaw = state[11] # extract yaw angle
 
@@ -622,7 +623,7 @@ def run_episode(max_steps, training):
             action = np.clip(pure_action, -0.4, 0.4)
             # action = np.clip(pure_action, env.agent.action_low, env.agent.action_high)
             # if close to hover, downscale action
-            print("prev_pos_error", prev_pos_error)
+            print("02 prev_pos_error", prev_pos_error)
             if prev_pos_error < 0.03:
                 print("DOWNSCALE BENCHOD")
                 action = 0.25 * action
@@ -638,6 +639,8 @@ def run_episode(max_steps, training):
 
             print("action:", action)
             next_state, reward, done, pos_error = env.step_hover(state_reduced, action) # apply action to drone
+            print "03 Pos_error:" + str(pos_error)
+
 
             # if pos error decreased, give reward. if increased, give pen
             # if pos_error < prev_pos_error:
@@ -676,6 +679,8 @@ def run_episode(max_steps, training):
             state = next_state # transfer the state over, but do not overwrite
             total_reward += reward
             steps_completed = step_number
+            print "04 prev_pos_error:" + str(prev_pos_error)
+
 
         if env.fsm_state == 2:
 
@@ -702,7 +707,7 @@ def run_episode(max_steps, training):
             # choose action
             pure_action = actor_imported_descend.predict(state_reduced)[0]
             action = 0.2 * pure_action
-            print("prev_pos_error", prev_pos_error)
+            print("05 prev_pos_error", prev_pos_error)
             if prev_pos_error < 0.05:
                 print("DOWNSCALE BENCHOD")
                 action = 0.1 * pure_action
@@ -717,7 +722,7 @@ def run_episode(max_steps, training):
             print("action:", action)
             next_state, reward, done, pos_error, pos_error_aug = env.step_descend(state_reduced, action) # apply action to drone
 
-            print("pos_error", pos_error)
+            print("06 pos_error", pos_error)
 
             # reward for being very close to goal
             if pos_error < 0.07**2:
