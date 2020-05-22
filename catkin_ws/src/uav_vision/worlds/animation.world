@@ -249,7 +249,7 @@
 
     </model>
 
-    <model name="frisbee">
+    <!-- <model name="frisbee">
       <pose>2 2 0 0 0 0</pose>
       <static>true</static>
       <link name="body">
@@ -262,7 +262,7 @@
           </geometry>
         </visual>
       </link>
-    </model>
+    </model> -->
 
 
     <!-- <model name="swimmer">
