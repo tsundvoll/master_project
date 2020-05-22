@@ -759,10 +759,7 @@ def run_episode(max_steps, training):
         while env.fsm_state == 3:
             land()
             print("landing")
-            break
-
-        break
-            
+            break            
 
 
         # stop episode if the drone is out of bounds
