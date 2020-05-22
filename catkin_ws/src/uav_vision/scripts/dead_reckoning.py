@@ -17,7 +17,7 @@ global_yaw = None
 
 global_last_estimate = None
 
-cv_switch = True
+cv_switch = False
 
 def cv_switch_callback(data):
     global cv_switch
