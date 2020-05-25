@@ -4,7 +4,7 @@ import rospy
 from ardrone_autonomy.msg import Navdata
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Int8
 
 import numpy as np
 from scipy.spatial.transform import Rotation as R
@@ -17,7 +17,14 @@ global_yaw = None
 
 global_last_estimate = None
 
+global_estimate_method = 0
+
 cv_switch = False
+
+def estimate_method_callback(data):
+    global global_estimate_method
+    global_estimate_method = data.data
+
 
 def cv_switch_callback(data):
     global cv_switch
@@ -75,12 +82,14 @@ def main():
     rospy.Subscriber('/ardrone/navdata', Navdata, navdata_callback)
     rospy.Subscriber('/filtered_estimate', Twist, estimate_callback)
     rospy.Subscriber('/switch_on_off_cv', Bool, cv_switch_callback)
+    rospy.Subscriber('/estimate_method', Int8, estimate_method_callback)
 
 
     pub_dead_reckoning = rospy.Publisher("/estimate/dead_reckoning", Twist, queue_size=10)
 
 
     rospy.loginfo("Starting Dead Reckoning module")
+    rospy.loginfo("Performing initial calibration...")
 
     count = 0
     N_CALIBRATION_STEPS = 1000
@@ -131,6 +140,8 @@ def main():
                 rospy.loginfo("Calibration ready. Duration: " + str(duration))
                 prev_time = end_time
             else: # Perform dead reckoning
+                rospy.loginfo("Method: " + str(global_estimate_method))
+
 
                 # Get last estimate if available
                 # if cv_switch and (global_last_estimate is not None):

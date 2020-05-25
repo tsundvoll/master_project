@@ -8,7 +8,7 @@ It does not filter the signal, but leaves this for another module.
 
 
 import rospy
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, Int8
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 
@@ -20,8 +20,8 @@ from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 
 global_image = None
-save_images = False
-draw_on_images = False
+save_images = True
+draw_on_images = True
 
 # Constants
 # D_H_SHORT = 3.0
@@ -341,9 +341,12 @@ def find_white_centroid(hsv):
 
 def find_harris_corners(img):
     """ Using sub-pixel method from OpenCV """
-    block_size = 7      # It is the size of neighbourhood considered for corner detection
-    aperture_param = 9  # Aperture parameter of Sobel derivative used.
-    k_param = 0.06      # Harris detector free parameter in the equation. range: [0.04, 0.06]
+    # block_size = 7      # It is the size of neighbourhood considered for corner detection
+    # aperture_param = 9  # Aperture parameter of Sobel derivative used.
+    # k_param = 0.2      # Harris detector free parameter in the equation. range: [0.04, 0.06]
+    block_size = 3      # It is the size of neighbourhood considered for corner detection
+    aperture_param = 3  # Aperture parameter of Sobel derivative used.
+    k_param = 0.1      # Harris detector free parameter in the equation. range: [0.04, 0.06]
     dst = cv2.cornerHarris(img, block_size, aperture_param, k_param)
     dst = cv2.dilate(dst, None)
 
@@ -409,12 +412,16 @@ def clip_corners_on_intensity(corners, img, average_filter_size):
     """
     value_per_degree = 255.0/360.0
     min_degree, max_degree = 60, 120 # +- 30 from 90 degrees
-    min_degree, max_degree = 0, 2000
+    # min_degree, max_degree = 0, 2000
 
     # Since 255 is white and 0 is black, subtract from 255
     # to get black intensity instead of white intensity
-    min_average_intensity = 255 - max_degree*value_per_degree
-    max_average_intensity = 255 - min_degree*value_per_degree
+    # min_average_intensity = 255 - max_degree*value_per_degree
+    # max_average_intensity = 255 - min_degree*value_per_degree
+
+    min_average_intensity = 200
+    max_average_intensity = 255
+
 
     number_of_corners = len(corners)
     min_intensity = np.array([min_average_intensity]*number_of_corners)
@@ -453,28 +460,112 @@ def clip_corners_on_intensity(corners, img, average_filter_size):
         return corners, intensities
 
 
+def clip_corners_not_right(corners, img, average_filter_size):
+
+    bw_edges = cv2.Canny(img,100,200)
+    radius = np.int0(average_filter_size / 2.0)
+    center = (radius, radius)
+
+
+    bw_circles = np.zeros((average_filter_size, average_filter_size), np.uint8)
+    bw_canvas = np.zeros((360, 640, 1), np.uint8)
+    
+    cv2.circle(bw_circles, center, radius, (255,0,0), 1)
+    
+    circle = np.where(bw_circles==255)
+    # circle_new = np.array([circle[0], circle[1]])
+
+    for corner in corners:
+        shift_center = corner - center
+        shifted_circle = np.array([circle[0]+shift_center[0], circle[1]+shift_center[1]])
+
+
+        bw_canvas[shifted_circle[0], shifted_circle[1]] = 255
+
+
+    bw_corner_area = cv2.bitwise_and(bw_canvas, bw_edges)
+
+
+
+    hsv_save_image(bw_edges, "bw_edges", is_gray=True)
+    hsv_save_image(bw_canvas, "bw_circles", is_gray=True)
+    hsv_save_image(bw_corner_area, "bw_draft", is_gray=True)
+
+    return corners
+
+# def clip_corners_not_right(corners, img, average_filter_size):
+#     bw_draft = img.copy()
+#     bw_circles = np.zeros((360,640,1), np.uint8)
+
+#     ret, bw_thresh = cv2.threshold(bw_draft, 127, 255, 0)
+
+#     min_angle = 80
+#     max_angle = 100
+
+#     min_area = min_angle / 360.0
+#     max_area = max_angle / 360.0
+
+
+
+#     radius = np.int0(average_filter_size/2.0)
+#     color = (255,0,0)
+#     thickness = -1
+
+#     for corner in corners:
+#         center = (corner[1], corner[0])
+#         print center
+#         cv2.circle(bw_circles, center, radius, color, thickness)
+#         bw_area = cv2.bitwise_and(bw_circles, bw_thresh)
+#         # bw_corner_area = cv2.bitwise_and(bw_circles, bw_edges)
+#         result = np.where(bw_corner_area == 255)
+        
+#         if len(result[0]) != 0:
+#             print len(result[0])    
+#             break
+
+
+
+
+#     hsv_save_image(bw_circles, "bw_circles", is_gray=True)
+#     hsv_save_image(bw_area, "bw_edges", is_gray=True)
+#     # hsv_save_image(bw_corner_area, "bw_draft", is_gray=True)
+
+#     print "Clip_corners_not_right done"
+#     print
+
+#     return corners
+
+
 def find_right_angled_corners(img):
     # Parameters ###########################
     ignore_border_size = 7
     average_filter_size = 19
+    check_angle_filter_size = 19
     ########################################
 
-    corners = find_harris_corners(img)
+    bw_blurred = make_gaussian_blurry(img, 9)
+
+    corners = find_harris_corners(bw_blurred)
 
     corners = clip_corners_on_border(corners, ignore_border_size)
     if corners is None:
         return None, None
 
-    corners, intensities = clip_corners_on_intensity(corners, img, average_filter_size)
-    if corners is None:
-        return None, None
+    # corners = clip_corners_not_right(corners, img, check_angle_filter_size)
+    # if corners is None:
+    #     return None, None
+
+    # corners, intensities = clip_corners_on_intensity(corners, img, average_filter_size)
+    # if corners is None:
+    #     return None, None
+    intensities = None
 
     return corners, intensities
 
 
 def new_find_right_angled_corners(img):
     """
-        Implementation of paper by Ryu, Lee and Park
+        (TO DO) Implementation of paper by Ryu, Lee and Park
     """
     
     corners = find_harris_corners(img)
@@ -538,7 +629,9 @@ def calculate_position(center_px, radius_px):
     est_x = -(est_z * d_x / focal_length) - 150 
     est_y = -(est_z * d_y / focal_length)
 
-    return np.array([est_x, est_y, est_z])
+    position = np.array([est_x, est_y, est_z]) / 1000.0
+
+    return position
 
 
 def fit_ellipse(points):
@@ -720,19 +813,20 @@ def evaluate_inner_corners(hsv):
     bw_white_mask = get_white_mask(hsv)
     if bw_white_mask is None:
         return None, None, None
-    bw_white_mask = make_gaussian_blurry(bw_white_mask, 9) #5
+    # bw_white_mask = make_gaussian_blurry(bw_white_mask, 9) #5
 
     hsv_save_image(bw_white_mask, "2_white_only", is_gray=True)
 
     inner_corners, intensities = find_right_angled_corners(bw_white_mask)
 
+    bw_white_mask = make_gaussian_blurry(bw_white_mask, 9) #5
     average_filter_size = 19
     img_average_intensity = make_circle_average_blurry(bw_white_mask, average_filter_size)
 
     if (inner_corners is not None):
         n_inner_corners = len(inner_corners)
         if (n_inner_corners > 1) and (n_inner_corners <= 5):
-            unique_corners = np.vstack({tuple(row) for row in inner_corners}) # Removes duplicate corners
+            unique_corners = np.vstack({tuple(row) for row in inner_corners}) # Removes duplicate corners. Deprecated way of doing this, but works for now.
             
             for corner in unique_corners:
                 draw_dot(hsv_canvas, corner, HSV_YELLOW_COLOR)
@@ -795,6 +889,9 @@ def evaluate_inner_corners(hsv):
 
 
 def get_estimate(hsv, count):
+    global pub_est_ellipse
+    global pub_est_arrow
+    global pub_est_corners
     global global_hsv_canvas_all
     method_of_choice = None # Updated to show which method is used for each timestep
 
@@ -816,61 +913,94 @@ def get_estimate(hsv, count):
     if green_mask is not None:
         hsv_save_image(green_mask, '1_green_mask', is_gray=True)
 
-
+    msg = Twist()
 
     center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
     center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv_inside_green) # or use hsv_inside_green
     center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
 
+    ellipse_available = (center_px_from_ellipse is not None) and (radius_length_px_from_ellipse != 0)
+    arrow_available = (center_px_from_arrow is not None) and (radius_length_px_from_arrow != 0)
+    corners_available = (center_px_from_inner_corners is not None) and (radius_px_length_from_inner_corners != 0)
+
+
     ############
     # Method 2 #
     ############
-    if (center_px_from_arrow is not None):
-        method_of_choice = "arrow"
+    if arrow_available:
+        # method_of_choice = "arrow"
         center_px, radius_length_px, angle_rad = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
-        est_x, est_y, est_z = calculate_position(center_px, radius_length_px)
-        est_angle = np.degrees(angle_rad)
+        est_arrow_x, est_arrow_y, est_arrow_z = calculate_position(center_px, radius_length_px)
+        est_arrow_angle = np.degrees(angle_rad)
+
+        msg.linear.x = est_arrow_x
+        msg.linear.y = est_arrow_y
+        msg.linear.z = est_arrow_z
+        msg.angular.z = est_arrow_angle
+        pub_est_arrow.publish(msg)
 
         draw_dot(global_hsv_canvas_all, center_px, HSV_RED_COLOR, size=5)    
-
+        
     ############
     # Method 1 #
     ############
-    elif (center_px_from_ellipse is not None):
-        method_of_choice = "ellipse"
+    if ellipse_available:
+        # method_of_choice = "ellipse"
         center_px, radius_length_px, angle_rad = center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse
-        est_x, est_y, est_z = calculate_position(center_px, radius_length_px)
-        est_angle = np.degrees(angle_rad)
+        est_ellipse_x, est_ellipse_y, est_ellipse_z = calculate_position(center_px, radius_length_px)
+        est_ellipse_angle = np.degrees(angle_rad)
+
+        msg.linear.x = est_ellipse_x
+        msg.linear.y = est_ellipse_y
+        msg.linear.z = est_ellipse_z
+        msg.angular.z = est_ellipse_angle
+        pub_est_ellipse.publish(msg)
 
         draw_dot(global_hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=5)
-
+        
     ############
     # Method 3 #
     ############
-    elif (center_px_from_inner_corners is not None):
-        method_of_choice = "corners"
+    if corners_available:
+        # method_of_choice = "corners"
         center_px, radius_length_px, angle_rad = center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners
-        est_x, est_y, est_z = calculate_position(center_px, radius_length_px)
-        est_angle = np.degrees(angle_rad)
+        est_corners_x, est_corners_y, est_corners_z = calculate_position(center_px, radius_length_px)
+        est_corners_angle = np.degrees(angle_rad)
+
+        msg.linear.x = est_corners_x
+        msg.linear.y = est_corners_y
+        msg.linear.z = est_corners_z
+        msg.angular.z = est_corners_angle
+        pub_est_corners.publish(msg)
 
         draw_dot(global_hsv_canvas_all, center_px, HSV_YELLOW_COLOR, size=5)
-    
-    #########################
-    # No estimate available #
-    #########################
+        
+    # Choose method #
+    if arrow_available:
+        method_of_choice = 2
+        est_x, est_y, est_z, est_angle = est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle
+
+    elif ellipse_available:
+        method_of_choice = 1
+        est_x, est_y, est_z, est_angle = est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle
+
+    elif corners_available:
+        method_of_choice = 3
+        est_x, est_y, est_z, est_angle = est_corners_x, est_corners_y, est_corners_z, est_corners_angle
     else:
-        method_of_choice = "none"
+        # method_of_choice = "none"
+        method_of_choice = 0
         est_x, est_y, est_z, est_angle = 0.0, 0.0, 0.0, 0.0
 
     # hsv_save_image(global_hsv_canvas_all, "5_canvas_all_"+str(count))
 
     bgr_canvas_all = cv2.cvtColor(global_hsv_canvas_all, cv2.COLOR_HSV2BGR) # convert to HSV
 
-    # try:
-    #     processed_image = bridge.cv2_to_imgmsg(bgr_canvas_all, "bgr8")
-    # except CvBridgeError as e:
-    #     rospy.loginfo(e)
-    processed_image = None
+    try:
+        processed_image = bridge.cv2_to_imgmsg(bgr_canvas_all, "bgr8")
+    except CvBridgeError as e:
+        rospy.loginfo(e)
+    # processed_image = None
 
     result = np.array([est_x, est_y, est_z, est_angle])
 
@@ -887,8 +1017,8 @@ def corner_test():
     bw_angle_test = make_gaussian_blurry(bw_angle_test, 7)
 
     hsv_save_image(bw_angle_test, "bw_angle_test", is_gray=True)
-    # corners, _ = find_right_angled_corners(bw_angle_test)
-    corners = new_find_right_angled_corners(bw_angle_test)
+    corners, _ = find_right_angled_corners(bw_angle_test)
+    # corners = new_find_right_angled_corners(bw_angle_test)
     print corners
 
     hsv_angle_test_canvas = hsv_angle_test.copy()
@@ -900,13 +1030,27 @@ def corner_test():
     
 
 def main():
+    global pub_est_ellipse
+    global pub_est_arrow
+    global pub_est_corners
+
     rospy.init_node('cv_module', anonymous=True)
 
     rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
 
     pub_processed_image = rospy.Publisher('/processed_image', Image, queue_size=10)
 
+    
+    pub_est_ellipse = rospy.Publisher("/estimate_ellipse", Twist, queue_size=10)
+    pub_est_arrow = rospy.Publisher("/estimate_arrow", Twist, queue_size=10)
+    pub_est_corners = rospy.Publisher("/estimate_corners", Twist, queue_size=10)
+      
     pub_est = rospy.Publisher("/estimate", Twist, queue_size=10)
+
+
+    pub_est_method = rospy.Publisher("/estimate_method", Int8, queue_size=10)
+
+
     est_msg = Twist()
 
     rospy.loginfo("Starting CV module")
@@ -919,18 +1063,18 @@ def main():
     while not rospy.is_shutdown():
 
         if (global_image is not None):
-
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
             est, method, processed_image = get_estimate(hsv, count)
 
-            # pub_processed_image.publish(processed_image)
+            pub_processed_image.publish(processed_image)
 
-            rospy.loginfo("Method: " + method)
+            # rospy.loginfo("Method: " + str(method))
+            pub_est_method.publish(Int8(method))
 
             # Publish the estimate
-            est_msg.linear.x = est[0] / 1000.0
-            est_msg.linear.y = est[1] / 1000.0
-            est_msg.linear.z = est[2] / 1000.0
+            est_msg.linear.x = est[0] #/ 1000.0
+            est_msg.linear.y = est[1] #/ 1000.0
+            est_msg.linear.z = est[2] #/ 1000.0
             est_msg.angular.z = est[3]
             pub_est.publish(est_msg)
 
