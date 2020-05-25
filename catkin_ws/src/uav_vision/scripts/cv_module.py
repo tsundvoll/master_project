@@ -341,12 +341,12 @@ def find_white_centroid(hsv):
 
 def find_harris_corners(img):
     """ Using sub-pixel method from OpenCV """
-    # block_size = 7      # It is the size of neighbourhood considered for corner detection
-    # aperture_param = 9  # Aperture parameter of Sobel derivative used.
-    # k_param = 0.2      # Harris detector free parameter in the equation. range: [0.04, 0.06]
-    block_size = 3      # It is the size of neighbourhood considered for corner detection
-    aperture_param = 3  # Aperture parameter of Sobel derivative used.
-    k_param = 0.1      # Harris detector free parameter in the equation. range: [0.04, 0.06]
+    block_size = 7      # It is the size of neighbourhood considered for corner detection
+    aperture_param = 9  # Aperture parameter of Sobel derivative used.
+    k_param = 0.04    # Harris detector free parameter in the equation. range: [0.04, 0.06]
+    # block_size = 3      # It is the size of neighbourhood considered for corner detection
+    # aperture_param = 3  # Aperture parameter of Sobel derivative used.
+    # k_param = 0.1      # Harris detector free parameter in the equation. range: [0.04, 0.06]
     dst = cv2.cornerHarris(img, block_size, aperture_param, k_param)
     dst = cv2.dilate(dst, None)
 
@@ -460,38 +460,81 @@ def clip_corners_on_intensity(corners, img, average_filter_size):
         return corners, intensities
 
 
+
 def clip_corners_not_right(corners, img, average_filter_size):
+    gaussian_blur_size = 51
+    sigmaX = 0
+    value_limit_low = 160
+    value_limit_high = 200
 
-    bw_edges = cv2.Canny(img,100,200)
-    radius = np.int0(average_filter_size / 2.0)
-    center = (radius, radius)
-
-
-    bw_circles = np.zeros((average_filter_size, average_filter_size), np.uint8)
-    bw_canvas = np.zeros((360, 640, 1), np.uint8)
+    bw_blurred = img.copy()
+    bw_blurred = cv2.GaussianBlur(bw_blurred, (gaussian_blur_size,gaussian_blur_size), sigmaX)
     
-    cv2.circle(bw_circles, center, radius, (255,0,0), 1)
+    # Text settings 
+    font = cv2.FONT_HERSHEY_DUPLEX     
+    fontScale = 0.8
+    color = (150, 0, 0)
+    thickness = 1
     
-    circle = np.where(bw_circles==255)
-    # circle_new = np.array([circle[0], circle[1]])
-
     for corner in corners:
-        shift_center = corner - center
-        shifted_circle = np.array([circle[0]+shift_center[0], circle[1]+shift_center[1]])
+        corner_x = np.int0(corner[0])
+        corner_y = np.int0(corner[1])
+        value = bw_blurred[corner_x, corner_y]
+        print value
+        # Using cv2.putText() method 
+        image = cv2.putText(bw_blurred, str(value), (corner_y-25, corner_x+40), font,  
+                    fontScale, color, thickness, cv2.LINE_AA) 
+
+    values = bw_blurred[corners[:,0], corners[:,1]]
+    print values
+
+    is_to_keep = np.logical_and(value_limit_low < values, values < value_limit_high)
+    print is_to_keep
+
+    cv2.circle(bw_blurred, (320,180), np.int0(gaussian_blur_size/2.0), (0,0,0), 1)
 
 
-        bw_canvas[shifted_circle[0], shifted_circle[1]] = 255
+    hsv_save_image(bw_blurred, "blurred", is_gray=True)
 
-
-    bw_corner_area = cv2.bitwise_and(bw_canvas, bw_edges)
-
-
-
-    hsv_save_image(bw_edges, "bw_edges", is_gray=True)
-    hsv_save_image(bw_canvas, "bw_circles", is_gray=True)
-    hsv_save_image(bw_corner_area, "bw_draft", is_gray=True)
+    print ""
+    print ""
 
     return corners
+
+
+
+# def clip_corners_not_right(corners, img, average_filter_size):
+
+#     bw_edges = cv2.Canny(img,100,200)
+#     radius = np.int0(average_filter_size / 2.0)
+#     center = (radius, radius)
+
+
+#     bw_circles = np.zeros((average_filter_size, average_filter_size), np.uint8)
+#     bw_canvas = np.zeros((360, 640, 1), np.uint8)
+    
+#     cv2.circle(bw_circles, center, radius, (255,0,0), 1)
+    
+#     circle = np.where(bw_circles==255)
+#     # circle_new = np.array([circle[0], circle[1]])
+
+#     for corner in corners:
+#         shift_center = corner - center
+#         shifted_circle = np.array([circle[0]+shift_center[0], circle[1]+shift_center[1]])
+
+
+#         bw_canvas[shifted_circle[0], shifted_circle[1]] = 255
+
+
+#     bw_corner_area = cv2.bitwise_and(bw_canvas, bw_edges)
+
+
+
+#     hsv_save_image(bw_edges, "bw_edges", is_gray=True)
+#     hsv_save_image(bw_canvas, "bw_circles", is_gray=True)
+#     hsv_save_image(bw_corner_area, "bw_draft", is_gray=True)
+
+#     return corners
 
 # def clip_corners_not_right(corners, img, average_filter_size):
 #     bw_draft = img.copy()
@@ -551,15 +594,16 @@ def find_right_angled_corners(img):
     if corners is None:
         return None, None
 
-    # corners = clip_corners_not_right(corners, img, check_angle_filter_size)
-    # if corners is None:
-    #     return None, None
+    corners = clip_corners_not_right(corners, img, check_angle_filter_size)
+    if corners is None:
+        return None, None
 
     # corners, intensities = clip_corners_on_intensity(corners, img, average_filter_size)
     # if corners is None:
     #     return None, None
     intensities = None
 
+    # return corners, intensities
     return corners, intensities
 
 
@@ -817,7 +861,7 @@ def evaluate_inner_corners(hsv):
 
     hsv_save_image(bw_white_mask, "2_white_only", is_gray=True)
 
-    inner_corners, intensities = find_right_angled_corners(bw_white_mask)
+    inner_corners, _ = find_right_angled_corners(bw_white_mask)
 
     bw_white_mask = make_gaussian_blurry(bw_white_mask, 9) #5
     average_filter_size = 19
@@ -1055,8 +1099,8 @@ def main():
 
     rospy.loginfo("Starting CV module")
 
-    # corner_test()
-    # return 
+    corner_test()
+    return 
 
     count = 0
     rate = rospy.Rate(20) # Hz

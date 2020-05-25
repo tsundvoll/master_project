@@ -6,6 +6,8 @@ from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool, Int8
 
+import time
+
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
@@ -89,7 +91,8 @@ def main():
 
 
     rospy.loginfo("Starting Dead Reckoning module")
-    rospy.loginfo("Performing initial calibration...")
+    # rospy.loginfo("Performing initial calibration...")
+    time.sleep(1)
 
     count = 0
     N_CALIBRATION_STEPS = 1000
@@ -128,17 +131,22 @@ def main():
             if count == 0:
                 start_time = rospy.get_time()
                 prev_time = start_time
-            elif count < N_CALIBRATION_STEPS:
-                calibration_sum_vel += new_vel
-                calibration_sum_acc += new_acc
-            elif count == N_CALIBRATION_STEPS:
-                calibration_vel = calibration_sum_vel / float(N_CALIBRATION_STEPS)
-                calibration_acc = calibration_sum_acc / float(N_CALIBRATION_STEPS)
+                calibration_vel = np.array([0.0, 0.0, 0.0])
+                calibration_acc = np.array([0.0, 0.0, 9.81e+03])
 
-                end_time = rospy.get_time()
-                duration = end_time - start_time
-                rospy.loginfo("Calibration ready. Duration: " + str(duration))
-                prev_time = end_time
+            # elif count < N_CALIBRATION_STEPS:
+            #     calibration_sum_vel += new_vel
+            #     calibration_sum_acc += new_acc
+            # elif count == N_CALIBRATION_STEPS:
+            #     calibration_vel = calibration_sum_vel / float(N_CALIBRATION_STEPS)
+            #     calibration_acc = calibration_sum_acc / float(N_CALIBRATION_STEPS)
+                
+            
+
+            #     end_time = rospy.get_time()
+            #     duration = end_time - start_time
+            #     rospy.loginfo("Calibration ready. Duration: " + str(duration))
+            #     prev_time = end_time
             else: # Perform dead reckoning
                 rospy.loginfo("Method: " + str(global_estimate_method))
 

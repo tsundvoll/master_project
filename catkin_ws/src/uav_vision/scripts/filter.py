@@ -45,7 +45,7 @@ def main():
     rospy.Subscriber('/estimate', Twist, estimate_callback)
     filtered_estimate_pub = rospy.Publisher('/filtered_estimate', Twist, queue_size=10)
 
-    rospy.loginfo("Starting filter for estimate (and later also dead reckoning)")
+    rospy.loginfo("Starting filter for estimate")
 
     filtered_estimate_msg = Twist()
 
