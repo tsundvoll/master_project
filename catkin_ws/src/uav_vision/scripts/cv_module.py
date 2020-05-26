@@ -70,6 +70,8 @@ def make_circle_average_blurry(image, blur_size):
 
 
 def hsv_save_image(image, label='image', is_gray=False):
+    if image is None:
+        print "The image with label " + label + " is none"
     folder = './image_processing/'
     if save_images:
         if is_gray:
@@ -323,9 +325,9 @@ def get_h_area(hsv):
     orange_mask = get_orange_mask(hsv)
     white_mask = get_white_mask(hsv)
 
-    hsv_save_image(green_mask, "green_mask", is_gray=True)
-    hsv_save_image(orange_mask, "orange_mask", is_gray=True)
-    hsv_save_image(white_mask, "white_mask", is_gray=True)
+    # hsv_save_image(green_mask, "green_mask", is_gray=True)
+    # hsv_save_image(orange_mask, "orange_mask", is_gray=True)
+    # hsv_save_image(white_mask, "white_mask", is_gray=True)
 
     # If no orange in image,
     # green and white on the edges,
@@ -383,9 +385,9 @@ def get_h_area(hsv):
 
 def find_white_centroid(hsv):
     bw_white_mask = get_white_mask(hsv)
-    hsv_save_image(bw_white_mask, "3_white_mask", is_gray=True)
     if bw_white_mask is None:
         return None
+    hsv_save_image(bw_white_mask, "3_white_mask", is_gray=True)
 
     if is_mask_touching_border(bw_white_mask):
         return None
@@ -845,11 +847,11 @@ def evaluate_ellipse(hsv):
     return center_px, radius_px, angle
 
 
-def evaluate_arrow(hsv):
+def evaluate_arrow(hsv, hsv_inside_green):
     """ Use the arrow to find: 
         center, radius, angle 
     """
-    center_px = find_white_centroid(hsv)
+    center_px = find_white_centroid(hsv_inside_green)
     arrowhead_px = find_orange_arrowhead(hsv)
 
     if (center_px is not None) and (arrowhead_px is not None):
@@ -994,20 +996,22 @@ def get_estimate(hsv, count):
     global_hsv_canvas_all = hsv.copy()
 
     hsv_inside_green = get_pixels_inside_green(hsv)
+    hsv_save_image(hsv_inside_green, '0_hsv_inside_green')
+
     hsv_h_area = get_h_area(hsv)
 
+    # white_mask = get_white_mask(hsv)
+    # print white_mask
+    # if white_mask is not None:
+    #     hsv_save_image(white_mask, '1_white_mask', is_gray=True)
 
-    white_mask = get_white_mask(hsv)
-    if white_mask is not None:
-        hsv_save_image(white_mask, '1_white_mask', is_gray=True)
-
-    orange_mask = get_orange_mask(hsv)
-    if orange_mask is not None:
-        hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
+    # orange_mask = get_orange_mask(hsv)
+    # if orange_mask is not None:
+    #     hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
 
     green_mask = get_green_mask(hsv)
     if green_mask is not None:
-        hsv_save_image(green_mask, '1_green_mask', is_gray=True)
+        # hsv_save_image(green_mask, '1_green_mask', is_gray=True)
 
         if (green_mask[0,:] > 0).any() or \
                 (green_mask[:,IMG_WIDTH-1] > 0).any() or \
@@ -1017,16 +1021,16 @@ def get_estimate(hsv, count):
         else:
             green_toughing_edge = False
 
+
     msg = Twist()
 
     center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
-    center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv_inside_green) # or use hsv_inside_green
+    center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv, hsv_inside_green) # use hsv or hsv_inside_green
     center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_h_area)
 
     ellipse_available = (center_px_from_ellipse is not None) and (radius_length_px_from_ellipse != 0)
     arrow_available = (center_px_from_arrow is not None) and (radius_length_px_from_arrow != 0)
     corners_available = (center_px_from_inner_corners is not None) and (radius_px_length_from_inner_corners != 0)
-
 
     ############
     # Method 2 #
@@ -1142,12 +1146,14 @@ def corner_test():
 
 
 def arrow_test():
-    folder = "./image_processing/still_photos/image_"
-    image_number = 20
+    image_number = 11
 
-    bgr_arrow_test = cv2.imread(folder+str(image_number)+".png")
-    
-    hsv_arrow_test = cv2.cvtColor(bgr_arrow_test, cv2.COLOR_BGR2HSV)
+    take_number = 4
+    folder = "./image_processing/still_photos/take_"+str(take_number)+"/"
+
+    global_image = cv2.imread(folder+"image_"+str(image_number)+".png")
+    bgr_angle_test = global_image
+    hsv_arrow_test = cv2.cvtColor(bgr_angle_test, cv2.COLOR_BGR2HSV)
     hsv_save_image(hsv_arrow_test, "0_hsv_test_image")
 
     bw_orange_mask = get_orange_mask(hsv_arrow_test)
@@ -1196,8 +1202,8 @@ def main():
 
     rospy.loginfo("Starting CV module")
 
-    # corner_test()
-    # # arrow_test()
+    # # corner_test()
+    # arrow_test()
     # return 
 
     count = 0
