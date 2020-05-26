@@ -50,17 +50,18 @@ def teleop_callback(data):
         pub_take_still_photo.publish(Empty())
         
 
-    control_msg = Twist()
-    control_msg.linear.x = right_js_vertical*sensitivity_x_y
-    control_msg.linear.y = right_js_horizontal*sensitivity_x_y
-    control_msg.linear.z = left_js_vertical*sensitivity_z
-    control_msg.angular.z = left_js_horizontal*sensitivity_yaw
-    pub_controller.publish(control_msg)
+    # control_msg = Twist()
+    # control_msg.linear.x = right_js_vertical*sensitivity_x_y
+    # control_msg.linear.y = right_js_horizontal*sensitivity_x_y
+    # control_msg.linear.z = left_js_vertical*sensitivity_z
+    # control_msg.angular.z = left_js_horizontal*sensitivity_yaw
+    # pub_controller.publish(control_msg)
 
-    const = 0.001
+    amplifier = 0.01
+    yaw_amplifier = 1
 
-    set_points += np.array([const*right_js_vertical*sensitivity_x_y,  const*right_js_horizontal*sensitivity_x_y,   const*left_js_vertical*sensitivity_z,
-                            0.0,                                0.0,                                    const*left_js_horizontal*sensitivity_yaw])
+    set_points += np.array([amplifier*right_js_vertical*sensitivity_x_y,  amplifier*right_js_horizontal*sensitivity_x_y,   amplifier*left_js_vertical*sensitivity_z,
+                            0.0,                                0.0,                                    yaw_amplifier*left_js_horizontal*sensitivity_yaw])
 
     set_point_msg = Twist()
     set_point_msg.linear.x = set_points[0]
