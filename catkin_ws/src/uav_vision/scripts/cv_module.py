@@ -318,7 +318,6 @@ def get_pixels_inside_green(hsv):
 
 
 def get_h_area(hsv):
-
     # For every side, find either all pixels green or the furtherst orange pixel
     green_mask = get_green_mask(hsv)
     orange_mask = get_orange_mask(hsv)
@@ -350,25 +349,26 @@ def get_h_area(hsv):
     top_bottom_margin = IMG_WIDTH - margin
     left_right_margin = IMG_HEIGHT - margin    
     
-    # Top
-    if np.sum(np.logical_or(green_mask[0,:] > 0, white_mask[0,:] > 0)) > top_bottom_margin:
-        print "All on top is green"
-        x_min = 0
+    if (green_mask is not None) and (white_mask is not None):
+        # Top
+        if np.sum(np.logical_or(green_mask[0,:] > 0, white_mask[0,:] > 0)) > top_bottom_margin:
+            # All on top is green
+            x_min = 0
 
-    # Right
-    if np.sum(np.logical_or(green_mask[:,IMG_WIDTH-1] > 0, white_mask[:,IMG_WIDTH-1] > 0)) > left_right_margin:
-        print "All on right is green"
-        y_max = IMG_WIDTH-1
+        # Right
+        if np.sum(np.logical_or(green_mask[:,IMG_WIDTH-1] > 0, white_mask[:,IMG_WIDTH-1] > 0)) > left_right_margin:
+            # All on right is green
+            y_max = IMG_WIDTH-1
 
-    # Bottom
-    if np.sum(np.logical_or(green_mask[IMG_HEIGHT-1,:] > 0, white_mask[IMG_HEIGHT-1,:] > 0)) > top_bottom_margin:
-        print "All on bottom is green"
-        x_max = IMG_HEIGHT-1
+        # Bottom
+        if np.sum(np.logical_or(green_mask[IMG_HEIGHT-1,:] > 0, white_mask[IMG_HEIGHT-1,:] > 0)) > top_bottom_margin:
+            # All on bottom is green
+            x_max = IMG_HEIGHT-1
 
-    # Left
-    if np.sum(np.logical_or(green_mask[:,0] > 0, white_mask[:,0] > 0)) > left_right_margin:
-        print "All on left is green"
-        y_min = 0
+        # Left
+        if np.sum(np.logical_or(green_mask[:,0] > 0, white_mask[:,0] > 0)) > left_right_margin:
+            # All on left is green
+            y_min = 0
 
 
     hsv_inside_orange = hsv.copy()
@@ -553,12 +553,13 @@ def clip_corners_not_right(corners, img, average_filter_size):
 
     is_to_keep = np.logical_and(value_limit_low < values, values < value_limit_high)
     new_corners = corners[is_to_keep]
+    new_values = values[is_to_keep]
 
     cv2.circle(bw_blurred, (320,180), np.int0(gaussian_blur_size/2.0), (0,0,0), 1)
 
     hsv_save_image(bw_blurred, "blurred", is_gray=True)
     
-    return new_corners
+    return new_corners, new_values
 
 
 
@@ -640,7 +641,7 @@ def clip_corners_not_right(corners, img, average_filter_size):
 
 def find_right_angled_corners(img):
     # Parameters ###########################
-    ignore_border_size = 20 # 7
+    ignore_border_size = 7 # 7, 20
     average_filter_size = 19
     check_angle_filter_size = 19
     ########################################
@@ -653,14 +654,14 @@ def find_right_angled_corners(img):
     if corners is None:
         return None, None
 
-    corners = clip_corners_not_right(corners, img, check_angle_filter_size)
+    corners, intensities = clip_corners_not_right(corners, img, check_angle_filter_size)
     if corners is None:
         return None, None
 
     # corners, intensities = clip_corners_on_intensity(corners, img, average_filter_size)
     # if corners is None:
     #     return None, None
-    intensities = None
+    # intensities = None
 
     # return corners, intensities
     return corners, intensities
@@ -671,7 +672,7 @@ def find_orange_arrowhead(hsv):
     if bw_orange_mask is None:
         return None
 
-    bw_orange_mask = make_gaussian_blurry(bw_orange_mask, 9) 
+    # bw_orange_mask = make_gaussian_blurry(bw_orange_mask, 9) 
     bw_orange_mask_inverted = cv2.bitwise_not(bw_orange_mask)
 
     hsv_save_image(bw_orange_mask_inverted, "3_orange_mask_inverted", is_gray=True)
@@ -682,10 +683,12 @@ def find_orange_arrowhead(hsv):
 
     number_of_corners_found = len(orange_corners)
 
-    value_per_degree = 255.0/360.0
-    ideal_angle = 90
-    ideal_intensity = 255-ideal_angle*value_per_degree
+    ideal_intensity = 191 # 75% of 255
     ideal_intensities = np.array([ideal_intensity]*number_of_corners_found)
+
+    # print orange_corners
+    # print intensities
+    # print ideal_intensities
 
     diff_intensities = np.absolute(np.array(ideal_intensities-intensities))
 
@@ -991,25 +994,34 @@ def get_estimate(hsv, count):
     global_hsv_canvas_all = hsv.copy()
 
     hsv_inside_green = get_pixels_inside_green(hsv)
+    hsv_h_area = get_h_area(hsv)
 
 
-    white_mask = get_white_mask(hsv_inside_green)
+    white_mask = get_white_mask(hsv)
     if white_mask is not None:
         hsv_save_image(white_mask, '1_white_mask', is_gray=True)
 
-    orange_mask = get_orange_mask(hsv_inside_green)
+    orange_mask = get_orange_mask(hsv)
     if orange_mask is not None:
         hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
 
-    green_mask = get_green_mask(hsv_inside_green)
+    green_mask = get_green_mask(hsv)
     if green_mask is not None:
         hsv_save_image(green_mask, '1_green_mask', is_gray=True)
+
+        if (green_mask[0,:] > 0).any() or \
+                (green_mask[:,IMG_WIDTH-1] > 0).any() or \
+                (green_mask[IMG_HEIGHT-1,:] > 0).any() or \
+                (green_mask[:,0] > 0).any():
+            green_toughing_edge = True
+        else:
+            green_toughing_edge = False
 
     msg = Twist()
 
     center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
     center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow = evaluate_arrow(hsv_inside_green) # or use hsv_inside_green
-    center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_inside_green)
+    center_px_from_inner_corners, radius_px_length_from_inner_corners, angle_from_inner_corners = evaluate_inner_corners(hsv_h_area)
 
     ellipse_available = (center_px_from_ellipse is not None) and (radius_length_px_from_ellipse != 0)
     arrow_available = (center_px_from_arrow is not None) and (radius_length_px_from_arrow != 0)
@@ -1068,17 +1080,15 @@ def get_estimate(hsv, count):
         draw_dot(global_hsv_canvas_all, center_px, HSV_YELLOW_COLOR, size=5)
         
     # Choose method #
-    if arrow_available:
+    if corners_available and green_toughing_edge:
+        method_of_choice = 3
+        est_x, est_y, est_z, est_angle = est_corners_x, est_corners_y, est_corners_z, est_corners_angle
+    elif arrow_available:
         method_of_choice = 2
         est_x, est_y, est_z, est_angle = est_arrow_x, est_arrow_y, est_arrow_z, est_arrow_angle
-
     elif ellipse_available:
         method_of_choice = 1
         est_x, est_y, est_z, est_angle = est_ellipse_x, est_ellipse_y, est_ellipse_z, est_ellipse_angle
-
-    elif corners_available:
-        method_of_choice = 3
-        est_x, est_y, est_z, est_angle = est_corners_x, est_corners_y, est_corners_z, est_corners_angle
     else:
         # method_of_choice = "none"
         method_of_choice = 0
@@ -1103,10 +1113,11 @@ def corner_test():
     # global_image = cv2.imread("0_hsv.png")
     # bgr_angle_test = cv2.imread("corner_angle_test_numerated.png")
 
-    folder = "./image_processing/still_photos/image_"
-    image_number = 21
+    image_number = 5
+    take_number = 2
+    folder = "./image_processing/still_photos/take_"+str(take_number)+"/"
 
-    global_image = cv2.imread(folder+str(image_number)+".png")
+    global_image = cv2.imread(folder+"image_"+str(image_number)+".png")
     bgr_angle_test = global_image
     hsv_angle_test = cv2.cvtColor(bgr_angle_test, cv2.COLOR_BGR2HSV)
     hsv_save_image(hsv_angle_test, "0_hsv_test_image")
@@ -1128,7 +1139,36 @@ def corner_test():
     hsv_save_image(hsv_angle_test_canvas, "angle_test")
     
     print "Done testing"
+
+
+def arrow_test():
+    folder = "./image_processing/still_photos/image_"
+    image_number = 20
+
+    bgr_arrow_test = cv2.imread(folder+str(image_number)+".png")
     
+    hsv_arrow_test = cv2.cvtColor(bgr_arrow_test, cv2.COLOR_BGR2HSV)
+    hsv_save_image(hsv_arrow_test, "0_hsv_test_image")
+
+    bw_orange_mask = get_orange_mask(hsv_arrow_test)
+    if bw_orange_mask is None:
+        return None
+
+    # bw_orange_mask = make_gaussian_blurry(bw_orange_mask, 9) 
+    bw_orange_mask_inverted = cv2.bitwise_not(bw_orange_mask)
+
+    hsv_save_image(bw_orange_mask_inverted, "3_orange_mask_inverted", is_gray=True)
+
+    orange_corners, intensities = find_right_angled_corners(bw_orange_mask_inverted)
+    if orange_corners is None:
+        return None
+
+    hsv_arrow_test_canvas = hsv_arrow_test.copy()
+
+    for corner in orange_corners:
+        draw_dot(hsv_arrow_test_canvas, corner, HSV_RED_COLOR, size=5)
+    hsv_save_image(hsv_arrow_test_canvas, "hsv_arrow_test_canvas")
+
 
 def main():
     global pub_est_ellipse
@@ -1156,8 +1196,9 @@ def main():
 
     rospy.loginfo("Starting CV module")
 
-    corner_test()
-    return 
+    # corner_test()
+    # # arrow_test()
+    # return 
 
     count = 0
     rate = rospy.Rate(20) # Hz
