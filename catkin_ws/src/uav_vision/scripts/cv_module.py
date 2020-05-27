@@ -20,8 +20,8 @@ from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 
 global_image = None
-save_images = True
-draw_on_images = True
+save_images = False
+draw_on_images = False
 
 # Constants
 # D_H_SHORT = 3.0

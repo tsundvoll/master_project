@@ -9,6 +9,7 @@
 *.json
 *.h5
 *.zip
+*.npy
 CMakeFiles/
 catkin_ws/build
 catkin_ws/devel

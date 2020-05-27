@@ -18,57 +18,58 @@ import time
 import matplotlib.pyplot as plt
 
 
-
+# Global variables
+global_collect_data = False
+received_signal = False
+start_time = None
 
 #############
 # Callbacks #
 #############
-estimate_ground_truth = None
-estimate_ground_truth_array = []
+global_est_ground_truth = np.zeros(6)
 def ground_truth_callback(data):
-    global estimate_ground_truth
-    estimate_ground_truth = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
-    curr_time = rospy.get_time() - start_time
+    global global_est_ground_truth
+    global_est_ground_truth = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
 
-    data_point = np.array([curr_time, estimate_ground_truth])
-    
-    estimate_ground_truth_array.append(data_point)
-
-
-estimate_ellipse = None
+global_est_ellipse = np.zeros(6)
 def estimate_ellipse_callback(data):
-    global estimate_ellipse
-    estimate_ellipse = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
+    global global_est_ellipse
+    global_est_ellipse = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
 
-estimate_arrow = None
+global_est_arrow = np.zeros(6)
 def estimate_arrow_callback(data):
-    global estimate_arrow
-    estimate_arrow = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
+    global global_est_arrow
+    global_est_arrow = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
 
-estimate_corners = None
+global_est_corners = np.zeros(6)
 def estimate_corners_callback(data):
-    global estimate_corners
-    estimate_corners = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
+    global global_est_corners
+    global_est_corners = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
 
-estimate_dead_reckoning = None
+global_est_dead_reckoning = np.zeros(6)
 def estimate_dead_reckoning_callback(data):
-    global estimate_dead_reckoning
-    estimate_dead_reckoning = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
+    global global_est_dead_reckoning
+    global_est_dead_reckoning = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
 
-global_collect_data = False
 
 def start_data_collection_callback(data):
+    global global_collect_data
+    global received_signal
+    global start_time
     global_collect_data = True
+    received_signal = True
     start_time = rospy.get_time()
+    rospy.loginfo("Start data collection")
+
 
 def stop_data_collection_callback(data):
     global global_collect_data
     global_collect_data = False
     stop_time = rospy.get_time()
+    rospy.loginfo("Stop data collection")
 
 
-
-def main():
+def main(test_number):
     global global_state
     global start_time
     rospy.init_node('planner', anonymous=True)
@@ -79,24 +80,68 @@ def main():
     rospy.Subscriber('/estimate/corners', Twist, estimate_corners_callback)
     rospy.Subscriber('/estimate/dead_reckoning', Twist, estimate_dead_reckoning_callback)
 
-    # rospy.Subscriber('/initiate_mission', Empty, start_data_collection_callback)
+    rospy.Subscriber('/initiate_mission', Empty, start_data_collection_callback)
     rospy.Subscriber('/take_still_photo', Empty, stop_data_collection_callback)
 
-    rospy.loginfo("Starting data collection")
+    pub_heartbeat = rospy.Publisher("/heartbeat_data_collection", Empty, queue_size=10)
+    heartbeat_msg = Empty()
 
+    rospy.loginfo("Starting data collection...")
     time.sleep(1)
+    rospy.loginfo("... Ready!")
+
+    est_ground_truth = np.zeros(6)
+    est_ellipse = np.zeros(6)
+    est_arrow = np.zeros(6)
+    est_corners = np.zeros(6)
+    est_dead_reckoning = np.zeros(6) 
+
+    data_array = []
         
-    rate = rospy.Rate(10) # Hz
+    rate = rospy.Rate(20) # Hz
     while not rospy.is_shutdown():
         curr_time = rospy.get_time()
 
-        if not global_collect_data:
+        if global_collect_data:
+            curr_time = rospy.get_time() - start_time
+
+            # if np.array_equal(global_est_ground_truth, est_ground_truth):
+            #     est_ground_truth = np.zeros(6)
+
+            # est_ground_truth
+            # est_ellipse
+            # est_arrow
+            # est_corners
+            # est_dead_reckoning
+
+            data_point = np.concatenate((
+                np.array([curr_time]),
+                global_est_ground_truth,
+                global_est_ellipse,
+                global_est_arrow,
+                global_est_corners,
+                global_est_dead_reckoning
+                )
+            )
+            print len(data_array)
+
+            data_array.append(data_point)
+
+        if not global_collect_data and received_signal:
             break
+
+        pub_heartbeat.publish(heartbeat_msg)
+
         rate.sleep()
+    folder = './catkin_ws/src/uav_vision/data_storage/'
 
 
-    print estimate_ground_truth_array
+    filename = 'test_'+str(test_number)+'.npy'
+    path = folder+filename
+    np.save(path, np.array(data_array))
     
     
 if __name__ == '__main__':
-    main()
+    test_number = 2
+
+    main(test_number)

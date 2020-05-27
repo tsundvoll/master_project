@@ -21,7 +21,7 @@ global_last_estimate = None
 
 global_estimate_method = 0
 
-cv_switch = False
+cv_switch = True
 
 def estimate_method_callback(data):
     global global_estimate_method
