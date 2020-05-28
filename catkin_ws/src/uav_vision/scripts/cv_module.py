@@ -1047,7 +1047,13 @@ def get_estimate(hsv, count):
         msg.angular.z = est_arrow_angle
         pub_est_arrow.publish(msg)
 
-        draw_dot(global_hsv_canvas_all, center_px, HSV_RED_COLOR, size=5)    
+        draw_dot(global_hsv_canvas_all, center_px, HSV_RED_COLOR, size=5)
+    else:
+        msg.linear.x = np.nan
+        msg.linear.y = np.nan
+        msg.linear.z = np.nan
+        msg.angular.z = np.nan
+        pub_est_arrow.publish(msg)  
         
     ############
     # Method 1 #
@@ -1065,6 +1071,12 @@ def get_estimate(hsv, count):
         pub_est_ellipse.publish(msg)
 
         draw_dot(global_hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=5)
+    else:
+        msg.linear.x = np.nan
+        msg.linear.y = np.nan
+        msg.linear.z = np.nan
+        msg.angular.z = np.nan
+        pub_est_ellipse.publish(msg)
         
     ############
     # Method 3 #
@@ -1082,6 +1094,12 @@ def get_estimate(hsv, count):
         pub_est_corners.publish(msg)
 
         draw_dot(global_hsv_canvas_all, center_px, HSV_YELLOW_COLOR, size=5)
+    else:
+        msg.linear.x = np.nan
+        msg.linear.y = np.nan
+        msg.linear.z = np.nan
+        msg.angular.z = np.nan
+        pub_est_corners.publish(msg)
         
     # Choose method #
     if corners_available and green_toughing_edge:

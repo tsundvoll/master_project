@@ -14,9 +14,9 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
     d_id = c_id + 6     # Dead reckoning index
 
     # Remove zeroes
-    stored_array[stored_array == 0] = None
+    # stored_array[stored_array == 0] = np.nan
 
-    time_stamps         = stored_array[:, t_id]
+    time_stamps = stored_array[:, t_id]
     # data_ground_truth   = stored_array[:, g_id:g_id+6]
     # data_ellipse        = stored_array[:, e_id:e_id+6]
     # data_arrow          = stored_array[:, a_id:a_id+6]
@@ -58,14 +58,25 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
 
             data = stored_array[:, index:index+6][:,variable]
 
-            # line, = ax.plot(time_stamps, data)
+            data[data == 0] = np.nan
+            time_stamps_local = time_stamps.copy()
+            time_stamps_local[np.isnan(data)] = np.nan
+
+            data_not_nan_ids = ~np.isnan(data)
+
             # line, = ax.scatter(time_stamps, data)
-            line = ax.scatter(time_stamps, data, s=1)
+            # line = ax.scatter(time_stamps, data, s=1)
+            # line, = ax.plot(time_stamps, data)
+            # line, = ax.plot(time_stamps[data_not_nan_ids], data[data_not_nan_ids])
+            line, = ax.plot(time_stamps_local[data_not_nan_ids], data[data_not_nan_ids])
+            line.set_color(line_color)
+            # line = ax.scatter(time_stamps[data_not_nan_ids], data[data_not_nan_ids])
+            line = ax.scatter(time_stamps_local[data_not_nan_ids], data[data_not_nan_ids])
+            line.set_color(line_color)
             
             # line.set_drawstyle('steps')
             # line.set_solid_joinstyle('bevel')
 
-            line.set_color(line_color)
             line.set_label(legend_text)
             ax.legend()
 

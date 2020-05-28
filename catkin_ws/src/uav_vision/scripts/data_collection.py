@@ -105,43 +105,52 @@ def main(test_number):
         if global_collect_data:
             curr_time = rospy.get_time() - start_time
 
-            if np.array_equal(global_est_ground_truth, prev_est_ground_truth):
-                est_ground_truth = np.zeros(6)
-            else:
-                est_ground_truth = global_est_ground_truth
-            prev_est_ground_truth = global_est_ground_truth
+            # if np.array_equal(global_est_ground_truth, prev_est_ground_truth):
+            #     est_ground_truth = np.zeros(6)
+            # else:
+            #     est_ground_truth = global_est_ground_truth
+            # prev_est_ground_truth = global_est_ground_truth
             
-            if np.array_equal(global_est_ellipse, prev_est_ellipse):
-                est_ellipse = np.zeros(6)
-            else:
-                est_ellipse = global_est_ellipse
-            prev_est_ellipse = global_est_ellipse
+            # if np.array_equal(global_est_ellipse, prev_est_ellipse):
+            #     est_ellipse = np.zeros(6)
+            # else:
+            #     est_ellipse = global_est_ellipse
+            # prev_est_ellipse = global_est_ellipse
 
-            if np.array_equal(global_est_arrow, prev_est_arrow):
-                est_arrow = np.zeros(6)
-            else:
-                est_arrow = global_est_arrow
-            prev_est_arrow = global_est_arrow
+            # if np.array_equal(global_est_arrow, prev_est_arrow):
+            #     est_arrow = np.zeros(6)
+            # else:
+            #     est_arrow = global_est_arrow
+            # prev_est_arrow = global_est_arrow
 
-            if np.array_equal(global_est_corners, prev_est_corners):
-                est_corners = np.zeros(6)
-            else:
-                est_corners = global_est_corners
-            prev_est_corners = global_est_corners
+            # if np.array_equal(global_est_corners, prev_est_corners):
+            #     est_corners = np.zeros(6)
+            # else:
+            #     est_corners = global_est_corners
+            # prev_est_corners = global_est_corners
 
-            if np.array_equal(global_est_dead_reckoning, prev_est_dead_reckoning):
-                est_dead_reckoning = np.zeros(6)
-            else:
-                est_dead_reckoning = global_est_dead_reckoning
-            prev_est_dead_reckoning = global_est_dead_reckoning
+            # if np.array_equal(global_est_dead_reckoning, prev_est_dead_reckoning):
+            #     est_dead_reckoning = np.zeros(6)
+            # else:
+            #     est_dead_reckoning = global_est_dead_reckoning
+            # prev_est_dead_reckoning = global_est_dead_reckoning
             
+            # data_point = np.concatenate((
+            #     np.array([curr_time]),
+            #     est_ground_truth,
+            #     est_ellipse,
+            #     est_arrow,
+            #     est_corners,
+            #     est_dead_reckoning
+            #     )
+            # )
             data_point = np.concatenate((
                 np.array([curr_time]),
-                est_ground_truth,
-                est_ellipse,
-                est_arrow,
-                est_corners,
-                est_dead_reckoning
+                global_est_ground_truth,
+                global_est_ellipse,
+                global_est_arrow,
+                global_est_corners,
+                global_est_dead_reckoning
                 )
             )
             print len(data_array)
