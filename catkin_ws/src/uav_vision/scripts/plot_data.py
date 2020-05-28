@@ -14,7 +14,7 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
     d_id = c_id + 6     # Dead reckoning index
 
     # Remove zeroes
-    # stored_array[stored_array == 0] = None
+    stored_array[stored_array == 0] = None
 
     time_stamps         = stored_array[:, t_id]
     # data_ground_truth   = stored_array[:, g_id:g_id+6]
@@ -58,21 +58,28 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
 
             data = stored_array[:, index:index+6][:,variable]
 
-            line, = ax.plot(time_stamps, data)
+            # line, = ax.plot(time_stamps, data)
+            # line, = ax.scatter(time_stamps, data)
+            line = ax.scatter(time_stamps, data, s=1)
+            
+            # line.set_drawstyle('steps')
+            # line.set_solid_joinstyle('bevel')
+
             line.set_color(line_color)
             line.set_label(legend_text)
             ax.legend()
 
             ax.set_title(title)
             # ax.legend(loc='upper left')
-            ax.set_ylabel('meters')
+            ax.set_xlabel('time [s]')
+            ax.set_ylabel('distance [m]')
             # ax.set_xlim(xmin=yrs[0], xmax=yrs[-1])
 
             # fig.tight_layout()
         plt.draw()
-        plt.waitforbuttonpress(0)
-        plt.close(fig)
-
+        # plt.waitforbuttonpress(0)
+        # plt.close(fig)
+        plt.show()
 
 
 # fig, ax = plt.subplots(figsize=(5, 3))
@@ -87,7 +94,7 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
 if __name__ == '__main__':
 
     # Settings
-    test_number = 4
+    test_number = 7
 
     # 0: ground truth, 1: ellipse, 2: arrow, 3: corners, 4: dead reckoning
     methods_to_plot = [0, 1, 2, 3, 4]
