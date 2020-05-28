@@ -6,77 +6,91 @@ import time
 
 
 def plot_data(stored_array, methods_to_plot, variables_to_plot):
-
     t_id = 0            # Time index
     g_id = 1            # Ground truth index
-    e_id = g_id + 6    # Ellipse index
+    e_id = g_id + 6     # Ellipse index
     a_id = e_id + 6     # Arrow index
     c_id = a_id + 6     # Corner index
     d_id = c_id + 6     # Dead reckoning index
 
+    # Remove zeroes
+    # stored_array[stored_array == 0] = None
+
     time_stamps         = stored_array[:, t_id]
-    data_ground_truth   = stored_array[:, g_id:e_id]
-    data_ellipse        = stored_array[:, e_id:a_id]
-    data_arrow          = stored_array[:, a_id:c_id]
-    data_corners        = stored_array[:, c_id:d_id]
-    data_dead_reckoning = stored_array[:, d_id:]
+    # data_ground_truth   = stored_array[:, g_id:g_id+6]
+    # data_ellipse        = stored_array[:, e_id:e_id+6]
+    # data_arrow          = stored_array[:, a_id:a_id+6]
+    # data_corners        = stored_array[:, c_id:c_id+6]
+    # data_dead_reckoning = stored_array[:, d_id:d_id+6]
 
-    print time_stamps.shape
-    print data_ground_truth.shape
-    print data_ellipse.shape
-    print data_arrow.shape
-    print data_corners.shape
-    print data_dead_reckoning.shape
+    titles_variables = [
+        "x", "y", "z", "None", "None", "yaw"
+    ]
+    titles_methods = [
+        "Ground truth",
+        "Ellipse",
+        "Arrow",
+        "Corners",
+        "Dead reckogning"
+    ]
+    indices_methods = [g_id, e_id, a_id, c_id, d_id]
 
-
-    if 0 in methods_to_plot:
-        title = "Ground truth"
-
-        fig, ax = plt.subplots()
-
-        for variable in variables_to_plot:
-            ax.plot(time_stamps, data_ground_truth[:,variable])
-        ax.set_title(title)
-        # ax.legend(loc='upper left')
-        ax.set_ylabel('meters')
-        # ax.set_xlim(xmin=yrs[0], xmax=yrs[-1])
-
-        # fig.tight_layout()
-        plt.show()
+    colors_methods = [
+        "g",         # green: "Ground truth"
+        "b",         # "Ellipse"
+        "r",         # "Arrow"
+        "y",         # "Corners"
+        "k"         # "Dead reckogning"
+    ]
 
 
-# data_x = data[:,0]
-# data_y = data[:,1]
-# data_z = data[:,2]
-# data_yaw = data[:,5]
 
-# # print time_stamps.shape
-# # print data.shape
+    for variable in variables_to_plot:
+        title = titles_variables[variable]
+        
+        
+        fig, ax = plt.subplots(figsize=(10,8))
+
+        for method in methods_to_plot:
+            legend_text = titles_methods[method]
+            line_color = colors_methods[method]
+            index = indices_methods[method]
+
+            data = stored_array[:, index:index+6][:,variable]
+
+            line, = ax.plot(time_stamps, data)
+            line.set_color(line_color)
+            line.set_label(legend_text)
+            ax.legend()
+
+            ax.set_title(title)
+            # ax.legend(loc='upper left')
+            ax.set_ylabel('meters')
+            # ax.set_xlim(xmin=yrs[0], xmax=yrs[-1])
+
+            # fig.tight_layout()
+        plt.draw()
+        plt.waitforbuttonpress(0)
+        plt.close(fig)
 
 
-# # rng = np.arange(50)
-# # rnd = np.random.randint(0, 10, size=(3, rng.size))
-# # yrs = 1950 + rng
 
 # fig, ax = plt.subplots(figsize=(5, 3))
-
 # ax.plot(time_stamps, data_z)
 # ax.set_title('Combined debt growth over time')
-# # ax.legend(loc='upper left')
+# ax.legend(loc='upper left')
 # ax.set_ylabel('meters')
-# # ax.set_xlim(xmin=yrs[0], xmax=yrs[-1])
-
-
-# # fig.tight_layout()
+# ax.set_xlim(xmin=yrs[0], xmax=yrs[-1])
+# fig.tight_layout()
 # plt.show()
 
 if __name__ == '__main__':
 
     # Settings
-    test_number = 2
+    test_number = 4
 
     # 0: ground truth, 1: ellipse, 2: arrow, 3: corners, 4: dead reckoning
-    methods_to_plot = [0]
+    methods_to_plot = [0, 1, 2, 3, 4]
 
     # 0: x, 1: y, 2: z, 3: roll, 4: pitch, 5: yaw
     variables_to_plot = [2]
