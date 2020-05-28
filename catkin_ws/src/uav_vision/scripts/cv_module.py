@@ -708,6 +708,7 @@ def find_orange_arrowhead(hsv):
 
 def calculate_position(center_px, radius_px):
     focal_length = 374.67
+    # real_radius = 400 # mm (750mm in diameter / 2)
     real_radius = 375 # mm (750mm in diameter / 2)
 
     # Center of image
@@ -718,13 +719,15 @@ def calculate_position(center_px, radius_px):
     d_x = x_0 - center_px[0]
     d_y = y_0 - center_px[1]
 
-    est_z = real_radius*focal_length / radius_px # - 59.4 # (adjustment)
+    est_z = real_radius*focal_length / radius_px
     
     # Camera is placed 150 mm along x-axis of the drone
     # Since the camera is pointing down, the x and y axis of the drone
     # is the inverse of the x and y axis of the camera
-    est_x = -(est_z * d_x / focal_length) - 100 
+    est_x = -(est_z * d_x / focal_length) - 100 # mm adjustment for translated camera frame
     est_y = -(est_z * d_y / focal_length)
+
+    est_z -= 20 # mm adjustment for translated camera frame
 
     position = np.array([est_x, est_y, est_z]) / 1000.0
 

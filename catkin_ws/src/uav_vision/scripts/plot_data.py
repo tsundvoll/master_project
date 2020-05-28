@@ -68,10 +68,12 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
             # line = ax.scatter(time_stamps, data, s=1)
             # line, = ax.plot(time_stamps, data)
             # line, = ax.plot(time_stamps[data_not_nan_ids], data[data_not_nan_ids])
-            line, = ax.plot(time_stamps_local[data_not_nan_ids], data[data_not_nan_ids])
+            # line, = ax.plot(time_stamps_local[data_not_nan_ids], data[data_not_nan_ids])
+            line, = ax.plot(time_stamps_local, data)
             line.set_color(line_color)
             # line = ax.scatter(time_stamps[data_not_nan_ids], data[data_not_nan_ids])
-            line = ax.scatter(time_stamps_local[data_not_nan_ids], data[data_not_nan_ids])
+            # line = ax.scatter(time_stamps_local[data_not_nan_ids], data[data_not_nan_ids])
+            # line = ax.scatter(time_stamps_local, data)
             line.set_color(line_color)
             
             # line.set_drawstyle('steps')
@@ -105,7 +107,7 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
 if __name__ == '__main__':
 
     # Settings
-    test_number = 7
+    test_number = 10
 
     # 0: ground truth, 1: ellipse, 2: arrow, 3: corners, 4: dead reckoning
     methods_to_plot = [0, 1, 2, 3, 4]

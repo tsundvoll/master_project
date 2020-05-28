@@ -221,7 +221,7 @@
       </link>
 
 
-      <model name='helipad_ar'>
+      <model name='helipad'>
         <static>1</static>
         <pose>0 0 0.0 0 0 0</pose>
         <link name='link_01'>
