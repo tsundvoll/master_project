@@ -30,10 +30,15 @@ draw_on_images = False
 # D_RADIUS = 40.0
 
 
-D_H_SHORT = 3.0
-D_H_LONG = 9.0
-D_ARROW = 25.0
-D_RADIUS = 32.0
+# D_H_SHORT = 3.0
+# D_H_LONG = 9.0
+# D_ARROW = 25.0
+# D_RADIUS = 32.0
+
+D_H_SHORT = 4.0
+D_H_LONG = 12.0
+D_ARROW = 30.0
+D_RADIUS = 39.0
 
 
 # Image size
@@ -708,8 +713,7 @@ def find_orange_arrowhead(hsv):
 
 def calculate_position(center_px, radius_px):
     focal_length = 374.67
-    # real_radius = 400 # mm (750mm in diameter / 2)
-    real_radius = 375 # mm (750mm in diameter / 2)
+    real_radius = 390 # mm (800mm in diameter / 2)
 
     # Center of image
     x_0 = IMG_HEIGHT/2.0
@@ -727,7 +731,7 @@ def calculate_position(center_px, radius_px):
     est_x = -(est_z * d_x / focal_length) - 100 # mm adjustment for translated camera frame
     est_y = -(est_z * d_y / focal_length)
 
-    est_z -= 20 # mm adjustment for translated camera frame
+    est_z -= 45 # mm adjustment for translated camera frame
 
     position = np.array([est_x, est_y, est_z]) / 1000.0
 
