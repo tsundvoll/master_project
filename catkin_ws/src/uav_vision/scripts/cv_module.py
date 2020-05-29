@@ -19,29 +19,21 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 
+# For ground truth callback:
+from nav_msgs.msg import Odometry
+from scipy.spatial.transform import Rotation as R
+
+# Settings
 global_image = None
 save_images = False
 draw_on_images = False
 
 # Constants
-# D_H_SHORT = 3.0
-# D_H_LONG = 9.0
-# D_ARROW = 30.0
-# D_RADIUS = 40.0
-
-
-# D_H_SHORT = 3.0
-# D_H_LONG = 9.0
-# D_ARROW = 25.0
-# D_RADIUS = 32.0
-
 D_H_SHORT = 4.0
 D_H_LONG = 12.0
 D_ARROW = 30.0
 D_RADIUS = 39.0
 
-
-# Image size
 IMG_WIDTH = 640
 IMG_HEIGHT = 360
 
@@ -55,6 +47,77 @@ def image_callback(data):
         global_image = bridge.imgmsg_to_cv2(data, 'bgr8') # {'bgr8' or 'rgb8}
     except CvBridgeError as e:
         rospy.loginfo(e)
+
+
+global_ground_truth = None
+def gt_callback(data):
+    global global_ground_truth
+    gt_pose = data.pose.pose
+
+    # Transform ground truth in body frame wrt. world frame to body frame wrt. landing platform
+
+    ##########
+    # 0 -> 2 #
+    ##########
+
+    # Position
+    p_x = gt_pose.position.x
+    p_y = gt_pose.position.y
+    p_z = gt_pose.position.z
+
+    # Translation of the world frame to body frame wrt. the world frame
+    d_0_2 = np.array([p_x, p_y, p_z])
+
+    # Orientation
+    q_x = gt_pose.orientation.x
+    q_y = gt_pose.orientation.y
+    q_z = gt_pose.orientation.z
+    q_w = gt_pose.orientation.w
+
+    # Rotation of the body frame wrt. the world frame
+    r_0_2 = R.from_quat([q_x, q_y, q_z, q_w])
+    r_2_0 = r_0_2.inv()
+    
+
+    ##########
+    # 0 -> 1 #
+    ##########
+    
+    # Translation of the world frame to landing frame wrt. the world frame
+    offset_x = 1.0
+    offset_y = 0.0
+    offset_z = 0.495
+    d_0_1 = np.array([offset_x, offset_y, offset_z])
+
+    # Rotation of the world frame to landing frame wrt. the world frame
+    # r_0_1 = np.identity(3) # No rotation, only translation
+    r_0_1 = np.identity(3) # np.linalg.inv(r_0_1)
+
+
+    ##########
+    # 2 -> 1 #
+    ##########
+    # Transformation of the body frame to landing frame wrt. the body frame
+    
+    # Translation of the landing frame to bdy frame wrt. the landing frame
+    d_1_2 = d_0_2 - d_0_1
+
+    # Rotation of the body frame to landing frame wrt. the body frame
+    r_2_1 = r_2_0
+
+    yaw = r_2_1.as_euler('xyz')[2]
+
+    r_2_1_yaw = R.from_euler('z', yaw)
+
+    # Translation of the body frame to landing frame wrt. the body frame
+    d_2_1 = -r_2_1_yaw.apply(d_1_2)
+
+
+    # Translation of the landing frame to body frame wrt. the body frame
+    # This is more intuitive for the controller
+    d_2_1_inv = -d_2_1
+
+    global_ground_truth = np.concatenate((d_2_1_inv, r_2_1.as_euler('xyz')))
 
 
 ##################
@@ -1200,8 +1263,24 @@ def arrow_test():
         draw_dot(hsv_arrow_test_canvas, corner, HSV_RED_COLOR, size=5)
     hsv_save_image(hsv_arrow_test_canvas, "hsv_arrow_test_canvas")
 
+def publish_ground_truth():
+    global pub_ground_truth
+
+    ground_truth_msg = Twist()
+    ground_truth_msg.linear.x = global_ground_truth[0]
+    ground_truth_msg.linear.y = global_ground_truth[1]
+    ground_truth_msg.linear.z = global_ground_truth[2]
+    yaw = -np.degrees(global_ground_truth[5]) - 90
+    if yaw < -180:
+        gt_yaw = 360 + yaw
+    else:
+        gt_yaw = yaw
+    ground_truth_msg.angular.z = gt_yaw
+    pub_ground_truth.publish(ground_truth_msg)
+
 
 def main():
+    global pub_ground_truth
     global pub_est_ellipse
     global pub_est_arrow
     global pub_est_corners
@@ -1209,19 +1288,18 @@ def main():
     rospy.init_node('cv_module', anonymous=True)
 
     rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
+    rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
+
 
     pub_processed_image = rospy.Publisher('/processed_image', Image, queue_size=10)
 
-    
+    pub_ground_truth = rospy.Publisher('/drone_ground_truth', Twist, queue_size=10)
     pub_est_ellipse = rospy.Publisher("/estimate_ellipse", Twist, queue_size=10)
     pub_est_arrow = rospy.Publisher("/estimate_arrow", Twist, queue_size=10)
     pub_est_corners = rospy.Publisher("/estimate_corners", Twist, queue_size=10)
-      
+
     pub_est = rospy.Publisher("/estimate", Twist, queue_size=10)
-
-
     pub_est_method = rospy.Publisher("/estimate_method", Int8, queue_size=10)
-
 
     est_msg = Twist()
 
@@ -1241,13 +1319,12 @@ def main():
 
             pub_processed_image.publish(processed_image)
 
-            # rospy.loginfo("Method: " + str(method))
             pub_est_method.publish(Int8(method))
 
             # Publish the estimate
-            est_msg.linear.x = est[0] #/ 1000.0
-            est_msg.linear.y = est[1] #/ 1000.0
-            est_msg.linear.z = est[2] #/ 1000.0
+            est_msg.linear.x = est[0]
+            est_msg.linear.y = est[1]
+            est_msg.linear.z = est[2]
             est_msg.angular.z = est[3]
             pub_est.publish(est_msg)
 
@@ -1255,8 +1332,10 @@ def main():
         else:
             rospy.loginfo("Waiting for image")
 
+        if (global_ground_truth is not None):
+            publish_ground_truth()
+        
         rate.sleep()
-    
 
 if __name__ == '__main__':
     main()

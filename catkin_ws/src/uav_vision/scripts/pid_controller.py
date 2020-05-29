@@ -239,20 +239,20 @@ def main():
             reference_msg.angular.z = desired_pose[5]
             reference_pub.publish(reference_msg)
 
-            pose_msg.linear.x = gt_relative_position[0]
-            pose_msg.linear.y = gt_relative_position[1]
-            pose_msg.linear.z = gt_relative_position[2]
-            pose_msg.angular.x = 0
-            pose_msg.angular.y = 0
+            # pose_msg.linear.x = gt_relative_position[0]
+            # pose_msg.linear.y = gt_relative_position[1]
+            # pose_msg.linear.z = gt_relative_position[2]
+            # pose_msg.angular.x = 0
+            # pose_msg.angular.y = 0
 
-            yaw = -np.degrees(gt_relative_position[5]) - 90
-            if yaw < -180:
-                gt_yaw = 360 + yaw
-            else:
-                gt_yaw = yaw
+            # yaw = -np.degrees(gt_relative_position[5]) - 90
+            # if yaw < -180:
+            #     gt_yaw = 360 + yaw
+            # else:
+            #     gt_yaw = yaw
 
-            pose_msg.angular.z = gt_yaw
-            pose_pub.publish(pose_msg)
+            # pose_msg.angular.z = gt_yaw
+            # pose_pub.publish(pose_msg)
 
             error_msg.linear.x = error_prev[0]
             error_msg.linear.y = error_prev[1]

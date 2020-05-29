@@ -19,6 +19,11 @@ set_point_angular_z = 0.0
 
 set_points = np.array([0.0, 0.0, 2.0, 0.0, 0.0, 0.0])
 
+
+manual_control = True
+set_point_control = False
+
+
 def teleop_callback(data):
     global set_points
 
@@ -49,32 +54,34 @@ def teleop_callback(data):
         # "Square"-button -> Take still photo
         pub_take_still_photo.publish(Empty())
         
-
-    # control_msg = Twist()
-    # control_msg.linear.x = right_js_vertical*sensitivity_x_y
-    # control_msg.linear.y = right_js_horizontal*sensitivity_x_y
-    # control_msg.linear.z = left_js_vertical*sensitivity_z
-    # control_msg.angular.z = left_js_horizontal*sensitivity_yaw
-    # pub_controller.publish(control_msg)
-
-    amplifier = 0.01
-    yaw_amplifier = 1
-
-    set_points += np.array([amplifier*right_js_vertical*sensitivity_x_y,  amplifier*right_js_horizontal*sensitivity_x_y,   amplifier*left_js_vertical*sensitivity_z,
-                            0.0,                                0.0,                                    yaw_amplifier*left_js_horizontal*sensitivity_yaw])
-
-    if set_points[5] > 180:
-        set_points[5] = -180
-    elif set_points[5] <= -180:
-        set_points[5] = 180
+    if manual_control:
+        control_msg = Twist()
+        control_msg.linear.x = right_js_vertical*sensitivity_x_y
+        control_msg.linear.y = right_js_horizontal*sensitivity_x_y
+        control_msg.linear.z = left_js_vertical*sensitivity_z
+        control_msg.angular.z = left_js_horizontal*sensitivity_yaw
+        pub_controller.publish(control_msg)
 
 
-    set_point_msg = Twist()
-    set_point_msg.linear.x = set_points[0]
-    set_point_msg.linear.y = set_points[1]
-    set_point_msg.linear.z = set_points[2]
-    set_point_msg.angular.z = set_points[5]
-    pub_set_point.publish(set_point_msg)
+    if set_point_control:
+        amplifier = 0.01
+        yaw_amplifier = 1
+
+        set_points += np.array([amplifier*right_js_vertical*sensitivity_x_y,  amplifier*right_js_horizontal*sensitivity_x_y,   amplifier*left_js_vertical*sensitivity_z,
+                                0.0,                                0.0,                                    yaw_amplifier*left_js_horizontal*sensitivity_yaw])
+
+        if set_points[5] > 180:
+            set_points[5] = -180
+        elif set_points[5] <= -180:
+            set_points[5] = 180
+
+
+        set_point_msg = Twist()
+        set_point_msg.linear.x = set_points[0]
+        set_point_msg.linear.y = set_points[1]
+        set_point_msg.linear.z = set_points[2]
+        set_point_msg.angular.z = set_points[5]
+        pub_set_point.publish(set_point_msg)
 
 
 def main():
