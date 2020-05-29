@@ -728,7 +728,7 @@ def calculate_position(center_px, radius_px):
     # Camera is placed 150 mm along x-axis of the drone
     # Since the camera is pointing down, the x and y axis of the drone
     # is the inverse of the x and y axis of the camera
-    est_x = -(est_z * d_x / focal_length) - 100 # mm adjustment for translated camera frame
+    est_x = -(est_z * d_x / focal_length) - 150 # mm adjustment for translated camera frame
     est_y = -(est_z * d_y / focal_length)
 
     est_z -= 45 # mm adjustment for translated camera frame
