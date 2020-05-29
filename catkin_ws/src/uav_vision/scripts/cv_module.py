@@ -1059,6 +1059,11 @@ def get_estimate(hsv, count):
     global pub_est_ellipse
     global pub_est_arrow
     global pub_est_corners
+
+    global pub_est_error_ellipse
+    global pub_est_error_arrow
+    global pub_est_error_corners
+
     global global_hsv_canvas_all
     method_of_choice = None # Updated to show which method is used for each timestep
 
@@ -1103,29 +1108,6 @@ def get_estimate(hsv, count):
     corners_available = (center_px_from_inner_corners is not None) and (radius_px_length_from_inner_corners != 0)
 
     ############
-    # Method 2 #
-    ############
-    if arrow_available:
-        # method_of_choice = "arrow"
-        center_px, radius_length_px, angle_rad = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
-        est_arrow_x, est_arrow_y, est_arrow_z = calculate_position(center_px, radius_length_px)
-        est_arrow_angle = np.degrees(angle_rad)
-
-        msg.linear.x = est_arrow_x
-        msg.linear.y = est_arrow_y
-        msg.linear.z = est_arrow_z
-        msg.angular.z = est_arrow_angle
-        pub_est_arrow.publish(msg)
-
-        draw_dot(global_hsv_canvas_all, center_px, HSV_RED_COLOR, size=5)
-    else:
-        msg.linear.x = np.nan
-        msg.linear.y = np.nan
-        msg.linear.z = np.nan
-        msg.angular.z = np.nan
-        pub_est_arrow.publish(msg)  
-        
-    ############
     # Method 1 #
     ############
     if ellipse_available:
@@ -1140,6 +1122,12 @@ def get_estimate(hsv, count):
         msg.angular.z = est_ellipse_angle
         pub_est_ellipse.publish(msg)
 
+        msg.linear.x = est_ellipse_x - global_ground_truth[0]
+        msg.linear.y = est_ellipse_y - global_ground_truth[1]
+        msg.linear.z = est_ellipse_z - global_ground_truth[2]
+        msg.angular.z = est_ellipse_angle - global_ground_truth[5]
+        pub_est_error_ellipse.publish(msg)
+
         draw_dot(global_hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=5)
     else:
         msg.linear.x = np.nan
@@ -1147,6 +1135,37 @@ def get_estimate(hsv, count):
         msg.linear.z = np.nan
         msg.angular.z = np.nan
         pub_est_ellipse.publish(msg)
+        pub_est_error_ellipse.publish(msg)
+        
+    ############
+    # Method 2 #
+    ############
+    if arrow_available:
+        # method_of_choice = "arrow"
+        center_px, radius_length_px, angle_rad = center_px_from_arrow, radius_length_px_from_arrow, angle_from_arrow
+        est_arrow_x, est_arrow_y, est_arrow_z = calculate_position(center_px, radius_length_px)
+        est_arrow_angle = np.degrees(angle_rad)
+
+        msg.linear.x = est_arrow_x
+        msg.linear.y = est_arrow_y
+        msg.linear.z = est_arrow_z
+        msg.angular.z = est_arrow_angle
+        pub_est_arrow.publish(msg)
+
+        msg.linear.x = est_arrow_x - global_ground_truth[0]
+        msg.linear.y = est_arrow_y - global_ground_truth[1]
+        msg.linear.z = est_arrow_z - global_ground_truth[2]
+        msg.angular.z = est_arrow_angle - global_ground_truth[5]
+        pub_est_error_arrow.publish(msg)
+
+        draw_dot(global_hsv_canvas_all, center_px, HSV_RED_COLOR, size=5)
+    else:
+        msg.linear.x = np.nan
+        msg.linear.y = np.nan
+        msg.linear.z = np.nan
+        msg.angular.z = np.nan
+        pub_est_arrow.publish(msg)
+        pub_est_error_arrow.publish(msg)
         
     ############
     # Method 3 #
@@ -1163,6 +1182,12 @@ def get_estimate(hsv, count):
         msg.angular.z = est_corners_angle
         pub_est_corners.publish(msg)
 
+        msg.linear.x = est_corners_x - global_ground_truth[0]
+        msg.linear.y = est_corners_y - global_ground_truth[1]
+        msg.linear.z = est_corners_z - global_ground_truth[2]
+        msg.angular.z = est_corners_angle - global_ground_truth[5]
+        pub_est_error_corners.publish(msg)
+
         draw_dot(global_hsv_canvas_all, center_px, HSV_YELLOW_COLOR, size=5)
     else:
         msg.linear.x = np.nan
@@ -1170,6 +1195,7 @@ def get_estimate(hsv, count):
         msg.linear.z = np.nan
         msg.angular.z = np.nan
         pub_est_corners.publish(msg)
+        pub_est_error_corners.publish(msg)
         
     # Choose method #
     if corners_available and green_toughing_edge:
@@ -1196,7 +1222,7 @@ def get_estimate(hsv, count):
         rospy.loginfo(e)
     # processed_image = None
 
-    result = np.array([est_x, est_y, est_z, est_angle])
+    result = np.array([est_x, est_y, est_z, 0, 0, est_angle])
 
     return result, method_of_choice, processed_image
 
@@ -1285,6 +1311,10 @@ def main():
     global pub_est_arrow
     global pub_est_corners
 
+    global pub_est_error_ellipse
+    global pub_est_error_arrow
+    global pub_est_error_corners
+
     rospy.init_node('cv_module', anonymous=True)
 
     rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
@@ -1294,9 +1324,16 @@ def main():
     pub_processed_image = rospy.Publisher('/processed_image', Image, queue_size=10)
 
     pub_ground_truth = rospy.Publisher('/drone_ground_truth', Twist, queue_size=10)
-    pub_est_ellipse = rospy.Publisher("/estimate_ellipse", Twist, queue_size=10)
-    pub_est_arrow = rospy.Publisher("/estimate_arrow", Twist, queue_size=10)
-    pub_est_corners = rospy.Publisher("/estimate_corners", Twist, queue_size=10)
+
+
+    pub_est_ellipse = rospy.Publisher("/estimate/ellipse", Twist, queue_size=10)
+    pub_est_arrow = rospy.Publisher("/estimate/arrow", Twist, queue_size=10)
+    pub_est_corners = rospy.Publisher("/estimate/corners", Twist, queue_size=10)
+
+    pub_est_error_ellipse = rospy.Publisher("/estimate_error/ellipse", Twist, queue_size=10)
+    pub_est_error_arrow = rospy.Publisher("/estimate_error/arrow", Twist, queue_size=10)
+    pub_est_error_corners = rospy.Publisher("/estimate_error/corners", Twist, queue_size=10)
+
 
     pub_est = rospy.Publisher("/estimate", Twist, queue_size=10)
     pub_est_method = rospy.Publisher("/estimate_method", Int8, queue_size=10)
@@ -1325,7 +1362,7 @@ def main():
             est_msg.linear.x = est[0]
             est_msg.linear.y = est[1]
             est_msg.linear.z = est[2]
-            est_msg.angular.z = est[3]
+            est_msg.angular.z = est[5]
             pub_est.publish(est_msg)
 
             count += 1

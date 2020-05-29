@@ -107,7 +107,7 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
 if __name__ == '__main__':
 
     # Settings
-    test_number = 12
+    test_number = 13
 
     # 0: ground truth, 1: ellipse, 2: arrow, 3: corners, 4: dead reckoning
     methods_to_plot = [0, 1, 2, 3, 4]

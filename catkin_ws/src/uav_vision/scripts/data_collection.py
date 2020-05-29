@@ -74,10 +74,10 @@ def main(test_number):
     global start_time
     rospy.init_node('planner', anonymous=True)
 
-    rospy.Subscriber('/drone_pose', Twist, ground_truth_callback)
-    rospy.Subscriber('/estimate_ellipse', Twist, estimate_ellipse_callback)
-    rospy.Subscriber('/estimate_arrow', Twist, estimate_arrow_callback)
-    rospy.Subscriber('/estimate_corners', Twist, estimate_corners_callback)
+    rospy.Subscriber('/drone_ground_truth', Twist, ground_truth_callback)
+    rospy.Subscriber('/estimate/ellipse', Twist, estimate_ellipse_callback)
+    rospy.Subscriber('/estimate/arrow', Twist, estimate_arrow_callback)
+    rospy.Subscriber('/estimate/corners', Twist, estimate_corners_callback)
     rospy.Subscriber('/estimate/dead_reckoning', Twist, estimate_dead_reckoning_callback)
 
     rospy.Subscriber('/initiate_mission', Empty, start_data_collection_callback)
@@ -172,6 +172,6 @@ def main(test_number):
     
     
 if __name__ == '__main__':
-    test_number = 12
+    test_number = 13
 
     main(test_number)

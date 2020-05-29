@@ -4,6 +4,7 @@ import rospy
 from ardrone_autonomy.msg import Navdata
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool, Int8
 
 import time
@@ -21,13 +22,84 @@ global_last_estimate = None
 
 global_estimate_method = 0
 
-cv_switch = True
+
+global_ground_truth = None
+def gt_callback(data):
+    global global_ground_truth
+    gt_pose = data.pose.pose
+
+    # Transform ground truth in body frame wrt. world frame to body frame wrt. landing platform
+
+    ##########
+    # 0 -> 2 #
+    ##########
+
+    # Position
+    p_x = gt_pose.position.x
+    p_y = gt_pose.position.y
+    p_z = gt_pose.position.z
+
+    # Translation of the world frame to body frame wrt. the world frame
+    d_0_2 = np.array([p_x, p_y, p_z])
+
+    # Orientation
+    q_x = gt_pose.orientation.x
+    q_y = gt_pose.orientation.y
+    q_z = gt_pose.orientation.z
+    q_w = gt_pose.orientation.w
+
+    # Rotation of the body frame wrt. the world frame
+    r_0_2 = R.from_quat([q_x, q_y, q_z, q_w])
+    r_2_0 = r_0_2.inv()
+    
+
+    ##########
+    # 0 -> 1 #
+    ##########
+    
+    # Translation of the world frame to landing frame wrt. the world frame
+    offset_x = 1.0
+    offset_y = 0.0
+    offset_z = 0.495
+    d_0_1 = np.array([offset_x, offset_y, offset_z])
+
+    # Rotation of the world frame to landing frame wrt. the world frame
+    # r_0_1 = np.identity(3) # No rotation, only translation
+    r_0_1 = np.identity(3) # np.linalg.inv(r_0_1)
+
+
+    ##########
+    # 2 -> 1 #
+    ##########
+    # Transformation of the body frame to landing frame wrt. the body frame
+    
+    # Translation of the landing frame to bdy frame wrt. the landing frame
+    d_1_2 = d_0_2 - d_0_1
+
+    # Rotation of the body frame to landing frame wrt. the body frame
+    r_2_1 = r_2_0
+
+    yaw = r_2_1.as_euler('xyz')[2]
+
+    r_2_1_yaw = R.from_euler('z', yaw)
+
+    # Translation of the body frame to landing frame wrt. the body frame
+    d_2_1 = -r_2_1_yaw.apply(d_1_2)
+
+
+    # Translation of the landing frame to body frame wrt. the body frame
+    # This is more intuitive for the controller
+    d_2_1_inv = -d_2_1
+
+    global_ground_truth = np.concatenate((d_2_1_inv, r_2_1.as_euler('xyz')))
+
 
 def estimate_method_callback(data):
     global global_estimate_method
     global_estimate_method = data.data
 
 
+cv_switch = True
 def cv_switch_callback(data):
     global cv_switch
     cv_switch = data
@@ -82,12 +154,15 @@ def main():
     rospy.init_node('dead_reckoning', anonymous=True)
 
     rospy.Subscriber('/ardrone/navdata', Navdata, navdata_callback)
+    rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
+
     rospy.Subscriber('/filtered_estimate', Twist, estimate_callback)
     rospy.Subscriber('/switch_on_off_cv', Bool, cv_switch_callback)
     rospy.Subscriber('/estimate_method', Int8, estimate_method_callback)
 
 
     pub_dead_reckoning = rospy.Publisher("/estimate/dead_reckoning", Twist, queue_size=10)
+    pub_dead_reckoning_error = rospy.Publisher("/estimate_error/dead_reckoning", Twist, queue_size=10)
 
 
     rospy.loginfo("Starting Dead Reckoning module")
@@ -182,11 +257,22 @@ def main():
 
                 pos_prev = pos_curr
 
-                dead_reckoning_msg.linear.x = pos_curr[0] / 1000
-                dead_reckoning_msg.linear.y = pos_curr[1] / 1000
-                dead_reckoning_msg.linear.z = pos_curr[2] / 1000
-                dead_reckoning_msg.angular.z = new_yaw
+                dead_reckoning_x = pos_curr[0] / 1000
+                dead_reckoning_y = pos_curr[1] / 1000
+                dead_reckoning_z = pos_curr[2] / 1000
+                dead_reckoning_yaw = new_yaw
+
+                dead_reckoning_msg.linear.x = dead_reckoning_x
+                dead_reckoning_msg.linear.y = dead_reckoning_y
+                dead_reckoning_msg.linear.z = dead_reckoning_z
+                dead_reckoning_msg.angular.z = dead_reckoning_yaw
                 pub_dead_reckoning.publish(dead_reckoning_msg)
+
+                dead_reckoning_msg.linear.x = dead_reckoning_x - global_ground_truth[0]
+                dead_reckoning_msg.linear.y = dead_reckoning_y - global_ground_truth[1]
+                dead_reckoning_msg.linear.z = dead_reckoning_z - global_ground_truth[2]
+                dead_reckoning_msg.angular.z = dead_reckoning_yaw - global_ground_truth[5]
+                pub_dead_reckoning_error.publish(dead_reckoning_msg)
 
             count += 1
         rate.sleep()

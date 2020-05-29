@@ -120,9 +120,9 @@ def set_point_callback(data):
 
 
 def take_off_callback(data):
+    # Reset the error integral each take off,
+    # since error might have accumulated during stand-still
     global error_integral
-
-    # Reset the error integral each take off, since error might have accumulated during stand-still
     error_integral = np.array([0.0]*6)
 
 
@@ -178,7 +178,7 @@ def main():
         rospy.Subscriber('/estimate/dead_reckoning', Twist, estimate_callback)
 
     
-    rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
+    # rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
     
     rospy.Subscriber('/set_point', Twist, set_point_callback)
 
@@ -188,7 +188,7 @@ def main():
 
     
     reference_pub = rospy.Publisher('/drone_reference', Twist, queue_size=10)
-    pose_pub = rospy.Publisher('/drone_pose', Twist, queue_size=10)
+    # pose_pub = rospy.Publisher('/drone_pose', Twist, queue_size=10)
     error_pub = rospy.Publisher('/drone_error', Twist, queue_size=10)
     error_integral_pub = rospy.Publisher('/drone_error_integral', Twist, queue_size=10)
 
@@ -215,10 +215,11 @@ def main():
     rate = rospy.Rate(100) # Hz
     while not rospy.is_shutdown():
 
-        if use_estimate:
-            relative_position = est_relative_position
-        else:
-            relative_position = gt_relative_position
+        relative_position = est_relative_position
+        # if use_estimate:
+        #     relative_position = est_relative_position
+        # else:
+        #     relative_position = gt_relative_position
 
         if relative_position is not None:
             actuation = controller(relative_position)
