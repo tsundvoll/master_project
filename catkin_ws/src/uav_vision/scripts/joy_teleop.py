@@ -63,6 +63,12 @@ def teleop_callback(data):
     set_points += np.array([amplifier*right_js_vertical*sensitivity_x_y,  amplifier*right_js_horizontal*sensitivity_x_y,   amplifier*left_js_vertical*sensitivity_z,
                             0.0,                                0.0,                                    yaw_amplifier*left_js_horizontal*sensitivity_yaw])
 
+    if set_points[5] > 180:
+        set_points[5] = -180
+    elif set_points[5] <= -180:
+        set_points[5] = 180
+
+
     set_point_msg = Twist()
     set_point_msg.linear.x = set_points[0]
     set_point_msg.linear.y = set_points[1]
