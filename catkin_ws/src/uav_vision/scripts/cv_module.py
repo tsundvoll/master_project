@@ -1335,7 +1335,7 @@ def main():
     pub_est_error_corners = rospy.Publisher("/estimate_error/corners", Twist, queue_size=10)
 
 
-    pub_est = rospy.Publisher("/estimate", Twist, queue_size=10)
+    pub_est = rospy.Publisher("/estimate_single", Twist, queue_size=10)
     pub_est_method = rospy.Publisher("/estimate_method", Int8, queue_size=10)
 
     est_msg = Twist()
@@ -1350,7 +1350,7 @@ def main():
     rate = rospy.Rate(20) # Hz
     while not rospy.is_shutdown():
 
-        if (global_image is not None):
+        if (global_image is not None) and (global_ground_truth is not None):
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
             est, method, processed_image = get_estimate(hsv, count)
 
@@ -1369,8 +1369,7 @@ def main():
         else:
             rospy.loginfo("Waiting for image")
 
-        if (global_ground_truth is not None):
-            publish_ground_truth()
+        publish_ground_truth()
         
         rate.sleep()
 

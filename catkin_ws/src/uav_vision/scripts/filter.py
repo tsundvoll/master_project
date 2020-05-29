@@ -42,7 +42,7 @@ def filter_estimate(estimate, estimate_history, median_filter_size, average_filt
 def main():
     rospy.init_node('filter', anonymous=True)
 
-    rospy.Subscriber('/estimate', Twist, estimate_callback)
+    rospy.Subscriber('/estimate_single', Twist, estimate_callback)
     filtered_estimate_pub = rospy.Publisher('/filtered_estimate', Twist, queue_size=10)
 
     rospy.loginfo("Starting filter for estimate")

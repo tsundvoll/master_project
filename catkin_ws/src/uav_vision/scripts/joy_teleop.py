@@ -20,8 +20,8 @@ set_point_angular_z = 0.0
 set_points = np.array([0.0, 0.0, 2.0, 0.0, 0.0, 0.0])
 
 
-manual_control = True
-set_point_control = False
+manual_control = False
+set_point_control = True
 
 
 def teleop_callback(data):

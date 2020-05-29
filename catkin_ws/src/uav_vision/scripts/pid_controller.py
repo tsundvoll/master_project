@@ -173,7 +173,7 @@ def main():
         # rospy.Subscriber('/estimate_filtered/arrow', Twist, estimate_callback)
         # rospy.Subscriber('/estimate_filtered/corners', Twist, estimate_callback)
 
-        # rospy.Subscriber('/estimate', Twist, estimate_callback)
+        # rospy.Subscriber('/estimate_single', Twist, estimate_callback)
         # rospy.Subscriber('/filtered_estimate', Twist, estimate_callback)
         rospy.Subscriber('/estimate/dead_reckoning', Twist, estimate_callback)
 
