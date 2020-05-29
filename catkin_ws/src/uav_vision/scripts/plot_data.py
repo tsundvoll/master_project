@@ -13,6 +13,11 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
     c_id = a_id + 6     # Corner index
     d_id = c_id + 6     # Dead reckoning index
 
+    error_e_id = d_id + 6     # Ellipse error index
+    error_a_id = error_e_id + 6     # Arrow error index
+    error_c_id = error_a_id + 6     # Corner error index
+    error_d_id = error_c_id + 6     # Dead reckoning error index
+
     # Remove zeroes
     # stored_array[stored_array == 0] = np.nan
 
@@ -26,28 +31,40 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
     titles_variables = [
         "x", "y", "z", "None", "None", "yaw"
     ]
+    lables_variables = [
+        "distance [m]", "distance [m]", "distance [m]", "none", "none", "rotation [deg]",
+    ]
     titles_methods = [
         "Ground truth",
         "Ellipse",
         "Arrow",
         "Corners",
-        "Dead reckogning"
+        "Dead reckogning",
+        "Ellipse error",
+        "Arrow error",
+        "Corners error",
+        "Dead reckogning error",
     ]
-    indices_methods = [g_id, e_id, a_id, c_id, d_id]
+    indices_methods = [g_id, e_id, a_id, c_id, d_id,
+        error_e_id, error_a_id, error_c_id, error_d_id
+    ]
 
     colors_methods = [
-        "g",         # green: "Ground truth"
-        "b",         # "Ellipse"
-        "r",         # "Arrow"
-        "y",         # "Corners"
-        "k"         # "Dead reckogning"
+        "g",        # green:    "Ground truth"
+        "b",        # blue:     "Ellipse"
+        "r",        # red:      "Arrow"
+        "y",        # yellow:   "Corners"
+        "k",        # black:    "Dead reckogning"
+        "b",        # blue:     "Ellipse error"
+        "r",        # red:      "Arrow error"
+        "y",        # yellow:   "Corners error"
+        "k"         # black:    "Dead reckogning error"
     ]
-
 
 
     for variable in variables_to_plot:
         title = titles_variables[variable]
-        
+        y_label = lables_variables[variable]
         
         fig, ax = plt.subplots(figsize=(10,8))
 
@@ -85,7 +102,7 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
             ax.set_title(title)
             # ax.legend(loc='upper left')
             ax.set_xlabel('time [s]')
-            ax.set_ylabel('distance [m]')
+            ax.set_ylabel(y_label)
             # ax.set_xlim(xmin=yrs[0], xmax=yrs[-1])
 
             # fig.tight_layout()
@@ -110,7 +127,9 @@ if __name__ == '__main__':
     test_number = 13
 
     # 0: ground truth, 1: ellipse, 2: arrow, 3: corners, 4: dead reckoning
-    methods_to_plot = [0, 1, 2, 3, 4]
+    # 5: ellipse_error, 6: arrow_error, 7: corners_error, 8: dead reckoning_error
+    # methods_to_plot = [0, 1, 2, 3, 4]
+    methods_to_plot = [5, 6, 7, 8]
 
     # 0: x, 1: y, 2: z, 3: roll, 4: pitch, 5: yaw
     variables_to_plot = [0,1,2,5]
