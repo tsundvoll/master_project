@@ -11,6 +11,8 @@ import numpy as np
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Empty, Bool
 
+import time
+
 est_relative_position = None
 
 # States of the quadcopter
@@ -92,26 +94,23 @@ def main():
     rospy.loginfo("Starting mission module")
 
     mission_speed = 0.5 # m/s
-    descend_speed = 0.1 # m/s
     publish_rate = 10 # Hz
-    distance_margin = 0.2 # m
+    distance_margin = 0.01 # m
+    distance_speed_reduction_margin = 1.0 # m
+
     margin = np.array([distance_margin]*3)
     land_margin = np.array([0.1, 0.1, 0.2])
-    pre_mission_time = 3 # seconds
+    pre_mission_time = 1 # second(s)
 
     hover_height = 0.2
-    mission_delta_x = 1.5
-    mission_delta_y = 3.0
-    mission_height = 3.0
-
-    mission_ascend = 10.0
+    mission_height = 5.0
 
     hover_point = np.array([0.0, 0.0, hover_height])
 
     mission = np.array([
         [0.0                , 0.0               , hover_height  ],
-        [0.0                , 0.0               , mission_ascend],
-        [0.0                , 0.0               , hover_height]
+        [0.0                , 0.0               , mission_height],
+        [0.0                , 0.0               , hover_height  ]
     ])
 
         
@@ -147,10 +146,14 @@ def main():
 
         elif global_state == S_MISSION:
             # Time to change to next major setpoint
-            if get_distance(next_minor_set_point, next_major_set_point) < distance_margin:
+            distance_to_target = get_distance(next_minor_set_point, next_major_set_point)
+
+            if distance_to_target < distance_margin:
                 if mission_count == len(mission)-1:
+                    mission_count = 0
                     global_state = S_HOVER
                     publish_set_point(pub_set_point, hover_point)
+                    break
                 else:
                     next_major_set_point = mission[mission_count+1]
 
@@ -167,7 +170,13 @@ def main():
 
                     mission_count += 1
             else:
-                next_minor_set_point += step_distance
+
+                if distance_to_target < distance_speed_reduction_margin:
+                    speed_reduction = np.maximum(distance_to_target / distance_speed_reduction_margin, 0.1)
+                else:
+                    speed_reduction = 1.0
+
+                next_minor_set_point += step_distance*speed_reduction
                 publish_set_point(pub_set_point, next_minor_set_point)
 
         elif global_state == S_RETURN_HOME:
