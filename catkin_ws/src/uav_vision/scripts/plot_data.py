@@ -5,7 +5,7 @@ import numpy as np
 import time
 
 
-def plot_data(stored_array, methods_to_plot, variables_to_plot):
+def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False):
     t_id = 0            # Time index
     g_id = 1            # Ground truth index
     e_id = g_id + 6     # Ellipse index
@@ -32,7 +32,7 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
         "x", "y", "z", "None", "None", "yaw"
     ]
     lables_variables = [
-        "distance [m]", "distance [m]", "distance [m]", "none", "none", "rotation [deg]",
+        "x-Position [m]", "y-Position [m]", "z-Position [m]", "none", "none", "yaw Rotation [deg]",
     ]
     titles_methods = [
         "Ground truth",
@@ -66,7 +66,11 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
         title = titles_variables[variable]
         y_label = lables_variables[variable]
         
-        fig, ax = plt.subplots(figsize=(10,8))
+        # fig, ax = plt.subplots(figsize=(10,8))
+        fig, ax = plt.subplots(figsize=(20,15))
+
+        if plot_error:
+            ax.axhline(y=0, color='grey', linestyle='--')
 
         for method in methods_to_plot:
             legend_text = titles_methods[method]
@@ -81,27 +85,15 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
 
             data_not_nan_ids = ~np.isnan(data)
 
-            # line, = ax.scatter(time_stamps, data)
-            # line = ax.scatter(time_stamps, data, s=1)
-            # line, = ax.plot(time_stamps, data)
-            # line, = ax.plot(time_stamps[data_not_nan_ids], data[data_not_nan_ids])
-            # line, = ax.plot(time_stamps_local[data_not_nan_ids], data[data_not_nan_ids])
+      
             line, = ax.plot(time_stamps_local, data)
             line.set_color(line_color)
-            # line = ax.scatter(time_stamps[data_not_nan_ids], data[data_not_nan_ids])
-            # line = ax.scatter(time_stamps_local[data_not_nan_ids], data[data_not_nan_ids])
-            # line = ax.scatter(time_stamps_local, data)
-            line.set_color(line_color)
-            
-            # line.set_drawstyle('steps')
-            # line.set_solid_joinstyle('bevel')
-
             line.set_label(legend_text)
             ax.legend()
 
             ax.set_title(title)
             # ax.legend(loc='upper left')
-            ax.set_xlabel('time [s]')
+            ax.set_xlabel('Time [s]')
             ax.set_ylabel(y_label)
             # ax.set_xlim(xmin=yrs[0], xmax=yrs[-1])
 
@@ -124,7 +116,7 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot):
 if __name__ == '__main__':
 
     # Settings
-    test_number = 13
+    test_number = 1
 
     # 0: ground truth, 1: ellipse, 2: arrow, 3: corners, 4: dead reckoning
     # 5: ellipse_error, 6: arrow_error, 7: corners_error, 8: dead reckoning_error
@@ -132,7 +124,10 @@ if __name__ == '__main__':
     methods_to_plot = [5, 6, 7, 8]
 
     # 0: x, 1: y, 2: z, 3: roll, 4: pitch, 5: yaw
-    variables_to_plot = [0,1,2,5]
+    # variables_to_plot = [0, 1, 2, 5]
+    variables_to_plot = [0]
+
+    plot_error = True
 
 
     # Load the data
@@ -142,5 +137,5 @@ if __name__ == '__main__':
     stored_array = np.load(path, allow_pickle=True)
 
 
-    plot_data(stored_array, methods_to_plot, variables_to_plot)
+    plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error)
 

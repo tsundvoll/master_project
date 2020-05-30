@@ -19,9 +19,19 @@ set_point_angular_z = 0.0
 
 set_points = np.array([0.0, 0.0, 2.0, 0.0, 0.0, 0.0])
 
+# 0: Manual control, 1: Set point control
+choose_controll_strategy = 1
 
 manual_control = False
-set_point_control = True
+set_point_control = False
+
+if choose_controll_strategy == 0:
+    manual_control = True
+elif choose_controll_strategy == 1:
+    set_point_control = True
+else:    
+    manual_control = True
+    set_point_control = True
 
 
 def teleop_callback(data):
@@ -47,11 +57,11 @@ def teleop_callback(data):
         pub_land.publish(Empty())
 
     if buttons[2]:
-        # "Triangle"-botton -> Initiate mission
+        # "Triangle"-botton -> Initiate mission and start data collection
         pub_initiate_mission.publish(Empty())
     
     if buttons[3]:
-        # "Square"-button -> Take still photo
+        # "Square"-button -> Take still photo and stop data collection
         pub_take_still_photo.publish(Empty())
         
     if manual_control:
@@ -65,7 +75,8 @@ def teleop_callback(data):
 
     if set_point_control:
         amplifier = 0.01
-        yaw_amplifier = 1
+        # yaw_amplifier = 1
+        yaw_amplifier = 0
 
         set_points += np.array([amplifier*right_js_vertical*sensitivity_x_y,  amplifier*right_js_horizontal*sensitivity_x_y,   amplifier*left_js_vertical*sensitivity_z,
                                 0.0,                                0.0,                                    yaw_amplifier*left_js_horizontal*sensitivity_yaw])
