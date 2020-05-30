@@ -141,10 +141,16 @@ def controller(state):
     error_integral += (time_interval * (error_prev + error)/2.0)*np.invert(freeze_integral)
     error_derivative = error - error_prev
     error_prev = error
-
     # error_integral = np.clip(error_integral, -error_integral_limit, error_integral_limit)
 
-    actuation = (Kp*error + Kd*error_derivative + Ki*error_integral)
+    z_reference = desired_pose[2]
+    actuation_reduction_array = np.array([1.0]*6)
+    if z_reference > 2.5:
+        actuation_reduction_x_y = np.maximum(2.5 / z_reference, 0.1)
+        actuation_reduction_array[0] = actuation_reduction_x_y
+        actuation_reduction_array[1] = actuation_reduction_x_y
+
+    actuation = (Kp*error + Kd*error_derivative + Ki*error_integral)*actuation_reduction_array
     
     actuation_clipped = np.clip(actuation, -actuation_saturation, actuation_saturation)
 
