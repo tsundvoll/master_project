@@ -26,7 +26,7 @@ from scipy.spatial.transform import Rotation as R
 # Settings
 global_image = None
 save_images = False
-draw_on_images = False
+draw_on_images = True
 
 # Constants
 D_H_SHORT = 4.0
@@ -257,12 +257,12 @@ def is_mask_touching_border(bw_mask):
     left_border =   bw_mask[:,0]
     right_border =  bw_mask[:,IMG_WIDTH-1]
     
-    sum_top_border = np.sum(top_border) + \
+    sum_border = np.sum(top_border) + \
         np.sum(bottom_border) + \
         np.sum(left_border) + \
         np.sum(right_border)
 
-    if sum_top_border != 0: 
+    if sum_border != 0: 
         # Then the mask is toughing the border
         return True
     else:

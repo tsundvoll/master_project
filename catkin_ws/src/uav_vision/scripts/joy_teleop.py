@@ -22,7 +22,7 @@ set_points = np.array([0.0, 0.0, 2.0, 0.0, 0.0, 0.0])
 # 0: Manual control, 1: Set point control
 choose_controll_strategy = 1
 
-manual_control = False
+manual_control = True
 set_point_control = False
 
 if choose_controll_strategy == 0:

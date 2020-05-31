@@ -5,7 +5,7 @@ import numpy as np
 import time
 
 
-def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False):
+def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False, plot_z_to_the_right=False):
     t_id = 0            # Time index
     g_id = 1            # Ground truth index
     e_id = g_id + 6     # Ellipse index
@@ -24,15 +24,15 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
         "x", "y", "z", "None", "None", "yaw"
     ]
     titles_error_variables = [
-        "x Position Error with ground truth z position", "y Position Error with ground truth z position", "z Position Error with ground truth z position",
-        "none", "none", "yaw Rotation Error with ground truth z position"
+        "x-Position Error with ground truth z position", "y-Position Error with ground truth z position", "z-Position Error with ground truth z position",
+        "none", "none", "yaw-Rotation Error with ground truth z position"
     ]
 
     lables_variables = [
-        "x-Position [m]", "y-Position [m]", "z-Position [m]", "none", "none", "yaw Rotation [deg]",
+        "x-Position [m]", "y-Position [m]", "z-Position [m]", "none", "none", "yaw-Rotation [deg]",
     ]
     lables_error_variables = [
-        "x-Position Error [m]", "y-Position Error [m]", "z-Position Error [m]", "none", "none", "yaw Rotation Error [deg]",
+        "x-Position Error [m]", "y-Position Error [m]", "z-Position Error [m]", "none", "none", "yaw-Rotation Error [deg]",
     ]
     titles_methods = [
         "Ground truth",
@@ -61,11 +61,12 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
     ]
 
     for variable in variables_to_plot:
-        title = titles_variables[variable]
 
         if plot_error:
             y_label = lables_error_variables[variable]
+            title = titles_error_variables[variable]
         else:
+            title = titles_variables[variable]
             y_label = lables_variables[variable]
 
         # fig, ax = plt.subplots(figsize=(10,8))
@@ -74,30 +75,6 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
         if plot_error:
             ax.axhline(y=0, color='grey', linestyle='--') # Plot the zero-line
 
-            # Plot the z ground truth
-            gt_method = 0
-            z_variable = 2
-
-            index = indices_methods[gt_method]
-            data = stored_array[:, index:index+6][:, z_variable]
-
-            time_stamps_local = time_stamps.copy()
-            time_stamps_local[np.isnan(data)] = np.nan
-
-            color = 'g'
-
-            ax2 = ax.twinx()
-
-            line, = ax2.plot(time_stamps_local, data)
-            line.set_color(color)
-            line.set_label("Ground truth z position")
-            ax2.yaxis.grid()
-            ax2.set_axisbelow(True)
-
-            ax2.legend(loc='upper right', facecolor='white', framealpha=1)
-
-            ax2.set_ylabel('z Position [m]', color=color)
-            ax2.tick_params(axis='y', labelcolor=color)
 
         for method in methods_to_plot:
             legend_text = titles_methods[method]
@@ -115,34 +92,69 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
             ax.set_title(title)
             ax.set_xlabel('Time [s]')
             ax.set_ylabel(y_label)
-            ax.xaxis.grid()
+            ax.legend(loc='upper left', facecolor='white', framealpha=1)
+
+            # ax.xaxis.grid()
+            # ax.yaxis.grid()
+            ax.grid()
         
-        ax.legend(loc='upper left', facecolor='white', framealpha=1)
+        if plot_z_to_the_right:
+            # Plot the z ground truth
+            gt_method = 0
+            z_variable = 2
+
+            index = indices_methods[gt_method]
+            data = stored_array[:, index:index+6][:, z_variable]
+
+            time_stamps_local = time_stamps.copy()
+            time_stamps_local[np.isnan(data)] = np.nan
+
+            color = 'g'
+
+            ax2 = ax.twinx()
+
+            line, = ax2.plot(time_stamps_local, data)
+            line.set_color(color)
+            line.set_label("Ground truth z position")
+            # ax2.yaxis.grid()
+            # ax2.set_axisbelow(True)
+
+            ax2.legend(loc='upper right', facecolor='white', framealpha=1)
+
+            ax2.set_ylabel('z Position [m]', color=color)
+            ax2.set_yticks(np.arange(7))
+            ax2.tick_params(axis='y', labelcolor=color)
+            ax2.set_ylim(-0.48, 6.3)
+
+            ax2.grid(None)
 
         plt.xlim(time_stamps[0], time_stamps[-1])
+        plt.grid()
 
         fig.tight_layout()
-        # plt.draw()
-        # plt.waitforbuttonpress(0)
-        # plt.close(fig)
-        # plt.grid()
-        plt.show()
+        fig.draw
+        plt.waitforbuttonpress(0)
+        plt.close()
+        
+
+        # plt.show()
 
 
 if __name__ == '__main__':
     # Settings
     test_number = 1
     plot_error = True
+    plot_z_to_the_right = True
 
     # 0: x, 1: y, 2: z, 3: roll, 4: pitch, 5: yaw
     # variables_to_plot = [0, 1, 2, 5]
-    variables_to_plot = [0]
+    variables_to_plot = [5]
 
 
     # 0: ground truth, 1: ellipse, 2: arrow, 3: corners, 4: dead reckoning
     # 5: ellipse_error, 6: arrow_error, 7: corners_error, 8: dead reckoning_error
     if plot_error:
-        methods_to_plot = [5, 6, 7] #, 8]
+        methods_to_plot = [6, 7]
     else:
         methods_to_plot = [0, 1, 2, 3, 4]
 
@@ -152,5 +164,5 @@ if __name__ == '__main__':
     path = folder + filename
     stored_array = np.load(path, allow_pickle=True)
 
-    plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error)
+    plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error, plot_z_to_the_right)
 
