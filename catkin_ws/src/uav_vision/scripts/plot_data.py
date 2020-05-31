@@ -5,7 +5,7 @@ import numpy as np
 import time
 
 
-def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False, plot_z_to_the_right=False):
+def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False, plot_z_to_the_right=False, z_right_color='g'):
     t_id = 0            # Time index
     g_id = 1            # Ground truth index
     e_id = g_id + 6     # Ellipse index
@@ -105,58 +105,55 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
 
             index = indices_methods[gt_method]
             data = stored_array[:, index:index+6][:, z_variable]
-
             time_stamps_local = time_stamps.copy()
             time_stamps_local[np.isnan(data)] = np.nan
 
-            color = 'g'
-
             ax2 = ax.twinx()
-
             line, = ax2.plot(time_stamps_local, data)
-            line.set_color(color)
+            line.set_color(z_right_color)
             line.set_label("Ground truth z position")
-            # ax2.yaxis.grid()
-            # ax2.set_axisbelow(True)
 
             ax2.legend(loc='upper right', facecolor='white', framealpha=1)
 
-            ax2.set_ylabel('z Position [m]', color=color)
+            ax2.set_ylabel('z Position [m]', color=z_right_color)
             ax2.set_yticks(np.arange(7))
-            ax2.tick_params(axis='y', labelcolor=color)
-            ax2.set_ylim(-0.48, 6.3)
-
+            ax2.tick_params(axis='y', labelcolor=z_right_color)
             ax2.grid(None)
 
         plt.xlim(time_stamps[0], time_stamps[-1])
         plt.grid()
 
         fig.tight_layout()
-        fig.draw
-        plt.waitforbuttonpress(0)
-        plt.close()
         
-
-        # plt.show()
+        # fig.draw
+        # plt.waitforbuttonpress(0)
+        # plt.close()
+        
+        plt.show()
 
 
 if __name__ == '__main__':
     # Settings
-    test_number = 1
-    plot_error = True
+    test_number = 3
+    plot_error = False
     plot_z_to_the_right = True
 
     # 0: x, 1: y, 2: z, 3: roll, 4: pitch, 5: yaw
     # variables_to_plot = [0, 1, 2, 5]
-    variables_to_plot = [5]
+    variables_to_plot = [0,2]
 
 
     # 0: ground truth, 1: ellipse, 2: arrow, 3: corners, 4: dead reckoning
     # 5: ellipse_error, 6: arrow_error, 7: corners_error, 8: dead reckoning_error
     if plot_error:
-        methods_to_plot = [6, 7]
+        methods_to_plot = [5, 6, 7]
+        plot_z_to_the_right = True
+
     else:
-        methods_to_plot = [0, 1, 2, 3, 4]
+        methods_to_plot = [0, 1, 2, 3]
+        plot_z_to_the_right = True
+        z_right_color = 'grey'
+
 
     # Load the data
     folder = './catkin_ws/src/uav_vision/data_storage/'
@@ -164,5 +161,5 @@ if __name__ == '__main__':
     path = folder + filename
     stored_array = np.load(path, allow_pickle=True)
 
-    plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error, plot_z_to_the_right)
+    plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error, plot_z_to_the_right, z_right_color)
 

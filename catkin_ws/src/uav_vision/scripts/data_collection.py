@@ -171,6 +171,6 @@ def main(test_number):
     
     
 if __name__ == '__main__':
-    test_number = 2
+    test_number = 3
 
     main(test_number)

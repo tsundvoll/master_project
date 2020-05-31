@@ -17,12 +17,12 @@ set_point_linear_y = 0.0
 set_point_linear_z = 2.0
 set_point_angular_z = 0.0
 
-set_points = np.array([0.0, 0.0, 2.0, 0.0, 0.0, 0.0])
+set_points = np.array([0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
 
 # 0: Manual control, 1: Set point control
 choose_controll_strategy = 1
 
-manual_control = True
+manual_control = False
 set_point_control = False
 
 if choose_controll_strategy == 0:

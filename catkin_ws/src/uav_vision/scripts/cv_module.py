@@ -26,7 +26,7 @@ from scipy.spatial.transform import Rotation as R
 # Settings
 global_image = None
 save_images = False
-draw_on_images = True
+draw_on_images = False
 
 # Constants
 D_H_SHORT = 4.0
@@ -251,17 +251,23 @@ def get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side):
         return normal_unit_vector_right
 
 
-def is_mask_touching_border(bw_mask):
-    top_border =    bw_mask[0,:]
-    bottom_border = bw_mask[IMG_HEIGHT-1,:]
-    left_border =   bw_mask[:,0]
-    right_border =  bw_mask[:,IMG_WIDTH-1]
+def is_mask_touching_border(bw_mask, padding = 0):
+    """
+    The padding is added when finding the white centroid.
+    The reason is that there is a border of black around the image,
+    that origins from the get_pixels_inside_green() method.
+    """
+
+    top_border =    bw_mask[padding,:]
+    bottom_border = bw_mask[IMG_HEIGHT-1-padding,:]
+    left_border =   bw_mask[:,padding]
+    right_border =  bw_mask[:,IMG_WIDTH-1-padding]
     
     sum_border = np.sum(top_border) + \
         np.sum(bottom_border) + \
         np.sum(left_border) + \
         np.sum(right_border)
-
+    
     if sum_border != 0: 
         # Then the mask is toughing the border
         return True
@@ -378,8 +384,10 @@ def get_pixels_inside_green(hsv):
 
     kernel = np.ones((15,15),np.uint8)
 
-    bw_closed_mask = cv2.dilate(bw_green_mask, kernel, iterations = 5)
-    bw_closed_mask = cv2.erode(bw_closed_mask, kernel, iterations = 5, borderValue=0)
+    bw_closed_mask = cv2.dilate(bw_green_mask, kernel, iterations = 6)
+    # bw_closed_mask = cv2.erode(bw_closed_mask, kernel, iterations = 6, borderType=cv2.BORDER_REFLECT_101)
+    # bw_closed_mask = cv2.erode(bw_closed_mask, kernel, iterations = 6) # borderType=cv2.BORDER_WRAP)
+    bw_closed_mask = cv2.erode(bw_closed_mask, kernel, iterations = 6, borderType=cv2.BORDER_CONSTANT, borderValue = 0)
 
     hsv_ellipse = hsv.copy()
     hsv_ellipse[bw_closed_mask==0] = HSV_BLACK_COLOR
@@ -457,7 +465,7 @@ def find_white_centroid(hsv):
         return None
     hsv_save_image(bw_white_mask, "3_white_mask", is_gray=True)
 
-    if is_mask_touching_border(bw_white_mask):
+    if is_mask_touching_border(bw_white_mask, padding=42):
         return None
 
     bw_white_mask = make_gaussian_blurry(bw_white_mask, 5)
@@ -776,7 +784,7 @@ def find_orange_arrowhead(hsv):
 
 def calculate_position(center_px, radius_px):
     focal_length = 374.67
-    real_radius = 390 # mm (800mm in diameter / 2)
+    real_radius = 390 # mm (780mm in diameter / 2)
 
     # Center of image
     x_0 = IMG_HEIGHT/2.0
@@ -791,7 +799,7 @@ def calculate_position(center_px, radius_px):
     # Camera is placed 150 mm along x-axis of the drone
     # Since the camera is pointing down, the x and y axis of the drone
     # is the inverse of the x and y axis of the camera
-    est_x = -(est_z * d_x / focal_length) - 120 # mm adjustment for translated camera frame
+    est_x = -(est_z * d_x / focal_length) - 150 # mm adjustment for translated camera frame
     est_y = -(est_z * d_y / focal_length)
 
     est_z -= 45 # mm adjustment for translated camera frame
@@ -912,7 +920,7 @@ def evaluate_ellipse(hsv):
     # Choose angle = 0 since it is not possible to estimate from the ellipse
     center_px = ellipse_parameters[0:2]
     radius_px = np.amax(np.abs(ellipse_parameters[2:4]))
-    angle = 0
+    angle = 0 # No angle estimate avaiable with this method
 
     return center_px, radius_px, angle
 
@@ -1216,11 +1224,13 @@ def get_estimate(hsv, count):
 
     bgr_canvas_all = cv2.cvtColor(global_hsv_canvas_all, cv2.COLOR_HSV2BGR) # convert to HSV
 
-    try:
-        processed_image = bridge.cv2_to_imgmsg(bgr_canvas_all, "bgr8")
-    except CvBridgeError as e:
-        rospy.loginfo(e)
-    # processed_image = None
+    if draw_on_images:
+        try:
+            processed_image = bridge.cv2_to_imgmsg(bgr_canvas_all, "bgr8")
+        except CvBridgeError as e:
+            rospy.loginfo(e)
+    else:
+        processed_image = None
 
     result = np.array([est_x, est_y, est_z, 0, 0, est_angle])
 
@@ -1354,7 +1364,8 @@ def main():
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
             est, method, processed_image = get_estimate(hsv, count)
 
-            pub_processed_image.publish(processed_image)
+            if processed_image is not None:
+                pub_processed_image.publish(processed_image)
 
             pub_est_method.publish(Int8(method))
 
