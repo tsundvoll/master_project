@@ -21,11 +21,11 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
     time_stamps = stored_array[:, t_id]
 
     titles_variables = [
-        "x", "y", "z", "None", "None", "yaw"
+        "x-Position", "y-Position", "z-Position", "None", "None", "yaw-Rotation"
     ]
     titles_error_variables = [
-        "x-Position Error with ground truth z position", "y-Position Error with ground truth z position", "z-Position Error with ground truth z position",
-        "none", "none", "yaw-Rotation Error with ground truth z position"
+        "x-Position Error", "y-Position Error", "z-Position Error",
+        "none", "none", "yaw-Rotation Error"
     ]
 
     lables_variables = [
@@ -63,14 +63,14 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
     for variable in variables_to_plot:
 
         if plot_error:
-            y_label = lables_error_variables[variable]
             title = titles_error_variables[variable]
+            y_label = lables_error_variables[variable]
         else:
             title = titles_variables[variable]
             y_label = lables_variables[variable]
 
-        # fig, ax = plt.subplots(figsize=(10,8))
-        fig, ax = plt.subplots(figsize=(20,15))
+        fig, ax = plt.subplots(figsize=(10,8))
+        # fig, ax = plt.subplots(figsize=(20,15))
 
         if plot_error:
             ax.axhline(y=0, color='grey', linestyle='--') # Plot the zero-line
@@ -96,7 +96,7 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
 
             # ax.xaxis.grid()
             # ax.yaxis.grid()
-            ax.grid()
+            # ax.grid()
         
         if plot_z_to_the_right:
             # Plot the z ground truth
@@ -111,11 +111,11 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
             ax2 = ax.twinx()
             line, = ax2.plot(time_stamps_local, data)
             line.set_color(z_right_color)
-            line.set_label("Ground truth z position")
+            line.set_label("Ground truth z-Position")
 
             ax2.legend(loc='upper right', facecolor='white', framealpha=1)
 
-            ax2.set_ylabel('z Position [m]', color=z_right_color)
+            ax2.set_ylabel('z-Position [m]', color=z_right_color)
             ax2.set_yticks(np.arange(7))
             ax2.tick_params(axis='y', labelcolor=z_right_color)
             ax2.grid(None)
@@ -125,11 +125,15 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
 
         fig.tight_layout()
         
-        # fig.draw
-        # plt.waitforbuttonpress(0)
-        # plt.close()
-        
-        plt.show()
+        folder = './catkin_ws/src/uav_vision/data_storage/plots/'
+        plt.savefig(folder+title+'.svg')
+
+
+        fig.draw
+        plt.waitforbuttonpress(0)
+        plt.close()
+
+        # plt.show()
 
 
 if __name__ == '__main__':
@@ -140,19 +144,19 @@ if __name__ == '__main__':
 
     # 0: x, 1: y, 2: z, 3: roll, 4: pitch, 5: yaw
     # variables_to_plot = [0, 1, 2, 5]
-    variables_to_plot = [0,2]
+    variables_to_plot = [0, 1, 2, 5]
 
 
     # 0: ground truth, 1: ellipse, 2: arrow, 3: corners, 4: dead reckoning
     # 5: ellipse_error, 6: arrow_error, 7: corners_error, 8: dead reckoning_error
-    if plot_error:
-        methods_to_plot = [5, 6, 7]
-        plot_z_to_the_right = True
-
-    else:
-        methods_to_plot = [0, 1, 2, 3]
-        plot_z_to_the_right = True
-        z_right_color = 'grey'
+    # if plot_error:
+    #     methods_to_plot = [5, 6, 7]
+    #     plot_z_to_the_right = True
+    #     z_right_color = 'grey'
+    # else:
+    #     methods_to_plot = [0, 1, 2, 3]
+    #     plot_z_to_the_right = True
+    #     z_right_color = 'grey'
 
 
     # Load the data
@@ -160,6 +164,15 @@ if __name__ == '__main__':
     filename = 'test_'+str(test_number)+'.npy'
     path = folder + filename
     stored_array = np.load(path, allow_pickle=True)
-
+    
+    plot_error = False
+    methods_to_plot = [0, 1, 2, 3]
+    plot_z_to_the_right = True
+    z_right_color = 'grey'
     plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error, plot_z_to_the_right, z_right_color)
-
+    
+    plot_error = True
+    methods_to_plot = [5, 6, 7]
+    plot_z_to_the_right = True
+    z_right_color = 'grey'
+    plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error, plot_z_to_the_right, z_right_color)
