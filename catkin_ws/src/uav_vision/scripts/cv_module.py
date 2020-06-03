@@ -6,7 +6,6 @@ It does not filter the signal, but leaves this for another module.
 
 """
 
-
 import rospy
 from std_msgs.msg import Empty, Int8
 from sensor_msgs.msg import Image
@@ -19,14 +18,16 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 
+import color_settings
+
 # For ground truth callback:
 from nav_msgs.msg import Odometry
 from scipy.spatial.transform import Rotation as R
 
 # Settings
 global_image = None
-save_images = False
-draw_on_images = False
+save_images = True
+draw_on_images = True
 
 # Constants
 D_H_SHORT = 4.0
@@ -147,6 +148,12 @@ def hsv_save_image(image, label='image', is_gray=False):
         else:
             cv2.imwrite(folder+label+".png", cv2.cvtColor(image, cv2.COLOR_HSV2BGR))
     return image
+
+
+def load_bgr_image(filename):
+    bgr = cv2.imread(filename) # import as BGR
+    # hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) # convert to HSV
+    return bgr
 
 
 def rgb_color_to_hsv(red, green, blue):
@@ -283,44 +290,15 @@ HSV_BLACK_COLOR = rgb_color_to_hsv(0,0,0)
 HSV_YELLOW_COLOR = [30, 255, 255]
 HSV_LIGHT_ORANGE_COLOR = [15, 255, 255]
 
-HSV_REAL_WHITE = [0, 0, 74]
-HSV_REAL_ORANGE = [36, 100, 74]
-HSV_REAL_GREEN = [120, 100, 30]
 
-# Setup for color finding
-HUE_MARGIN = 15
-SAT_MARGIN = 15
-VAL_MARGIN = 15
-
-# White
-HUE_LOW_WHITE = 0
-HUE_HIGH_WHITE = 360
-
-SAT_LOW_WHITE = 0
-SAT_HIGH_WHITE = 15
-
-VAL_LOW_WHITE = 30 
-VAL_HIGH_WHITE = 100
-
-# Orange
-HUE_LOW_ORANGE = max(0, HSV_REAL_ORANGE[0] - HUE_MARGIN) 
-HUE_HIGH_ORANGE = min(360, HSV_REAL_ORANGE[0] + HUE_MARGIN)
-
-SAT_LOW_ORANGE = 85
-SAT_HIGH_ORANGE = 100
-
-VAL_LOW_ORANGE = 30
-VAL_HIGH_ORANGE = 100
-
-# Green
-HUE_LOW_GREEN = max(0, HSV_REAL_GREEN[0] - HUE_MARGIN) 
-HUE_HIGH_GREEN = min(360, HSV_REAL_GREEN[0] + HUE_MARGIN)
-
-SAT_LOW_GREEN = 85 
-SAT_HIGH_GREEN = 100
-
-VAL_LOW_GREEN = 15
-VAL_HIGH_GREEN = 60
+if color_settings.USE_SIMULATOR_COLORS:
+    HUE_LOW_WHITE, HUE_HIGH_WHITE, SAT_LOW_WHITE, SAT_HIGH_WHITE, VAL_LOW_WHITE, VAL_HIGH_WHITE, \
+    HUE_LOW_ORANGE, HUE_HIGH_ORANGE, SAT_LOW_ORANGE, SAT_HIGH_ORANGE, VAL_LOW_ORANGE, VAL_HIGH_ORANGE, \
+    HUE_LOW_GREEN, HUE_HIGH_GREEN, SAT_LOW_GREEN, SAT_HIGH_GREEN, VAL_LOW_GREEN, VAL_HIGH_GREEN = color_settings.SIMULATOR_COLOR_LIMITS
+else:
+    HUE_LOW_WHITE, HUE_HIGH_WHITE, SAT_LOW_WHITE, SAT_HIGH_WHITE, VAL_LOW_WHITE, VAL_HIGH_WHITE, \
+    HUE_LOW_ORANGE, HUE_HIGH_ORANGE, SAT_LOW_ORANGE, SAT_HIGH_ORANGE, VAL_LOW_ORANGE, VAL_HIGH_ORANGE, \
+    HUE_LOW_GREEN, HUE_HIGH_GREEN, SAT_LOW_GREEN, SAT_HIGH_GREEN, VAL_LOW_GREEN, VAL_HIGH_GREEN = color_settings.REAL_COLOR_LIMITS
 
 
 ##################
@@ -600,7 +578,6 @@ def clip_corners_on_intensity(corners, img, average_filter_size):
         return None, None
     else:
         return corners, intensities
-
 
 
 def clip_corners_not_right(corners, img, average_filter_size):
@@ -922,6 +899,10 @@ def evaluate_ellipse(hsv):
     radius_px = np.amax(np.abs(ellipse_parameters[2:4]))
     angle = 0 # No angle estimate avaiable with this method
 
+    hsv_canvas_ellipse = hsv.copy()
+    draw_dot(hsv_canvas_ellipse, center_px, HSV_BLUE_COLOR)
+    hsv_save_image(hsv_canvas_ellipse, "4_canvas_ellipse")
+
     return center_px, radius_px, angle
 
 
@@ -1083,28 +1064,25 @@ def get_estimate(hsv, count):
 
     hsv_h_area = get_h_area(hsv)
 
-    # white_mask = get_white_mask(hsv)
-    # print white_mask
-    # if white_mask is not None:
-    #     hsv_save_image(white_mask, '1_white_mask', is_gray=True)
+    white_mask = get_white_mask(hsv)
+    if white_mask is not None:
+        hsv_save_image(white_mask, '1_white_mask', is_gray=True)
 
-    # orange_mask = get_orange_mask(hsv)
-    # if orange_mask is not None:
-    #     hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
+    orange_mask = get_orange_mask(hsv)
+    if orange_mask is not None:
+        hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
 
     green_mask = get_green_mask(hsv)
+    green_toughing_edge = False
     if green_mask is not None:
-        # hsv_save_image(green_mask, '1_green_mask', is_gray=True)
+        hsv_save_image(green_mask, '1_green_mask', is_gray=True)
 
         if (green_mask[0,:] > 0).any() or \
                 (green_mask[:,IMG_WIDTH-1] > 0).any() or \
                 (green_mask[IMG_HEIGHT-1,:] > 0).any() or \
                 (green_mask[:,0] > 0).any():
             green_toughing_edge = True
-        else:
-            green_toughing_edge = False
-
-
+            
     msg = Twist()
 
     center_px_from_ellipse, radius_length_px_from_ellipse, angle_from_ellipse = evaluate_ellipse(hsv)
@@ -1221,6 +1199,7 @@ def get_estimate(hsv, count):
         est_x, est_y, est_z, est_angle = 0.0, 0.0, 0.0, 0.0
 
     # hsv_save_image(global_hsv_canvas_all, "5_canvas_all_"+str(count))
+    hsv_save_image(global_hsv_canvas_all, "5_canvas_all")
 
     bgr_canvas_all = cv2.cvtColor(global_hsv_canvas_all, cv2.COLOR_HSV2BGR) # convert to HSV
 
@@ -1325,6 +1304,9 @@ def main():
     global pub_est_error_arrow
     global pub_est_error_corners
 
+    global global_ground_truth
+    global global_image
+
     rospy.init_node('cv_module', anonymous=True)
 
     rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
@@ -1352,9 +1334,20 @@ def main():
 
     rospy.loginfo("Starting CV module")
 
+    is_simulator = True
+    is_test_image = False
+
+    if not is_simulator:
+        global_ground_truth = np.zeros(6)
+        # test_image_filepath = './image_40.png'
+    if is_test_image:
+        test_image_filepath = './image_40.png'
+        global_image = load_bgr_image(test_image_filepath)
+
     # # corner_test()
     # arrow_test()
     # return 
+
 
     count = 0
     rate = rospy.Rate(20) # Hz
@@ -1379,6 +1372,8 @@ def main():
             publish_ground_truth()
 
             count += 1
+            if is_test_image:
+                break
         else:
             rospy.loginfo("Waiting for image")
 

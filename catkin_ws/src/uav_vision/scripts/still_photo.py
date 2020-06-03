@@ -34,15 +34,30 @@ def take_still_photo_callback(data):
 
 
 def main():
-    rospy.init_node('cv_module', anonymous=True)
+    rospy.init_node('still_photos_on_request', anonymous=True)
 
     rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
     rospy.Subscriber('/take_still_photo', Empty, take_still_photo_callback)
 
-    rospy.loginfo("Starting still photo module")
+    rospy.loginfo("Starting still_photos_on_request module")
 
     rospy.spin()
+
+
+def continous_images():
+    rospy.init_node('still_photos_continous', anonymous=True)
+
+    rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
+
+    rospy.loginfo("Starting still_photos_continous module")
+
     
+    rate = rospy.Rate(2) # Hz
+    while not rospy.is_shutdown():
+        take_still_photo_callback(None)
+        rate.sleep()
+
     
 if __name__ == '__main__':
-    main()
+    # main()
+    continous_images()

@@ -59,6 +59,11 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
         "y",        # yellow:   "Corners error"
         "k"         # black:    "Dead reckogning error"
     ]
+    y_ticks_error_pos = np.arange(-0.10, 0.11, 0.025)
+    y_ticks_error_rot = np.arange(-10, 11, 2)
+    y_ticks_error = np.array([
+        [y_ticks_error_pos]*3, [y_ticks_error_rot]*3
+    ])
 
     for variable in variables_to_plot:
 
@@ -93,6 +98,9 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
             ax.set_xlabel('Time [s]')
             ax.set_ylabel(y_label)
             ax.legend(loc='upper left', facecolor='white', framealpha=1)
+
+            # if plot_error:
+            #     ax.set_yticks(y_ticks_error[variable])
 
             # ax.xaxis.grid()
             # ax.yaxis.grid()
@@ -138,7 +146,7 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
 
 if __name__ == '__main__':
     # Settings
-    test_number = 3
+    test_number = 5
     plot_error = False
     plot_z_to_the_right = True
 

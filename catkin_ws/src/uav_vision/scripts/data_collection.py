@@ -128,6 +128,8 @@ def main(test_number):
 
     data_array = []
         
+    duration = 30 # seconds
+    
     rate = rospy.Rate(20) # Hz
     while not rospy.is_shutdown():
         curr_time = rospy.get_time()
@@ -156,6 +158,9 @@ def main(test_number):
 
             data_array.append(data_point)
 
+            if curr_time > duration:
+                break
+
         if not global_collect_data and received_signal:
             break
 
@@ -171,6 +176,6 @@ def main(test_number):
     
     
 if __name__ == '__main__':
-    test_number = 3
+    test_number = 5
 
     main(test_number)
