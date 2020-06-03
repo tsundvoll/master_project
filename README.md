@@ -49,6 +49,13 @@ Scipy 1.4.1 seems to be necessary to have to run pid_controller.py.
 However, it is a bit hard to install with python 2.7, and I have not yet solved this problem.
 Scipy 1.2.1 works
 
+
+## Connect to physical drone
+```
+roslaunch uav_vision ar2.launch
+rosservice call /ardrone/setcamchannel 1
+```
+
 ### Other useful things:
 ```
 sudo apt-get install python-pip
@@ -68,6 +75,8 @@ sudo apt-get install terminator
 
 ## DDPG package
 The DDPG package made by Daniel Tavakoli is added in a separate package.
+
+
 
 
 ## TO DO 14. February:
