@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import time
-
+import sys
 
 def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False, plot_z_to_the_right=False, z_right_color='g'):
     t_id = 0            # Time index
@@ -145,8 +145,16 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
 
 
 if __name__ == '__main__':
+
+    if len(sys.argv) == 2:
+        test_number = sys.argv[1]
+    else:
+        test_number = 5
+
+    print "Plotting test number " + str(test_number)
+
+
     # Settings
-    test_number = 5
     plot_error = False
     plot_z_to_the_right = True
 

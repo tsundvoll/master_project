@@ -93,7 +93,7 @@ def main():
 
     rospy.loginfo("Starting mission module")
 
-    mission_speed = 0.5 # m/s
+    mission_speed = 0.4 # m/s
     publish_rate = 10 # Hz
     distance_margin = 0.01 # m
     distance_speed_reduction_margin = 1.0 # m

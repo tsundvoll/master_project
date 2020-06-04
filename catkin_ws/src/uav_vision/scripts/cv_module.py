@@ -19,6 +19,7 @@ from cv_bridge import CvBridge, CvBridgeError
 bridge = CvBridge()
 
 import color_settings
+import config as cfg
 
 # For ground truth callback:
 from nav_msgs.msg import Odometry
@@ -28,6 +29,7 @@ from scipy.spatial.transform import Rotation as R
 global_image = None
 save_images = True
 draw_on_images = True
+global_is_simulator = cfg.is_simulator
 
 # Constants
 D_H_SHORT = 4.0
@@ -291,7 +293,7 @@ HSV_YELLOW_COLOR = [30, 255, 255]
 HSV_LIGHT_ORANGE_COLOR = [15, 255, 255]
 
 
-if color_settings.USE_SIMULATOR_COLORS:
+if global_is_simulator:
     HUE_LOW_WHITE, HUE_HIGH_WHITE, SAT_LOW_WHITE, SAT_HIGH_WHITE, VAL_LOW_WHITE, VAL_HIGH_WHITE, \
     HUE_LOW_ORANGE, HUE_HIGH_ORANGE, SAT_LOW_ORANGE, SAT_HIGH_ORANGE, VAL_LOW_ORANGE, VAL_HIGH_ORANGE, \
     HUE_LOW_GREEN, HUE_HIGH_GREEN, SAT_LOW_GREEN, SAT_HIGH_GREEN, VAL_LOW_GREEN, VAL_HIGH_GREEN = color_settings.SIMULATOR_COLOR_LIMITS
@@ -1334,12 +1336,12 @@ def main():
 
     rospy.loginfo("Starting CV module")
 
-    is_simulator = True
     is_test_image = False
 
-    if not is_simulator:
+    if not global_is_simulator:
         global_ground_truth = np.zeros(6)
-        # test_image_filepath = './image_40.png'
+    
+    
     if is_test_image:
         test_image_filepath = './image_40.png'
         global_image = load_bgr_image(test_image_filepath)
