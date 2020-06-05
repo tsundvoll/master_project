@@ -122,6 +122,14 @@ def gt_callback(data):
 
     global_ground_truth = np.concatenate((d_2_1_inv, r_2_1.as_euler('xyz')))
 
+    # Transform to get the correct yaw
+    yaw = -np.degrees(global_ground_truth[5]) - 90
+    if yaw < -180:
+        gt_yaw = 360 + yaw
+    else:
+        gt_yaw = yaw
+    global_ground_truth[5] = gt_yaw
+
 
 ##################
 # Help functions #
@@ -1287,12 +1295,15 @@ def publish_ground_truth():
     ground_truth_msg.linear.x = global_ground_truth[0]
     ground_truth_msg.linear.y = global_ground_truth[1]
     ground_truth_msg.linear.z = global_ground_truth[2]
-    yaw = -np.degrees(global_ground_truth[5]) - 90
-    if yaw < -180:
-        gt_yaw = 360 + yaw
-    else:
-        gt_yaw = yaw
-    ground_truth_msg.angular.z = gt_yaw
+
+    ground_truth_msg.angular.z = global_ground_truth[5]
+
+    # yaw = -np.degrees(global_ground_truth[5]) - 90
+    # if yaw < -180:
+    #     gt_yaw = 360 + yaw
+    # else:
+    #     gt_yaw = yaw
+    # ground_truth_msg.angular.z = gt_yaw
     pub_ground_truth.publish(ground_truth_msg)
 
 
