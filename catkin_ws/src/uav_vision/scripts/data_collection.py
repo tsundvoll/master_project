@@ -176,6 +176,6 @@ def main(test_number):
     
     
 if __name__ == '__main__':
-    test_number = 8
+    test_number = 7
 
     main(test_number)

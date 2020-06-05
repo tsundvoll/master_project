@@ -108,9 +108,9 @@ def main():
     hover_point = np.array([0.0, 0.0, hover_height])
 
     mission = np.array([
-        [0.0                , 0.0               , hover_height  ],
-        [0.0                , 0.0               , mission_height],
-        [0.0                , 0.0               , hover_height  ]
+        [-0.1                , 0.0               , hover_height  ],
+        [-0.1                , 0.0               , mission_height],
+        [-0.1                , 0.0               , hover_height  ]
     ])
 
         
