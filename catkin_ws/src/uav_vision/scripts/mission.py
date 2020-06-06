@@ -104,17 +104,32 @@ def main():
     land_margin = np.array([0.1, 0.1, 0.2])
     pre_mission_time = 1 # second(s)
 
-    hover_height = 1.0
-    mission_height = 3.0
+    hover_height = 1.5
+    mission_height = 5.0
 
     hover_point = np.array([0.0, 0.0, hover_height])
 
+    # Experiment A
     # mission = np.array([
     #     [-0.1                , 0.0               , hover_height  ],
     #     [-0.1                , 0.0               , mission_height],
     #     [-0.1                , 0.0               , hover_height  ]
     # ])
 
+    # Experiment C
+    # mission = np.array([
+    #     [0.0, 0.0, 1.0],
+    #     [0.0, 0.0, 3.0]
+    # ])
+
+    # Experiment D
+    # mission = np.array([
+    #     [0.0, 0.0, 1.5],
+    #     [3.0, 0.0, 1.5],
+    #     [0.0, 0.0, 1.5]
+    # ])
+
+    # Experiment E
     mission = np.array([
         [1.0, 2.0, 4.0],
         [0.0, 0.0, 2.0],
