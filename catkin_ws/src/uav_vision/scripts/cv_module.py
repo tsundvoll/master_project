@@ -27,8 +27,8 @@ from scipy.spatial.transform import Rotation as R
 
 # Settings
 global_image = None
-save_images = True
-draw_on_images = True
+save_images = False
+draw_on_images = False
 global_is_simulator = cfg.is_simulator
 
 # Constants

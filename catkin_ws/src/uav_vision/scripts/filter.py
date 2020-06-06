@@ -51,10 +51,10 @@ def main():
     filtered_estimate_msg = Twist()
 
     # Set up filter
-    # median_filter_size = 10
-    # average_filter_size = 25
-    median_filter_size = 5
-    average_filter_size = 20
+    # median_filter_size = 5
+    # average_filter_size = 20
+    median_filter_size = 3
+    average_filter_size = 5
 
     estimate_history_size = median_filter_size + average_filter_size - 1
     estimate_history = np.zeros((estimate_history_size,6))
@@ -76,7 +76,7 @@ def main():
             filtered_estimate_pub.publish(filtered_estimate_msg)
             
             # Mark the estimate as used to avoid filtering the same estimate again
-            # est_relative_position = None
+            est_relative_position = None
 
         rate.sleep()
     
