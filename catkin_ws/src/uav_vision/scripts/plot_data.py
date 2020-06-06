@@ -375,13 +375,14 @@ def plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m,
     y_labels = ['x-position error[m]', 'y-position error[m]', 'z-position error[m]', 'none', 'none', 'yaw-rotation error[m]']
 
     x_ytics = [np.linspace(-0.10, 0.10, num=5)]*6
-    x_ytics[5] = np.linspace(-0.15, 0.10, num=6)
+    x_ytics[5] = np.linspace(-0.15, 0.15, num=7)
+    y_ytics = x_ytics
 
-    y_ytics = [np.linspace(-0.15, 0.15, num=7)]*6
-    z_ytics = [np.linspace(0.30, 0.70, num=5), np.linspace(0.80, 1.20, num=5), np.linspace(1.70, 2.10, num=5),
-        np.linspace(2.80, 3.20, num=5), np.linspace(4.80, 5.80, num=6), np.linspace(9.80, 10.20, num=5)]
-    yaw_ytics = [np.linspace(-8, 8, num=9), np.linspace(-8, 8, num=9), np.linspace(-8, 8, num=9),
-        np.linspace(-8, 8, num=9), np.linspace(0, 140, num=8), np.linspace(-8, 8, num=9)]
+    z_ytics = [np.linspace(-0.20, 0.20, num=9)]*6
+    z_ytics[4] = np.linspace(0, 1.0, num=6)
+
+    yaw_ytics = [np.linspace(-6, 6, num=7)]*6
+    yaw_ytics[4] = np.linspace(-140, 140, num=15)
 
     for variable in [V_X, V_Y, V_Z, V_YAW]:
         file_title = file_titles[variable]
@@ -390,6 +391,7 @@ def plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m,
 
         for i in range(6):
             ax = plt.subplot(3,2,i+1)
+            ax.axhline(y=0, color='grey', linestyle='--') # Plot the zero-line
             if i==4 or i==5:
                 ax.set_xlabel('Time [s]')
 
@@ -421,12 +423,12 @@ def plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m,
 
             if variable == V_X:
                 ax.set_yticks(x_ytics[i])
-            # elif variable == V_Y:
-            #     ax.set_yticks(y_ytics[i])
-            # elif variable == V_Z:
-            #     ax.set_yticks(z_ytics[i]) 
-            # elif variable == V_YAW:
-            #     ax.set_yticks(yaw_ytics[i])
+            elif variable == V_Y:
+                ax.set_yticks(y_ytics[i])
+            elif variable == V_Z:
+                ax.set_yticks(z_ytics[i]) 
+            elif variable == V_YAW:
+                ax.set_yticks(yaw_ytics[i])
 
             # Plot legend on top
             if i==1:
