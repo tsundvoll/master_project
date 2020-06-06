@@ -40,6 +40,7 @@ def filter_estimate(estimate, estimate_history, median_filter_size, average_filt
 
 
 def main():
+    global est_relative_position
     rospy.init_node('filter', anonymous=True)
 
     rospy.Subscriber('/estimate_single', Twist, estimate_callback)
@@ -73,6 +74,9 @@ def main():
             filtered_estimate_msg.linear.z = est_filtered[2]
             filtered_estimate_msg.angular.z = est_filtered[5]
             filtered_estimate_pub.publish(filtered_estimate_msg)
+            
+            # Mark the estimate as used to avoid filtering the same estimate again
+            # est_relative_position = None
 
         rate.sleep()
     

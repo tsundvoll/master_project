@@ -9,7 +9,7 @@ import numpy as np
 
 # Higher sensitivity, higher speed
 sensitivity_x_y = 2.0
-sensitivity_z = 2.0
+sensitivity_z = 0.5
 sensitivity_yaw = 1.0
 
 set_point_linear_x = 0.0

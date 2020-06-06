@@ -73,6 +73,11 @@ global_est_error_dead_reckoning = np.zeros(6)
 def estimate_error_dead_reckoning_callback(data):
     global global_est_error_dead_reckoning
     global_est_error_dead_reckoning = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
+
+global_filtered_estimate = np.zeros(6)
+def filtered_estimate_callback(data):
+    global global_filtered_estimate
+    global_filtered_estimate = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
 ######################
 
 
@@ -110,6 +115,8 @@ def main(test_number):
     rospy.Subscriber('/estimate_error/corners', Twist, estimate_error_corners_callback)
     rospy.Subscriber('/estimate_error/dead_reckoning', Twist, estimate_error_dead_reckoning_callback)
 
+    rospy.Subscriber('/filtered_estimate', Twist, filtered_estimate_callback)  
+
     rospy.Subscriber('/initiate_mission', Empty, start_data_collection_callback)
     rospy.Subscriber('/take_still_photo', Empty, stop_data_collection_callback)
 
@@ -120,15 +127,9 @@ def main(test_number):
     time.sleep(1)
     rospy.loginfo("... Ready!")
 
-    prev_est_ground_truth = np.zeros(6)
-    prev_est_ellipse = np.zeros(6)
-    prev_est_arrow = np.zeros(6)
-    prev_est_corners = np.zeros(6)
-    prev_est_dead_reckoning = np.zeros(6) 
-
     data_array = []
         
-    duration = 30 # seconds
+    duration = 3000 # seconds
     
     rate = rospy.Rate(20) # Hz
     while not rospy.is_shutdown():
@@ -152,9 +153,12 @@ def main(test_number):
                 global_est_error_arrow,
                 global_est_error_corners,
                 global_est_error_dead_reckoning,
+                # Filtered estimate
+                global_filtered_estimate
                 )
             )
-            print len(data_array)
+            # print len(data_array)
+            print "Time: " + str(curr_time)
 
             data_array.append(data_point)
 
@@ -176,6 +180,6 @@ def main(test_number):
     
     
 if __name__ == '__main__':
-    test_number = 7
+    test_number = 11
 
     main(test_number)

@@ -11,6 +11,23 @@ V_Y = 1
 V_Z = 2
 V_YAW = 5
 
+# List if indices
+## 0    time_stamps
+
+## 1    ground_truth
+
+## 7    est_ellipse
+## 13	est_arrow
+## 19	est_corners
+## 25	est_dead_reckoning
+
+## 31	est_error_ellipse
+## 37	est_error_arrow
+## 43	est_error_corners
+## 49	est_error_dead_reckoning
+
+## 55   filtered_estimate
+
 def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False, plot_z_to_the_right=False, z_right_color='g'):
     t_id = 0            # Time index
     g_id = 1            # Ground truth index
@@ -58,11 +75,11 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
         "g",        # green:    "Ground truth"
         "b",        # blue:     "Ellipse"
         "r",        # red:      "Arrow"
-        "y",        # yellow:   "Corners"
+        "orange",   # orange:   "Corners"
         "k",        # black:    "Dead reckogning"
         "b",        # blue:     "Ellipse error"
         "r",        # red:      "Arrow error"
-        "y",        # yellow:   "Corners error"
+        "orange",   # orange:   "Corners error"
         "k"         # black:    "Dead reckogning error"
     ]
     y_ticks_error_pos = np.arange(-0.10, 0.11, 0.025)
@@ -150,25 +167,13 @@ def plot_data(stored_array, methods_to_plot, variables_to_plot, plot_error=False
         # plt.show()
 
 def plot_data_manually(stored_array):
-    # List if indices
-    # 0     time_stamps
-    # 1	    ground_truth
-    # 7	    est_ellipse
-    # 13	est_arrow
-    # 19	est_corners
-    # 25	est_dead_reckoning
-
-    # 31	est_error_ellipse
-    # 37	est_error_arrow
-    # 43	est_error_corners
-    # 49	est_error_dead_reckoning
     index_values = [1, 7, 13, 19]
-    color_values = ['green', 'blue', 'red', 'yellow']
+    color_values = ['green', 'blue', 'red', 'orange']
     legend_values = ['ground truth', 'ellipse', 'arrow', 'corners']
     legend_lines = []
 
     index_errors = [31, 37, 43]
-    color_errors = ['blue', 'red', 'yellow']
+    color_errors = ['blue', 'red', 'orange']
 
     time_stamps = stored_array[:, 0]
     ground_truth = stored_array[:, 1:1+6]
@@ -298,7 +303,7 @@ def plot_hover_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m, hover
     all_hover_data = np.array([hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m, hover_10m])
 
     index_values = [1, 7, 13, 19]
-    color_values = ['green', 'blue', 'red', 'yellow']
+    color_values = ['green', 'blue', 'red', 'orange']
     legend_values = ['ground truth', 'ellipse', 'arrow', 'corners']
     y_labels = ['x-position [m]', 'y-position [m]', 'z-position [m]', 'none', 'none', 'yaw-rotation [m]']
 
@@ -370,7 +375,7 @@ def plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m,
     all_hover_data = np.array([hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m, hover_10m])
     
     index_values = [31, 37, 43]
-    color_values = ['blue', 'red', 'yellow']
+    color_values = ['blue', 'red', 'orange']
     legend_values = ['ellipse', 'arrow', 'corners']
     y_labels = ['x-position error[m]', 'y-position error[m]', 'z-position error[m]', 'none', 'none', 'yaw-rotation error[m]']
 
@@ -440,9 +445,52 @@ def plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m,
         plt.savefig(folder+file_title+'.svg')
 
 
+
+def plot_step_z(data_step_z):
+    file_title = "Step_z"
+
+    variable = V_Y
+    index_values = [1, 7, 13, 19, 55]
+    color_values = ['green', 'blue', 'red', 'orange', 'black']
+    legend_values = ['ground truth', 'ellipse', 'arrow', 'corners', 'filter_estimate']
+
+
+    time_stamps = data_step_z[:, 0]
+
+    fig = plt.figure(figsize=(7,5))
+    ax = plt.subplot()
+    plt.grid()
+    plt.xlim(time_stamps[0], time_stamps[-1])
+
+    for i in range(5):
+        if i==0:
+            ax.set_xlabel('Time [s]')
+            ax.set_ylabel('z-position [m]')
+
+        index = index_values[i]
+        color = color_values[i]
+        legend_text = legend_values[i]
+    
+        data = data_step_z[:, index:index+6][:,variable]
+    
+        time_stamps_local = time_stamps.copy()
+        time_stamps_local[np.isnan(data)] = np.nan
+
+        line, = ax.plot(time_stamps_local, data)
+        line.set_color(color)
+        line.set_label(legend_text)
+
+    plt.legend()
+    
+    fig.tight_layout()
+
+    folder = './plots/'
+    plt.savefig(folder+file_title+'.svg')
+
+
 if __name__ == '__main__':
     # Load the data
-    folder = './catkin_ws/src/uav_vision/data_storage/'
+    folder = './catkin_ws/src/uav_vision/data_storage/experiment_data/'
     
     # Up and down test
     test_number = 1
@@ -480,6 +528,12 @@ if __name__ == '__main__':
     filename = 'test_'+str(test_number)+'.npy'
     path = folder + filename
     hover_10m = np.load(path, allow_pickle=True)
+
+    # Step test
+    test_number = 8
+    filename = 'test_'+str(test_number)+'.npy'
+    path = folder + filename
+    data_step_z = np.load(path, allow_pickle=True)
     
 
 
@@ -491,4 +545,6 @@ if __name__ == '__main__':
 
     # plot_hover_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m, hover_10m)
     
-    plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m, hover_10m)
+    # plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m, hover_10m)
+
+    plot_step_z(data_step_z)

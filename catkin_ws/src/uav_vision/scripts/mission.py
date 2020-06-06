@@ -89,6 +89,8 @@ def main():
     rospy.Subscriber('/initiate_mission', Empty, initiate_mission_callback)
 
     pub_set_point = rospy.Publisher("/set_point", Twist, queue_size=1)
+    pub_land = rospy.Publisher("/ardrone/land", Empty, queue_size=10)
+
     set_point_msg = Twist()
 
     rospy.loginfo("Starting mission module")
@@ -102,16 +104,24 @@ def main():
     land_margin = np.array([0.1, 0.1, 0.2])
     pre_mission_time = 1 # second(s)
 
-    hover_height = 0.2
-    mission_height = 5.0
+    hover_height = 1.0
+    mission_height = 3.0
 
     hover_point = np.array([0.0, 0.0, hover_height])
 
+    # mission = np.array([
+    #     [-0.1                , 0.0               , hover_height  ],
+    #     [-0.1                , 0.0               , mission_height],
+    #     [-0.1                , 0.0               , hover_height  ]
+    # ])
+
     mission = np.array([
-        [-0.1                , 0.0               , hover_height  ],
-        [-0.1                , 0.0               , mission_height],
-        [-0.1                , 0.0               , hover_height  ]
+        [1.0, 2.0, 4.0],
+        [0.0, 0.0, 2.0],
+        [0.0, 0.0, 0.2]
     ])
+
+    land_after_mission = True
 
         
     rate = rospy.Rate(publish_rate) # Hz
@@ -151,9 +161,13 @@ def main():
             if distance_to_target < distance_margin:
                 if mission_count == len(mission)-1:
                     mission_count = 0
-                    global_state = S_HOVER
-                    publish_set_point(pub_set_point, hover_point)
-                    break
+                    if land_after_mission:
+                        pub_land.publish(Empty())
+                        global_state = S_LAND
+                    else:
+                        global_state = S_HOVER
+                        publish_set_point(pub_set_point, hover_point)
+                        break
                 else:
                     next_major_set_point = mission[mission_count+1]
 
@@ -186,7 +200,9 @@ def main():
             global_state = S_HOVER
 
         elif global_state == S_LAND:
-            global_state = S_HOVER
+            publish_set_point(pub_set_point, np.zeros(3))
+            rospy.loginfo("Autonomy disabled")
+            break
     
         print_state(global_state)
 
