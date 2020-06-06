@@ -1082,13 +1082,13 @@ def get_estimate(hsv, count, current_ground_truth):
 
     hsv_h_area = get_h_area(hsv)
 
-    white_mask = get_white_mask(hsv)
-    if white_mask is not None:
-        hsv_save_image(white_mask, '1_white_mask', is_gray=True)
+    # white_mask = get_white_mask(hsv)
+    # if white_mask is not None:
+    #     hsv_save_image(white_mask, '1_white_mask', is_gray=True)
 
-    orange_mask = get_orange_mask(hsv)
-    if orange_mask is not None:
-        hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
+    # orange_mask = get_orange_mask(hsv)
+    # if orange_mask is not None:
+    #     hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
 
     green_mask = get_green_mask(hsv)
     green_toughing_edge = False
@@ -1358,15 +1358,9 @@ def main():
         test_image_filepath = './image_40.png'
         global_image = load_bgr_image(test_image_filepath)
 
-    # # corner_test()
-    # arrow_test()
-    # return 
-
-
-
 
     count = 0
-    rate = rospy.Rate(20) # Hz
+    rate = rospy.Rate(10) # Hz
     while not rospy.is_shutdown():
 
         current_ground_truth = gt_convertion()
