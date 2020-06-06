@@ -36,17 +36,17 @@ if pid_with_estimate:
     ####################
     #  PID parameters  #
     ####################
-    Kp_position_x = 1.0
-    Ki_position_x = 0.005
-    Kd_position_x = 0.3
+    Kp_position_x = 0.7
+    Ki_position_x = 0.001
+    Kd_position_x = 0.5
     ####################
     Kp_position_y = Kp_position_x
     Ki_position_y = Ki_position_x
     Kd_position_y = Kd_position_x
     ####################
-    Kp_position_z = 1.0
-    Ki_position_z = 0.01
-    Kd_position_z = 0.3
+    Kp_position_z = 0.7
+    Ki_position_z = 0.001
+    Kd_position_z = 0.5
     ####################
     Kp_orientation = 0.01
     Ki_orientation = 0.0
@@ -91,6 +91,26 @@ error_integral_limit = 40
 # Kd_position_y = Kd_position_x
 # ####################
 # Kp_position_z = 1.5
+# Ki_position_z = 0.01
+# Kd_position_z = 0.3
+# ####################
+# Kp_orientation = 0.01
+# Ki_orientation = 0.0
+# Kd_orientation = 0.0
+# ####################
+
+# ####################
+# #  PID parameters  #
+# ####################
+# Kp_position_x = 1.0
+# Ki_position_x = 0.005
+# Kd_position_x = 0.3
+# ####################
+# Kp_position_y = Kp_position_x
+# Ki_position_y = Ki_position_x
+# Kd_position_y = Kd_position_x
+# ####################
+# Kp_position_z = 1.0
 # Ki_position_z = 0.01
 # Kd_position_z = 0.3
 # ####################
