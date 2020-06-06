@@ -76,7 +76,7 @@ def teleop_callback(data):
     if set_point_control:
         amplifier = 0.01
         # yaw_amplifier = 1
-        yaw_amplifier = 0
+        yaw_amplifier = 1
 
         set_points += np.array([amplifier*right_js_vertical*sensitivity_x_y,  amplifier*right_js_horizontal*sensitivity_x_y,   amplifier*left_js_vertical*sensitivity_z,
                                 0.0,                                0.0,                                    yaw_amplifier*left_js_horizontal*sensitivity_yaw])

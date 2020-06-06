@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d # For 3D plot
+import matplotlib.gridspec as gridspec # For custom subplot grid
 import numpy as np
 import time
 import sys
@@ -437,7 +439,7 @@ def plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m,
 
             # Plot legend on top
             if i==1:
-                plt.legend(bbox_to_anchor=(-0.7, 1.2, 1.2, 0.0), loc='upper right', ncol=5, mode='expand')
+                plt.legend(bbox_to_anchor=(-0.5, 1.2, 0.8, 0.0), loc='upper right', ncol=5, mode='expand')
 
         fig.tight_layout()
 
@@ -447,97 +449,376 @@ def plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m,
 
 
 def plot_step_z(data_step_z):
-    file_title = "Step_z"
+    file_titles = ['Step_x', 'None', 'Step_z']
 
-    variable = V_Y
-    index_values = [1, 7, 13, 19, 25, 55]
+    variables = [V_X, V_Z]
+    index_values = [1, 7, 13, 19, 55, 25]
     color_values = ['green', 'blue', 'red', 'orange', 'grey', 'black']
     legend_values = ['ground truth', 'ellipse', 'arrow', 'corners', 'filter_estimate', 'dead_reckoning']
 
 
     time_stamps = data_step_z[:, 0]
 
-    fig = plt.figure(figsize=(7,5))
-    ax = plt.subplot()
-    plt.grid()
-    plt.xlim(time_stamps[0], time_stamps[-1])
+    for variable in variables:
+        file_title = file_titles[variable]
+        fig = plt.figure(figsize=(7,5))
+        ax = plt.subplot()
+        plt.grid()
+        plt.xlim(time_stamps[0], time_stamps[-1])
 
-    for i in range(len(index_values)):
-        if i==0:
-            ax.set_xlabel('Time [s]')
-            ax.set_ylabel('z-position [m]')
+        for i in range(len(index_values)):
+            if i==0:
+                ax.set_xlabel('Time [s]')
+                ax.set_ylabel('z-position [m]')
 
-        index = index_values[i]
-        color = color_values[i]
-        legend_text = legend_values[i]
-    
-        data = data_step_z[:, index:index+6][:,variable]
-    
-        time_stamps_local = time_stamps.copy()
-        time_stamps_local[np.isnan(data)] = np.nan
+            index = index_values[i]
+            color = color_values[i]
+            legend_text = legend_values[i]
+        
+            data = data_step_z[:, index:index+6][:,variable]
+        
+            time_stamps_local = time_stamps.copy()
+            time_stamps_local[np.isnan(data)] = np.nan
 
-        line, = ax.plot(time_stamps_local, data)
-        line.set_color(color)
-        line.set_label(legend_text)
+            line, = ax.plot(time_stamps_local, data)
+            line.set_color(color)
+            line.set_label(legend_text)
 
-    plt.legend()
-    
+        plt.legend()
+        
+        fig.tight_layout()
+
+        folder = './plots/'
+        plt.savefig(folder+file_title+'.svg')
+
+
+def plot_dead_reckoning_test(data_dead_reckoning_test):
+    file_title = 'Dead_reckoning_x'
+
+    variables = [V_X]
+    index_values = [1, 55, 25]
+    color_values = ['green', 'grey', 'black']
+    legend_values = ['ground truth', 'filter_estimate', 'dead_reckoning']
+
+    time_stamps = data_dead_reckoning_test[:, 0]
+
+    for variable in variables:
+        fig = plt.figure(figsize=(7,5))
+        ax = plt.subplot()
+        plt.grid()
+        plt.xlim(time_stamps[0], time_stamps[-1])
+
+        for i in range(len(index_values)):
+            if i==0:
+                ax.set_xlabel('Time [s]')
+                ax.set_ylabel('x-position [m]')
+
+            index = index_values[i]
+            color = color_values[i]
+            legend_text = legend_values[i]
+        
+            data = data_dead_reckoning_test[:, index:index+6][:,variable]
+        
+            time_stamps_local = time_stamps.copy()
+            time_stamps_local[np.isnan(data)] = np.nan
+
+            line, = ax.plot(time_stamps_local, data)
+            line.set_color(color)
+            line.set_label(legend_text)
+
+        plt.legend()
+        
+        fig.tight_layout()
+
+        folder = './plots/'
+        plt.savefig(folder+file_title+'.svg')
+
+
+def plot_landing(data_landing):
+    """
+    Generates a 3D plot of the trajectory while landing,
+    and three 2D plots from each side of the 3D plot,
+    and a combined plot
+    """
+    ###########
+    # 3D plot #
+    ###########
+    file_title = 'Landing_3D'
+    fig = plt.figure()
+    ax_3D = plt.axes(projection='3d')
+
+    indices = [1, 55, 25]
+    colors = ['green', 'grey', 'black']
+    legends = ['ground truth', 'filter_estimate', 'dead_reckoning']
+
+    for i in range(len(indices)):
+        index = indices[i]
+        color = colors[i]
+        legend = legends[i]
+
+        data_x = data_landing[:, index:index+6][:,V_X]
+        data_y = data_landing[:, index:index+6][:,V_Y]
+        data_z = data_landing[:, index:index+6][:,V_Z]
+
+        line, = ax_3D.plot3D(data_x, data_y, data_z, color)
+        line.set_label(legend)
+        ax.legend()
+
+
+
+        ax_3D.set_xlabel('x-position [m]')
+        ax_3D.set_ylabel('y-position [m]')
+        ax_3D.set_zlabel('z-position [m]')
+
+    ax_3D.view_init(20, 190) # Set view angle for the 3D plot
+
+    fig.tight_layout()
+
+    folder = './plots/'
+    plt.savefig(folder+file_title+'.svg')
+
+    ############
+    # 2D plots #
+    ############
+    file_title = 'Landing_2D'
+    fig = plt.figure(figsize=(7, 12))
+
+    axes = [plt.subplot(3,1,1), plt.subplot(3,1,2), plt.subplot(3,1,3)]
+    for i in range(len(indices)):
+        index = indices[i]
+        color = colors[i]
+        legend = legends[i]
+
+        data_x = data_landing[:, index:index+6][:,V_X]
+        data_y = data_landing[:, index:index+6][:,V_Y]
+        data_z = data_landing[:, index:index+6][:,V_Z]
+
+        # Plot xy
+        ax = axes[0]
+        ax.grid()
+        line, = ax.plot(data_x, data_y, color)
+        line.set_label(legend)
+        ax.legend()
+        ax.set_xlabel('x-position [m]')
+        ax.set_ylabel('y-position [m]')
+
+        # Plot xz
+        ax = axes[1]
+        ax.grid()
+        line, = ax.plot(data_x, data_z, color)
+        line.set_label(legend)
+        ax.legend()
+        ax.set_xlabel('x-position [m]')
+        ax.set_ylabel('z-position [m]')
+
+        # Plot yz
+        ax = axes[2]
+        ax.grid()
+        line, = ax.plot(data_y, data_z, color)
+        line.set_label(legend)
+        ax.legend()
+        ax.set_xlabel('y-position [m]')
+        ax.set_ylabel('z-position [m]')
+
+    fig.tight_layout()
+
+    folder = './plots/'
+    plt.savefig(folder+file_title+'.svg')
+
+    #################
+    # Combine plots #
+    #################
+    file_title = 'Landing_combined'
+    fig = plt.figure(figsize=(10,12))
+    widths = [1.5, 1]
+    heights = [1, 1.5, 1]
+    gs = gridspec.GridSpec(nrows=3, ncols=2, width_ratios=widths, height_ratios=heights)
+
+    ax_3D = fig.add_subplot(gs[1, 0], projection='3d')
+
+    indices = [1, 55, 25]
+    colors = ['green', 'grey', 'black']
+    legends = ['ground truth', 'filter_estimate', 'dead_reckoning']
+
+    for i in range(len(indices)):
+        index = indices[i]
+        color = colors[i]
+        legend = legends[i]
+
+        data_x = data_landing[:, index:index+6][:,V_X]
+        data_y = data_landing[:, index:index+6][:,V_Y]
+        data_z = data_landing[:, index:index+6][:,V_Z]
+
+        ax_3D.plot3D(data_x, data_y, data_z, color)
+
+        ax_3D.set_xlabel('x-position [m]')
+        ax_3D.set_ylabel('y-position [m]')
+        ax_3D.set_zlabel('z-position [m]')
+
+    ax_3D.view_init(20, 190) # Set view angle for the 3D plot
+
+    # 2D plots
+    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[1, 1]), fig.add_subplot(gs[2, 0])]
+    for i in range(len(indices)):
+        index = indices[i]
+        color = colors[i]
+        legend = legends[i]
+
+        data_x = data_landing[:, index:index+6][:,V_X]
+        data_y = data_landing[:, index:index+6][:,V_Y]
+        data_z = data_landing[:, index:index+6][:,V_Z]
+
+        # Plot xy
+        ax = axes[0]
+        ax.grid()
+        ax.plot(data_y, data_x, color)
+
+        ax.yaxis.tick_right()
+        ax.yaxis.set_label_position("right")
+
+        ax.set_xlabel('y-position [m]')
+        ax.set_ylabel('x-position [m]')
+
+        xlim_left, xlim_right = ax.get_xlim()   # Invert x-axis
+        ax.set_xlim(xlim_right, xlim_left)
+
+        ax.set_aspect(1.5)
+
+        # Plot xz
+        ax = axes[1]
+        ax.grid()
+        ax.plot(data_x, data_z, color)
+        ax.set_xlabel('x-position [m]')
+        ax.set_ylabel('z-position [m]')
+
+        ax.set_aspect(0.2)
+
+        # Plot yz
+        ax = axes[2]
+        ax.grid()
+        ax.plot(data_y, data_z, color)
+        ax.set_xlabel('y-position [m]')
+        ax.set_ylabel('z-position [m]')
+
+        xlim_left, xlim_right = ax.get_xlim()   # Invert x-axis
+        ax.set_xlim(xlim_right, xlim_left)
+
+        ax.set_aspect(0.4)
+
     fig.tight_layout()
 
     folder = './plots/'
     plt.savefig(folder+file_title+'.svg')
 
 
-if __name__ == '__main__':
+def plot_yaw_test(data_yaw_test):
+    file_title = 'Yaw_test'
+
+    variables = [V_YAW]
+    index_values = [1, 13, 19, 55, 25]
+    color_values = ['green', 'red', 'orange', 'grey', 'black']
+    legend_values = ['ground truth', 'arrow', 'corners', 'filter_estimate', 'dead_reckoning']
+
+    time_stamps = data_yaw_test[:, 0]
+
+    for variable in variables:
+        fig = plt.figure(figsize=(7,5))
+        ax = plt.subplot()
+        plt.grid()
+        plt.xlim(time_stamps[0], time_stamps[-1])
+
+        for i in range(len(index_values)):
+            if i==0:
+                ax.set_xlabel('Time [s]')
+                ax.set_ylabel('yaw-rotation [deg]')
+
+            index = index_values[i]
+            color = color_values[i]
+            legend_text = legend_values[i]
+        
+            data = data_yaw_test[:, index:index+6][:,variable]
+        
+            time_stamps_local = time_stamps.copy()
+            time_stamps_local[np.isnan(data)] = np.nan
+
+            line, = ax.plot(time_stamps_local, data)
+            line.set_color(color)
+            line.set_label(legend_text)
+
+        plt.legend()
+        
+        fig.tight_layout()
+
+        folder = './plots/'
+        plt.savefig(folder+file_title+'.svg')
+
+
+
+def main():
     # Load the data
-    # folder = './catkin_ws/src/uav_vision/data_storage/experiment_data/'
-    folder = './catkin_ws/src/uav_vision/data_storage/'
+    folder = './catkin_ws/src/uav_vision/data_storage/experiment_data/'
     
     # Up and down test
-    test_number = 1
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    up_and_down_5m = np.load(path, allow_pickle=True)
+    # test_number = 1
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # up_and_down_5m = np.load(path, allow_pickle=True)
 
     # Hover tests
-    test_number = 2
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_0_5m = np.load(path, allow_pickle=True)
+    # test_number = 2
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_0_5m = np.load(path, allow_pickle=True)
 
-    test_number = 3
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_1m = np.load(path, allow_pickle=True)
+    # test_number = 3
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_1m = np.load(path, allow_pickle=True)
 
-    test_number = 4
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_2m = np.load(path, allow_pickle=True)
+    # test_number = 4
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_2m = np.load(path, allow_pickle=True)
 
-    test_number = 5
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_3m = np.load(path, allow_pickle=True)
+    # test_number = 5
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_3m = np.load(path, allow_pickle=True)
 
-    test_number = 6
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_5m = np.load(path, allow_pickle=True)
+    # test_number = 6
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_5m = np.load(path, allow_pickle=True)
 
-    test_number = 7
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_10m = np.load(path, allow_pickle=True)
+    # test_number = 7
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_10m = np.load(path, allow_pickle=True)
 
     # Step test
-    test_number = 8
+    # test_number = 8
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_step_z = np.load(path, allow_pickle=True)
+
+    # # Dead reckoning test
+    # test_number = 9
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_dead_reckoning_test = np.load(path, allow_pickle=True)
+
+    # Land test
+    test_number = 10
     filename = 'test_'+str(test_number)+'.npy'
     path = folder + filename
-    data_step_z = np.load(path, allow_pickle=True)
+    data_landing = np.load(path, allow_pickle=True)
+
+    # # Yaw test
+    # test_number = 11
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_yaw_test = np.load(path, allow_pickle=True)
     
-
-
 
     #################
     # Plot the data #
@@ -548,4 +829,14 @@ if __name__ == '__main__':
     
     # plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m, hover_10m)
 
-    plot_step_z(data_step_z)
+    # plot_step_z(data_step_z)
+
+    # plot_dead_reckoning_test(data_dead_reckoning_test)
+
+    plot_landing(data_landing)
+
+    # plot_yaw_test(data_yaw_test)
+
+
+if __name__ == '__main__':
+    main()
