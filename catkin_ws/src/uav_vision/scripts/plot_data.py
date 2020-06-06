@@ -449,7 +449,7 @@ def plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m,
 def plot_step_z(data_step_z):
     file_title = "Step_z"
 
-    variable = V_Z
+    variable = V_Y
     index_values = [1, 7, 13, 19, 25, 55]
     color_values = ['green', 'blue', 'red', 'orange', 'grey', 'black']
     legend_values = ['ground truth', 'ellipse', 'arrow', 'corners', 'filter_estimate', 'dead_reckoning']
@@ -490,7 +490,8 @@ def plot_step_z(data_step_z):
 
 if __name__ == '__main__':
     # Load the data
-    folder = './catkin_ws/src/uav_vision/data_storage/experiment_data/'
+    # folder = './catkin_ws/src/uav_vision/data_storage/experiment_data/'
+    folder = './catkin_ws/src/uav_vision/data_storage/'
     
     # Up and down test
     test_number = 1
