@@ -55,8 +55,14 @@ def image_callback(data):
 global_ground_truth = None
 def gt_callback(data):
     global global_ground_truth
-    gt_pose = data.pose.pose
+    global_ground_truth = data.pose.pose
 
+
+def gt_convertion():
+    if global_ground_truth is None:
+        print "No ground truth available"
+        return None
+    gt_pose = global_ground_truth
     # Transform ground truth in body frame wrt. world frame to body frame wrt. landing platform
 
     ##########
@@ -120,15 +126,17 @@ def gt_callback(data):
     # This is more intuitive for the controller
     d_2_1_inv = -d_2_1
 
-    global_ground_truth = np.concatenate((d_2_1_inv, r_2_1.as_euler('xyz')))
+    local_ground_truth = np.concatenate((d_2_1_inv, r_2_1.as_euler('xyz')))
 
     # Transform to get the correct yaw
-    yaw = -np.degrees(global_ground_truth[5]) - 90
+    yaw = -np.degrees(local_ground_truth[5]) - 90
     if yaw < -180:
         gt_yaw = 360 + yaw
     else:
         gt_yaw = yaw
-    global_ground_truth[5] = gt_yaw
+    local_ground_truth[5] = gt_yaw
+
+    return local_ground_truth
 
 
 ##################
@@ -1054,7 +1062,7 @@ def evaluate_inner_corners(hsv):
     return None, None, None
 
 
-def get_estimate(hsv, count):
+def get_estimate(hsv, count, current_ground_truth):
     global pub_est_ellipse
     global pub_est_arrow
     global pub_est_corners
@@ -1118,10 +1126,10 @@ def get_estimate(hsv, count):
         msg.angular.z = est_ellipse_angle
         pub_est_ellipse.publish(msg)
 
-        msg.linear.x = est_ellipse_x - global_ground_truth[0]
-        msg.linear.y = est_ellipse_y - global_ground_truth[1]
-        msg.linear.z = est_ellipse_z - global_ground_truth[2]
-        msg.angular.z = est_ellipse_angle - global_ground_truth[5]
+        msg.linear.x = est_ellipse_x - current_ground_truth[0]
+        msg.linear.y = est_ellipse_y - current_ground_truth[1]
+        msg.linear.z = est_ellipse_z - current_ground_truth[2]
+        msg.angular.z = est_ellipse_angle - current_ground_truth[5]
         pub_est_error_ellipse.publish(msg)
 
         draw_dot(global_hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=5)
@@ -1148,10 +1156,10 @@ def get_estimate(hsv, count):
         msg.angular.z = est_arrow_angle
         pub_est_arrow.publish(msg)
 
-        msg.linear.x = est_arrow_x - global_ground_truth[0]
-        msg.linear.y = est_arrow_y - global_ground_truth[1]
-        msg.linear.z = est_arrow_z - global_ground_truth[2]
-        msg.angular.z = est_arrow_angle - global_ground_truth[5]
+        msg.linear.x = est_arrow_x - current_ground_truth[0]
+        msg.linear.y = est_arrow_y - current_ground_truth[1]
+        msg.linear.z = est_arrow_z - current_ground_truth[2]
+        msg.angular.z = est_arrow_angle - current_ground_truth[5]
         pub_est_error_arrow.publish(msg)
 
         draw_dot(global_hsv_canvas_all, center_px, HSV_RED_COLOR, size=5)
@@ -1178,10 +1186,10 @@ def get_estimate(hsv, count):
         msg.angular.z = est_corners_angle
         pub_est_corners.publish(msg)
 
-        msg.linear.x = est_corners_x - global_ground_truth[0]
-        msg.linear.y = est_corners_y - global_ground_truth[1]
-        msg.linear.z = est_corners_z - global_ground_truth[2]
-        msg.angular.z = est_corners_angle - global_ground_truth[5]
+        msg.linear.x = est_corners_x - current_ground_truth[0]
+        msg.linear.y = est_corners_y - current_ground_truth[1]
+        msg.linear.z = est_corners_z - current_ground_truth[2]
+        msg.angular.z = est_corners_angle - current_ground_truth[5]
         pub_est_error_corners.publish(msg)
 
         draw_dot(global_hsv_canvas_all, center_px, HSV_YELLOW_COLOR, size=5)
@@ -1288,22 +1296,15 @@ def arrow_test():
         draw_dot(hsv_arrow_test_canvas, corner, HSV_RED_COLOR, size=5)
     hsv_save_image(hsv_arrow_test_canvas, "hsv_arrow_test_canvas")
 
-def publish_ground_truth():
+def publish_ground_truth(current_ground_truth):
     global pub_ground_truth
 
     ground_truth_msg = Twist()
-    ground_truth_msg.linear.x = global_ground_truth[0]
-    ground_truth_msg.linear.y = global_ground_truth[1]
-    ground_truth_msg.linear.z = global_ground_truth[2]
+    ground_truth_msg.linear.x = current_ground_truth[0]
+    ground_truth_msg.linear.y = current_ground_truth[1]
+    ground_truth_msg.linear.z = current_ground_truth[2]
+    ground_truth_msg.angular.z = current_ground_truth[5]
 
-    ground_truth_msg.angular.z = global_ground_truth[5]
-
-    # yaw = -np.degrees(global_ground_truth[5]) - 90
-    # if yaw < -180:
-    #     gt_yaw = 360 + yaw
-    # else:
-    #     gt_yaw = yaw
-    # ground_truth_msg.angular.z = gt_yaw
     pub_ground_truth.publish(ground_truth_msg)
 
 
@@ -1362,13 +1363,16 @@ def main():
     # return 
 
 
+
+
     count = 0
     rate = rospy.Rate(20) # Hz
     while not rospy.is_shutdown():
 
-        if (global_image is not None) and (global_ground_truth is not None):
+        current_ground_truth = gt_convertion()
+        if (global_image is not None) and (current_ground_truth is not None):
             hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
-            est, method, processed_image = get_estimate(hsv, count)
+            est, method, processed_image = get_estimate(hsv, count, current_ground_truth)
 
             if processed_image is not None:
                 pub_processed_image.publish(processed_image)
@@ -1382,7 +1386,7 @@ def main():
             est_msg.angular.z = est[5]
             pub_est.publish(est_msg)
 
-            publish_ground_truth()
+            publish_ground_truth(current_ground_truth)
 
             count += 1
             if is_test_image:

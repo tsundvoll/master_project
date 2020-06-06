@@ -449,10 +449,10 @@ def plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m,
 def plot_step_z(data_step_z):
     file_title = "Step_z"
 
-    variable = V_Y
-    index_values = [1, 7, 13, 19, 55]
-    color_values = ['green', 'blue', 'red', 'orange', 'black']
-    legend_values = ['ground truth', 'ellipse', 'arrow', 'corners', 'filter_estimate']
+    variable = V_Z
+    index_values = [1, 7, 13, 19, 25, 55]
+    color_values = ['green', 'blue', 'red', 'orange', 'grey', 'black']
+    legend_values = ['ground truth', 'ellipse', 'arrow', 'corners', 'filter_estimate', 'dead_reckoning']
 
 
     time_stamps = data_step_z[:, 0]
@@ -462,7 +462,7 @@ def plot_step_z(data_step_z):
     plt.grid()
     plt.xlim(time_stamps[0], time_stamps[-1])
 
-    for i in range(5):
+    for i in range(len(index_values)):
         if i==0:
             ax.set_xlabel('Time [s]')
             ax.set_ylabel('z-position [m]')
