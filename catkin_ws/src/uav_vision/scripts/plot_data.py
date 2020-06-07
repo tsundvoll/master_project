@@ -562,7 +562,7 @@ def plot_landing(data_landing):
 
         line, = ax_3D.plot3D(data_x, data_y, data_z, color)
         line.set_label(legend)
-        ax.legend()
+        ax_3D.legend()
 
 
 
@@ -639,6 +639,7 @@ def plot_landing(data_landing):
     indices = [1, 55, 25]
     colors = ['green', 'grey', 'black']
     legends = ['ground truth', 'filter_estimate', 'dead_reckoning']
+    legend_lines = []
 
     for i in range(len(indices)):
         index = indices[i]
@@ -649,8 +650,9 @@ def plot_landing(data_landing):
         data_y = data_landing[:, index:index+6][:,V_Y]
         data_z = data_landing[:, index:index+6][:,V_Z]
 
-        ax_3D.plot3D(data_x, data_y, data_z, color)
-
+        line, = ax_3D.plot3D(data_x, data_y, data_z, color)
+        # line.set_label(legend)
+        legend_lines.append(line)
         ax_3D.set_xlabel('x-position [m]')
         ax_3D.set_ylabel('y-position [m]')
         ax_3D.set_zlabel('z-position [m]')
@@ -705,6 +707,9 @@ def plot_landing(data_landing):
 
         ax.set_aspect(0.4)
 
+
+    fig.legend(legend_lines, legends, bbox_to_anchor=(0.57, 0.47, 0.4, 0.77), loc='center')
+
     fig.tight_layout()
 
     folder = './plots/'
@@ -753,7 +758,6 @@ def plot_yaw_test(data_yaw_test):
         plt.savefig(folder+file_title+'.svg')
 
 
-
 def main():
     # Load the data
     folder = './catkin_ws/src/uav_vision/data_storage/experiment_data/'
@@ -765,35 +769,35 @@ def main():
     # up_and_down_5m = np.load(path, allow_pickle=True)
 
     # Hover tests
-    # test_number = 2
-    # filename = 'test_'+str(test_number)+'.npy'
-    # path = folder + filename
-    # hover_0_5m = np.load(path, allow_pickle=True)
+    test_number = 2
+    filename = 'test_'+str(test_number)+'.npy'
+    path = folder + filename
+    hover_0_5m = np.load(path, allow_pickle=True)
 
-    # test_number = 3
-    # filename = 'test_'+str(test_number)+'.npy'
-    # path = folder + filename
-    # hover_1m = np.load(path, allow_pickle=True)
+    test_number = 3
+    filename = 'test_'+str(test_number)+'.npy'
+    path = folder + filename
+    hover_1m = np.load(path, allow_pickle=True)
 
-    # test_number = 4
-    # filename = 'test_'+str(test_number)+'.npy'
-    # path = folder + filename
-    # hover_2m = np.load(path, allow_pickle=True)
+    test_number = 4
+    filename = 'test_'+str(test_number)+'.npy'
+    path = folder + filename
+    hover_2m = np.load(path, allow_pickle=True)
 
-    # test_number = 5
-    # filename = 'test_'+str(test_number)+'.npy'
-    # path = folder + filename
-    # hover_3m = np.load(path, allow_pickle=True)
+    test_number = 5
+    filename = 'test_'+str(test_number)+'.npy'
+    path = folder + filename
+    hover_3m = np.load(path, allow_pickle=True)
 
-    # test_number = 6
-    # filename = 'test_'+str(test_number)+'.npy'
-    # path = folder + filename
-    # hover_5m = np.load(path, allow_pickle=True)
+    test_number = 6
+    filename = 'test_'+str(test_number)+'.npy'
+    path = folder + filename
+    hover_5m = np.load(path, allow_pickle=True)
 
-    # test_number = 7
-    # filename = 'test_'+str(test_number)+'.npy'
-    # path = folder + filename
-    # hover_10m = np.load(path, allow_pickle=True)
+    test_number = 7
+    filename = 'test_'+str(test_number)+'.npy'
+    path = folder + filename
+    hover_10m = np.load(path, allow_pickle=True)
 
     # Step test
     # test_number = 8
@@ -808,10 +812,10 @@ def main():
     # data_dead_reckoning_test = np.load(path, allow_pickle=True)
 
     # Land test
-    test_number = 10
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    data_landing = np.load(path, allow_pickle=True)
+    # test_number = 10
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_landing = np.load(path, allow_pickle=True)
 
     # # Yaw test
     # test_number = 11
@@ -833,9 +837,14 @@ def main():
 
     # plot_dead_reckoning_test(data_dead_reckoning_test)
 
-    plot_landing(data_landing)
+    # plot_landing(data_landing)
 
     # plot_yaw_test(data_yaw_test)
+
+    #####################
+    # Calculate on data #
+    #####################
+    calculate_accuracy(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m, hover_10m)
 
 
 if __name__ == '__main__':
