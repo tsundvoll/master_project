@@ -21,3 +21,6 @@ Experiment D
 
 Experiment E
 10: (1.0, 2.0, 4.0) -> (0.0, 0.0, 2.0) -> (0.0, 0.0, 0.3) -> Land
+
+Experiment F
+11: Rotate ~90 degrees clockwise, then counterclockwise
