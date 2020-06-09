@@ -478,17 +478,18 @@ def find_white_centroid(hsv):
 
 
 def find_harris_corners(img):
-    """ Using sub-pixel method from OpenCV """
+    """ Using sub-pixel method from OpenCV 
+    Inspiration: https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_features_harris/py_features_harris.html
+    """
+
     block_size = 7      # It is the size of neighbourhood considered for corner detection
     aperture_param = 9  # Aperture parameter of Sobel derivative used.
     k_param = 0.04    # Harris detector free parameter in the equation. range: [0.04, 0.06]
-    # block_size = 3      # It is the size of neighbourhood considered for corner detection
-    # aperture_param = 3  # Aperture parameter of Sobel derivative used.
-    # k_param = 0.1      # Harris detector free parameter in the equation. range: [0.04, 0.06]
-    dst = cv2.cornerHarris(img, block_size, aperture_param, k_param)
+    
+    bw_blurred = make_gaussian_blurry(img, 9)
+    
+    dst = cv2.cornerHarris(bw_blurred, block_size, aperture_param, k_param)
     dst = cv2.dilate(dst, None)
-
-    # global_hsv_canvas_all[dst>0.01*dst.max()]=[0,0,255]
     ret, dst = cv2.threshold(dst, 0.01*dst.max(), 255, 0)
     dst = np.uint8(dst)
 
@@ -497,7 +498,7 @@ def find_harris_corners(img):
 
     # define the criteria to stop and refine the corners
     criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-    corners = cv2.cornerSubPix(img, np.float32(centroids), (5,5), (-1,-1), criteria)
+    corners = cv2.cornerSubPix(bw_blurred, np.float32(centroids), (5,5), (-1,-1), criteria)
 
     # Flip axis
     corners[:,[0, 1]] = corners[:,[1, 0]]
@@ -719,9 +720,7 @@ def find_right_angled_corners(img):
     check_angle_filter_size = 19
     ########################################
 
-    bw_blurred = make_gaussian_blurry(img, 9)
-
-    corners = find_harris_corners(bw_blurred)
+    corners = find_harris_corners(img)
 
     corners = clip_corners_on_border(corners, ignore_border_size)
     if corners is None:
@@ -860,6 +859,7 @@ def fit_ellipse(points):
 
 def get_ellipse_parameters(green_ellipse):
     edges = cv2.Canny(green_ellipse,100,200)
+    # edges = cv2.Canny(image=image, first_threshold=100, second_threshold=200, apertureSize = 3)
     result = np.where(edges == 255)
 
     ellipse = fit_ellipse(result)
