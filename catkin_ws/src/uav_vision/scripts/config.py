@@ -30,9 +30,9 @@ offset_setpoint_y = delta_y                     # 1.41              # 3.15
 controller_desired_pose = np.array([offset_setpoint_x, offset_setpoint_y, reference_height, 0.0, 0.0, 0.0])
 
 
-pid_with_estimate = True
+# pid_with_estimate = True
 
-if pid_with_estimate:
+if is_simulator:
     ####################
     #  PID parameters  #
     ####################

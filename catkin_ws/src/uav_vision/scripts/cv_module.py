@@ -27,7 +27,7 @@ from scipy.spatial.transform import Rotation as R
 
 # Settings
 global_image = None
-save_images = False
+save_images = True
 draw_on_images = True
 global_is_simulator = cfg.is_simulator
 
@@ -484,7 +484,7 @@ def find_harris_corners(img):
 
     block_size = 7      # It is the size of neighbourhood considered for corner detection
     aperture_param = 9  # Aperture parameter of Sobel derivative used.
-    k_param = 0.04    # Harris detector free parameter in the equation. range: [0.04, 0.06]
+    k_param = 0.04      # Harris detector free parameter in the equation. range: [0.04, 0.06]
     
     bw_blurred = make_gaussian_blurry(img, 9)
     
@@ -497,7 +497,8 @@ def find_harris_corners(img):
     ret, labels, stats, centroids = cv2.connectedComponentsWithStats(dst)
 
     # define the criteria to stop and refine the corners
-    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+    # criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+    criteria = (cv2.TERM_CRITERIA_MAX_ITER + cv2.TERM_CRITERIA_EPS, 100, 0.001)
     corners = cv2.cornerSubPix(bw_blurred, np.float32(centroids), (5,5), (-1,-1), criteria)
 
     # Flip axis
@@ -609,6 +610,10 @@ def clip_corners_not_right(corners, img, average_filter_size):
     bw_blurred = img.copy()
     bw_blurred = cv2.GaussianBlur(bw_blurred, (gaussian_blur_size,gaussian_blur_size), sigmaX)
     
+    bgr = cv2.cvtColor(bw_blurred, cv2.COLOR_GRAY2BGR)
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    marked = hsv.copy()
+
     # Text settings 
     font = cv2.FONT_HERSHEY_DUPLEX     
     fontScale = 0.8
@@ -629,7 +634,19 @@ def clip_corners_not_right(corners, img, average_filter_size):
     new_corners = corners[is_to_keep]
     new_values = values[is_to_keep]
 
-    cv2.circle(bw_blurred, (320,180), np.int0(gaussian_blur_size/2.0), (0,0,0), 1)
+    # cv2.circle(bw_blurred, (320,180), np.int0(gaussian_blur_size/2.0), (0,0,0), 1)
+    
+    color = HSV_YELLOW_COLOR
+    fontScale = 0.4
+    for corner in corners:
+        corner_x = np.int0(corner[0])
+        corner_y = np.int0(corner[1])
+        value = bw_blurred[corner_x, corner_y]
+        image = cv2.putText(marked, str(value), (corner_y, corner_x), font,  
+                    fontScale, color, thickness, cv2.LINE_AA)
+        marked[corner_x, corner_y] = HSV_RED_COLOR
+
+    hsv_save_image(marked, "marked")
 
     hsv_save_image(bw_blurred, "blurred", is_gray=True)
     
@@ -905,7 +922,7 @@ def evaluate_ellipse(hsv):
         return None, None, None
 
     bw_green_ellipse = flood_fill(bw_green_mask, start=(0,0))
-    # hsv_save_image(bw_green_ellipse, "3_green_ellipse", is_gray=True)
+    hsv_save_image(bw_green_ellipse, "3_green_ellipse", is_gray=True)
 
     ellipse_parameters = get_ellipse_parameters(bw_green_ellipse)
     if ellipse_parameters is None:
@@ -1238,11 +1255,11 @@ def corner_test():
     # global_image = cv2.imread("0_hsv.png")
     # bgr_angle_test = cv2.imread("corner_angle_test_numerated.png")
 
-    image_number = 5
-    take_number = 2
-    folder = "./image_processing/still_photos/take_"+str(take_number)+"/"
+    # image_number = 5
+    # take_number = 2
+    # folder = "./image_processing/still_photos/take_"+str(take_number)+"/"
 
-    global_image = cv2.imread(folder+"image_"+str(image_number)+".png")
+    # global_image = cv2.imread(folder+"image_"+str(image_number)+".png")
     bgr_angle_test = global_image
     hsv_angle_test = cv2.cvtColor(bgr_angle_test, cv2.COLOR_BGR2HSV)
     hsv_save_image(hsv_angle_test, "0_hsv_test_image")
@@ -1345,15 +1362,19 @@ def main():
 
     rospy.loginfo("Starting CV module")
 
-    is_test_image = False
+    is_test_image = True
+    global_is_simulator = False
 
     if not global_is_simulator:
         global_ground_truth = np.zeros(6)
     
     
     if is_test_image:
-        test_image_filepath = './image_40.png'
+        # test_image_filepath = './image_40.png'
+        test_image_filepath = './0_hsv.png'
         global_image = load_bgr_image(test_image_filepath)
+
+        corner_test()
 
 
     count = 0
