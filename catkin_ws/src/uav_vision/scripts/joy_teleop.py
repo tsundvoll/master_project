@@ -22,9 +22,10 @@ set_points = np.array([0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
 # 0: Manual control, 1: Set point control
 choose_controll_strategy = 1
 
+
+##################################
 manual_control = False
 set_point_control = False
-
 if choose_controll_strategy == 0:
     manual_control = True
 elif choose_controll_strategy == 1:
@@ -32,6 +33,7 @@ elif choose_controll_strategy == 1:
 else:    
     manual_control = True
     set_point_control = True
+##################################
 
 
 def teleop_callback(data):
@@ -63,6 +65,10 @@ def teleop_callback(data):
     if buttons[3]:
         # "Square"-button -> Take still photo and stop data collection
         pub_take_still_photo.publish(Empty())
+
+    if buttons[5]:
+        # "R1"-button -> Emergency landing
+        pub_emergency.publish(Empty())
         
     if manual_control:
         control_msg = Twist()
@@ -76,7 +82,7 @@ def teleop_callback(data):
     if set_point_control:
         amplifier = 0.01
         # yaw_amplifier = 1
-        yaw_amplifier = 1
+        yaw_amplifier = 0
 
         set_points += np.array([amplifier*right_js_vertical*sensitivity_x_y,  amplifier*right_js_horizontal*sensitivity_x_y,   amplifier*left_js_vertical*sensitivity_z,
                                 0.0,                                0.0,                                    yaw_amplifier*left_js_horizontal*sensitivity_yaw])
@@ -98,6 +104,7 @@ def teleop_callback(data):
 def main():
     global pub_take_off
     global pub_land
+    global pub_emergency
     global pub_controller
     global pub_take_still_photo
     global pub_initiate_mission
@@ -106,6 +113,7 @@ def main():
 
     pub_take_off = rospy.Publisher("/ardrone/takeoff", Empty, queue_size=10)
     pub_land = rospy.Publisher("/ardrone/land", Empty, queue_size=10)
+    pub_emergency = rospy.Publisher("/ardrone/reset", Empty, queue_size=10)
     pub_controller = rospy.Publisher("/cmd_vel", Twist, queue_size=1000)
 
     pub_set_point = rospy.Publisher("/set_point", Twist, queue_size=10)

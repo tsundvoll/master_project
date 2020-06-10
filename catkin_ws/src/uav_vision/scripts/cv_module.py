@@ -1362,8 +1362,8 @@ def main():
 
     rospy.loginfo("Starting CV module")
 
-    is_test_image = True
-    global_is_simulator = False
+    is_test_image = False
+    global_is_simulator = True
 
     if not global_is_simulator:
         global_ground_truth = np.zeros(6)
