@@ -20,7 +20,7 @@ set_point_angular_z = 0.0
 set_points = np.array([0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
 
 # 0: Manual control, 1: Set point control
-choose_controll_strategy = 1
+choose_controll_strategy = 0
 
 
 ##################################

@@ -23,7 +23,7 @@ global_last_estimate = None
 global_estimate_method = 0
 
 
-global_ground_truth = None
+global_ground_truth = np.zeros(6)
 def gt_callback(data):
     global global_ground_truth
     gt_pose = data.pose.pose
@@ -151,6 +151,10 @@ def filter_measurement(measurement, measurement_history, median_filter_size, ave
 
 def main():
     global global_last_estimate
+    global global_velocities
+    global global_acceleration
+    global global_yaw
+
     rospy.init_node('dead_reckoning', anonymous=True)
 
     rospy.Subscriber('/ardrone/navdata', Navdata, navdata_callback)
@@ -173,8 +177,8 @@ def main():
     N_CALIBRATION_STEPS = 1000
     calibration_sum_vel = np.zeros(3)
     calibration_sum_acc = np.zeros(3)
-    calibration_vel = 0.0
-    calibration_acc = 0.0
+    calibration_vel = np.zeros(3)
+    calibration_acc = np.zeros(3)
 
     # Avoid small fluxtuations by removing small values
     vel_min = -3.0
@@ -197,31 +201,36 @@ def main():
 
     dead_reckoning_msg = Twist()
     
+    do_calibration_before_start = True
+
     rate = rospy.Rate(100) # Hz
     while not rospy.is_shutdown():
         if global_velocities is not None:
             new_vel = global_velocities
             new_acc = global_acceleration
             new_yaw = global_yaw
+            global_velocities, global_acceleration, global_yaw = None, None, None
             if count == 0:
                 start_time = rospy.get_time()
                 prev_time = start_time
-                calibration_vel = np.array([0.0, 0.0, 0.0])
-                calibration_acc = np.array([0.0, 0.0, 9.81e+03])
 
-            # elif count < N_CALIBRATION_STEPS:
-            #     calibration_sum_vel += new_vel
-            #     calibration_sum_acc += new_acc
-            # elif count == N_CALIBRATION_STEPS:
-            #     calibration_vel = calibration_sum_vel / float(N_CALIBRATION_STEPS)
-            #     calibration_acc = calibration_sum_acc / float(N_CALIBRATION_STEPS)
+                if not do_calibration_before_start:
+                    calibration_vel = np.array([0.0, 0.0, 0.0])
+                    calibration_acc = np.array([0.0, 0.0, 9.81e+03])
+
+            elif count < N_CALIBRATION_STEPS and do_calibration_before_start:
+                calibration_sum_vel += new_vel
+                calibration_sum_acc += new_acc
+            elif count == N_CALIBRATION_STEPS and do_calibration_before_start:
+                calibration_vel = calibration_sum_vel / float(N_CALIBRATION_STEPS)
+                calibration_acc = calibration_sum_acc / float(N_CALIBRATION_STEPS)
                 
             
 
-            #     end_time = rospy.get_time()
-            #     duration = end_time - start_time
-            #     rospy.loginfo("Calibration ready. Duration: " + str(duration))
-            #     prev_time = end_time
+                end_time = rospy.get_time()
+                duration = end_time - start_time
+                rospy.loginfo("Calibration ready. Duration: " + str(duration))
+                prev_time = end_time
             else: # Perform dead reckoning
                 rospy.loginfo("Method: " + str(global_estimate_method))
 

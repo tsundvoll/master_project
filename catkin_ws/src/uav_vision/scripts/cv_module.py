@@ -31,11 +31,18 @@ save_images = True
 draw_on_images = True
 global_is_simulator = cfg.is_simulator
 
+if global_is_simulator:
+    camera_offset_x = 150 # mm
+    camera_offset_z = -45 # mm
+else:
+    camera_offset_x = -60 # mm
+    camera_offset_z = -45 # mm
+
 # Constants
-D_H_SHORT = 4.0
-D_H_LONG = 12.0
-D_ARROW = 30.0
-D_RADIUS = 39.0
+D_H_SHORT = 4.0 # cm
+D_H_LONG = 12.0 # cm
+D_ARROW = 30.0 # cm
+D_RADIUS = 39.0 # cm
 
 IMG_WIDTH = 640
 IMG_HEIGHT = 360
@@ -810,10 +817,10 @@ def calculate_position(center_px, radius_px):
     # Camera is placed 150 mm along x-axis of the drone
     # Since the camera is pointing down, the x and y axis of the drone
     # is the inverse of the x and y axis of the camera
-    est_x = -(est_z * d_x / focal_length) - 150 # mm adjustment for translated camera frame
+    est_x = -((est_z * d_x / focal_length) + camera_offset_x) # mm adjustment for translated camera frame in x direction
     est_y = -(est_z * d_y / focal_length)
 
-    est_z -= 45 # mm adjustment for translated camera frame
+    est_z += camera_offset_z # mm adjustment for translated camera frame in z direction
 
     position = np.array([est_x, est_y, est_z]) / 1000.0
 
@@ -1034,7 +1041,7 @@ def evaluate_inner_corners(hsv):
             draw_dot(hsv_canvas, c_m, HSV_BLUE_COLOR)
             hsv_save_image(hsv_canvas, "3_canvas")
 
-            if c_m_value > 190: # The points are on a short side
+            if c_m_value > 191: # The points are on a short side
                 is_short_side = True
                 normal_vector = get_normal_vector(bw_white_mask, corner_a, corner_b, is_short_side)
                 normal_unit_vector = normalize_vector(normal_vector)
@@ -1099,13 +1106,13 @@ def get_estimate(hsv, count, current_ground_truth):
 
     hsv_h_area = get_h_area(hsv)
 
-    # white_mask = get_white_mask(hsv)
-    # if white_mask is not None:
-    #     hsv_save_image(white_mask, '1_white_mask', is_gray=True)
+    white_mask = get_white_mask(hsv)
+    if white_mask is not None:
+        hsv_save_image(white_mask, '1_white_mask', is_gray=True)
 
-    # orange_mask = get_orange_mask(hsv)
-    # if orange_mask is not None:
-    #     hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
+    orange_mask = get_orange_mask(hsv)
+    if orange_mask is not None:
+        hsv_save_image(orange_mask, '1_orange_mask', is_gray=True)
 
     green_mask = get_green_mask(hsv)
     green_toughing_edge = False
@@ -1262,7 +1269,7 @@ def corner_test():
     # global_image = cv2.imread(folder+"image_"+str(image_number)+".png")
     bgr_angle_test = global_image
     hsv_angle_test = cv2.cvtColor(bgr_angle_test, cv2.COLOR_BGR2HSV)
-    hsv_save_image(hsv_angle_test, "0_hsv_test_image")
+    # hsv_save_image(hsv_angle_test, "0_hsv_test_image")
 
     hsv_inside_green = get_pixels_inside_green(hsv_angle_test)
     hsv_h_area = get_h_area(hsv_angle_test)
@@ -1292,7 +1299,7 @@ def arrow_test():
     global_image = cv2.imread(folder+"image_"+str(image_number)+".png")
     bgr_angle_test = global_image
     hsv_arrow_test = cv2.cvtColor(bgr_angle_test, cv2.COLOR_BGR2HSV)
-    hsv_save_image(hsv_arrow_test, "0_hsv_test_image")
+    # hsv_save_image(hsv_arrow_test, "0_hsv_test_image")
 
     bw_orange_mask = get_orange_mask(hsv_arrow_test)
     if bw_orange_mask is None:
@@ -1362,16 +1369,15 @@ def main():
 
     rospy.loginfo("Starting CV module")
 
-    is_test_image = False
-    global_is_simulator = True
+    is_test_image = True
 
     if not global_is_simulator:
         global_ground_truth = np.zeros(6)
     
     
     if is_test_image:
-        # test_image_filepath = './image_40.png'
-        test_image_filepath = './0_hsv.png'
+        test_image_filepath = './image_40.png'
+        # test_image_filepath = './0_hsv.png'
         global_image = load_bgr_image(test_image_filepath)
 
         corner_test()
@@ -1383,7 +1389,8 @@ def main():
 
         current_ground_truth = global_ground_truth # Fetch the latest ground truth pose available
         if (global_image is not None) and (current_ground_truth is not None):
-            hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
+            denoised = cv2.fastNlMeansDenoisingColored(global_image,None,10,10,7,21) # denoising
+            hsv = cv2.cvtColor(denoised, cv2.COLOR_BGR2HSV) # convert to HSV
             est, method, processed_image = get_estimate(hsv, count, current_ground_truth)
 
             if processed_image is not None:
