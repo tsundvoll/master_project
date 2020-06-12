@@ -761,6 +761,53 @@ def plot_yaw_test(data_yaw_test):
         plt.savefig(folder+file_title+'.svg')
 
 
+def plot_hold_hover(data_hold_hover_test):
+    file_titles = ['Hover_x', 'Hover_y', 'Hover_z']
+    y_labels = ['x-position [m]', 'y-position [m]', 'z-position [m]']
+
+    variables = [V_X, V_Y, V_Z]
+    index_values = [7, 13, 19, 55, 25]
+    color_values = ['blue', 'red', 'orange', 'grey', 'black']
+    legend_values = ['ellipse', 'arrow', 'corners', 'filtered estimate', 'dead reckoning']
+
+
+    time_stamps = data_hold_hover_test[:, 0]
+
+    for variable in variables:
+        file_title = file_titles[variable]
+        y_label = y_labels[variable]
+        fig = plt.figure(figsize=(7,5))
+        ax = plt.subplot()
+        plt.grid()
+        plt.xlim(time_stamps[0], time_stamps[-1])
+
+        for i in range(len(index_values)):
+            if i==0:
+                ax.set_xlabel('Time [s]')
+                ax.set_ylabel(y_label)
+
+            index = index_values[i]
+            color = color_values[i]
+            legend_text = legend_values[i]
+        
+            data = data_hold_hover_test[:, index:index+6][:,variable]
+        
+            time_stamps_local = time_stamps.copy()
+            time_stamps_local[np.isnan(data)] = np.nan
+
+            line, = ax.plot(time_stamps_local, data)
+            line.set_color(color)
+            line.set_label(legend_text)
+
+        plt.legend()
+        
+        fig.tight_layout()
+
+        folder = './plots/'
+        plt.savefig(folder+file_title+'.svg')
+
+
+
 # List if indices
 ## 0    time_stamps
 
@@ -839,66 +886,72 @@ def main():
     # Load the data
     folder = './catkin_ws/src/uav_vision/data_storage/experiment_data/'
     
-    # Up and down test
-    test_number = 1
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    up_and_down_5m = np.load(path, allow_pickle=True)
+    # # Up and down test
+    # test_number = 1
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # up_and_down_5m = np.load(path, allow_pickle=True)
 
-    # Hover tests
-    test_number = 2
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_0_5m = np.load(path, allow_pickle=True)
+    # # Hover tests
+    # test_number = 2
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_0_5m = np.load(path, allow_pickle=True)
 
-    test_number = 3
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_1m = np.load(path, allow_pickle=True)
+    # test_number = 3
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_1m = np.load(path, allow_pickle=True)
 
-    test_number = 4
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_2m = np.load(path, allow_pickle=True)
+    # test_number = 4
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_2m = np.load(path, allow_pickle=True)
 
-    test_number = 5
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_3m = np.load(path, allow_pickle=True)
+    # test_number = 5
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_3m = np.load(path, allow_pickle=True)
 
-    test_number = 6
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_5m = np.load(path, allow_pickle=True)
+    # test_number = 6
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_5m = np.load(path, allow_pickle=True)
 
-    test_number = 7
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    hover_10m = np.load(path, allow_pickle=True)
+    # test_number = 7
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # hover_10m = np.load(path, allow_pickle=True)
 
-    # Step test
-    test_number = 8
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    data_step_z = np.load(path, allow_pickle=True)
+    # # Step test
+    # test_number = 8
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_step_z = np.load(path, allow_pickle=True)
 
-    # Dead reckoning test
-    test_number = 9
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    data_dead_reckoning_test = np.load(path, allow_pickle=True)
+    # # Dead reckoning test
+    # test_number = 9
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_dead_reckoning_test = np.load(path, allow_pickle=True)
 
-    # Land test
-    test_number = 10
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    data_landing = np.load(path, allow_pickle=True)
+    # # Land test
+    # test_number = 10
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_landing = np.load(path, allow_pickle=True)
 
-    # Yaw test
-    test_number = 11
+    # # Yaw test
+    # test_number = 11
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_yaw_test = np.load(path, allow_pickle=True)
+
+    # Hold hover test
+    test_number = 24
     filename = 'test_'+str(test_number)+'.npy'
     path = folder + filename
-    data_yaw_test = np.load(path, allow_pickle=True)
+    data_hold_hover_test = np.load(path, allow_pickle=True)
     
 
     #################
@@ -910,13 +963,15 @@ def main():
     
     # plot_hover_error_compare(hover_0_5m, hover_1m, hover_2m, hover_3m, hover_5m, hover_10m)
 
-    plot_step_z(data_step_z)
+    # plot_step_z(data_step_z)
 
     # plot_dead_reckoning_test(data_dead_reckoning_test)
 
     # plot_landing(data_landing)
 
     # plot_yaw_test(data_yaw_test)
+
+    plot_hold_hover(data_hold_hover_test)
 
     #####################
     # Calculate on data #
