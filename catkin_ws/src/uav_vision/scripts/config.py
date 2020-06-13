@@ -2,8 +2,13 @@
 import numpy as np
 import math
 
-
+# General
 is_simulator = True
+
+# CV module
+save_images = False
+draw_on_images = True
+use_test_image = False
 
 
 # def height_to_delta_x_y(height):

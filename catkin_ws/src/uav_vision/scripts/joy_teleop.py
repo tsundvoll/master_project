@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 import rospy
-from std_msgs.msg import String, Empty, Float32
+from std_msgs.msg import String, Empty, Bool
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 
@@ -20,15 +20,14 @@ set_point_angular_z = 0.0
 set_points = np.array([0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
 
 # 0: Manual control, 1: Set point control
-choose_controll_strategy = 0
-
+choose_initial_controll_strategy = 0
 
 ##################################
 manual_control = False
 set_point_control = False
-if choose_controll_strategy == 0:
+if choose_initial_controll_strategy == 0:
     manual_control = True
-elif choose_controll_strategy == 1:
+elif choose_initial_controll_strategy == 1:
     set_point_control = True
 else:    
     manual_control = True
@@ -38,6 +37,8 @@ else:
 
 def teleop_callback(data):
     global set_points
+    global manual_control
+    global set_point_control
 
     # axes [8] = [left_js left-right(0), left_js up-down(1), L2(2), right_js left-right(3), right_js up-down(4), R2(5), upper_js left-right(6), upper_js up-down(7)]
     # buttons [13] = [cross(0), circle(1), triangle(2), square(3), L1(4), R1(5), L2(6), R2(7), share(8), options(9), start(10), js_left(11), js_right(12)]
@@ -66,11 +67,27 @@ def teleop_callback(data):
         # "Square"-button -> Take still photo and stop data collection
         pub_take_still_photo.publish(Empty())
 
+    if buttons[4]:
+        # "L1"-button -> Toggle between manual control and set point control
+        if manual_control:
+            manual_control = False
+            set_point_control = True
+            rospy.loginfo("Set point controll on")
+            pub_pid_on_off.publish(Bool(True))
+
+        elif set_point_control:
+            set_point_control = False
+            manual_control = True
+            rospy.loginfo("Manual control on")
+            pub_pid_on_off.publish(Bool(False))
+
     if buttons[5]:
         # "R1"-button -> Emergency landing
-        pub_emergency.publish(Empty())
-        
+        pub_emergency.publish(Empty())      
+
+
     if manual_control:
+        # Publish velocity command directly to the quadcopter
         control_msg = Twist()
         control_msg.linear.x = right_js_vertical*sensitivity_x_y
         control_msg.linear.y = right_js_horizontal*sensitivity_x_y
@@ -80,6 +97,8 @@ def teleop_callback(data):
 
 
     if set_point_control:
+        # Publish set point to the PID controller
+
         amplifier = 0.01
         # yaw_amplifier = 1
         yaw_amplifier = 0
@@ -110,6 +129,7 @@ def main():
     global pub_initiate_mission
 
     global pub_set_point
+    global pub_pid_on_off
 
     pub_take_off = rospy.Publisher("/ardrone/takeoff", Empty, queue_size=10)
     pub_land = rospy.Publisher("/ardrone/land", Empty, queue_size=10)
@@ -120,6 +140,8 @@ def main():
 
     pub_take_still_photo = rospy.Publisher("/take_still_photo", Empty, queue_size=10)
     pub_initiate_mission = rospy.Publisher("/initiate_mission", Empty, queue_size=10)
+
+    pub_pid_on_off = rospy.Publisher("/pid_on_off", Bool, queue_size=10)
 
     rospy.Subscriber("joy", Joy, teleop_callback)
 

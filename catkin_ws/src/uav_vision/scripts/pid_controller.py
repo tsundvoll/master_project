@@ -3,7 +3,7 @@ import rospy
 import numpy as np
 from geometry_msgs.msg import Twist, Pose, Point
 from sensor_msgs.msg import Image
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, Bool
 from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Odometry
 from scipy.spatial.transform import Rotation as R
@@ -18,6 +18,7 @@ import config as cfg
 gt_relative_position = None
 est_relative_position = None
 prev_time = None
+pid_on_off = False
 
 def gt_callback(data):
     global gt_relative_position
@@ -93,6 +94,10 @@ def estimate_callback(data):
     global est_relative_position
     est_relative_position = np.array([data.linear.x, data.linear.y, data.linear.z, 0, 0, data.angular.z])
 
+
+def pid_on_off_callback(data):
+    global pid_on_off
+    pid_on_off = data.data
 
 # Setup for the PID controller
 error_prev = np.array([0.0]*6)
@@ -191,6 +196,7 @@ def main():
 
     rospy.Subscriber('/ardrone/takeoff', Empty, take_off_callback)
 
+    rospy.Subscriber('/pid_on_off', Bool, pid_on_off_callback)
 
     
     reference_pub = rospy.Publisher('/drone_reference', Twist, queue_size=10)
@@ -227,7 +233,7 @@ def main():
         # else:
         #     relative_position = gt_relative_position
 
-        if relative_position is not None:
+        if (relative_position is not None) and pid_on_off:
             actuation = controller(relative_position)
             msg = Twist()
             msg.linear.x = actuation[0]

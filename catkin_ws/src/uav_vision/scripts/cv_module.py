@@ -26,10 +26,11 @@ from nav_msgs.msg import Odometry
 from scipy.spatial.transform import Rotation as R
 
 # Settings
-global_image = None
-save_images = True
-draw_on_images = True
 global_is_simulator = cfg.is_simulator
+
+save_images = cfg.save_images
+draw_on_images = cfg.draw_on_images
+use_test_image = cfg.use_test_image
 
 if global_is_simulator:
     camera_offset_x = 150 # mm
@@ -46,6 +47,8 @@ D_RADIUS = 39.0 # cm
 
 IMG_WIDTH = 640
 IMG_HEIGHT = 360
+
+global_image = None
 
 #################
 # ROS functions #
@@ -1369,13 +1372,13 @@ def main():
 
     rospy.loginfo("Starting CV module")
 
-    is_test_image = True
+
 
     if not global_is_simulator:
         global_ground_truth = np.zeros(6)
     
     
-    if is_test_image:
+    if use_test_image:
         test_image_filepath = './image_40.png'
         # test_image_filepath = './0_hsv.png'
         global_image = load_bgr_image(test_image_filepath)
@@ -1389,8 +1392,8 @@ def main():
 
         current_ground_truth = global_ground_truth # Fetch the latest ground truth pose available
         if (global_image is not None) and (current_ground_truth is not None):
-            denoised = cv2.fastNlMeansDenoisingColored(global_image,None,10,10,7,21) # denoising
-            hsv = cv2.cvtColor(denoised, cv2.COLOR_BGR2HSV) # convert to HSV
+            # denoised = cv2.fastNlMeansDenoisingColored(global_image,None,10,10,7,21) # denoising
+            hsv = cv2.cvtColor(global_image, cv2.COLOR_BGR2HSV) # convert to HSV
             est, method, processed_image = get_estimate(hsv, count, current_ground_truth)
 
             if processed_image is not None:
@@ -1408,7 +1411,7 @@ def main():
             # publish_ground_truth(current_ground_truth)
 
             count += 1
-            if is_test_image:
+            if use_test_image:
                 break
         else:
             rospy.loginfo("Waiting for image")
