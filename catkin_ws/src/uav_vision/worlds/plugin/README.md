@@ -6,10 +6,7 @@ cd build
 cmake ../
 make
 ´´´
-
-
 Make sure Gazebo can load the plugins later 
-
 ´´´
 export GAZEBO_PLUGIN_PATH=`pwd`:$GAZEBO_PLUGIN_PATH
 ´´´

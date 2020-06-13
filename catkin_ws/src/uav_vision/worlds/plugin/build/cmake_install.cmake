@@ -1,4 +1,4 @@
-# Install script for directory: /home/thomas/master_project/catkin_ws/src/uav_vision/worlds/plugin
+# Install script for directory: /home/elias/master_project/catkin_ws/src/uav_vision/worlds/plugin
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -40,5 +40,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/thomas/master_project/catkin_ws/src/uav_vision/worlds/plugin/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/elias/master_project/catkin_ws/src/uav_vision/worlds/plugin/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

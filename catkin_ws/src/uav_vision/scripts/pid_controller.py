@@ -179,14 +179,9 @@ def main():
     use_estimate = True
 
     if use_estimate:
-        # rospy.Subscriber('/drone_estimate_filtered', Point, estimate_callback)
-        # rospy.Subscriber('/estimate_filtered/ellipse', Twist, estimate_callback)
-        # rospy.Subscriber('/estimate_filtered/arrow', Twist, estimate_callback)
-        # rospy.Subscriber('/estimate_filtered/corners', Twist, estimate_callback)
-
-        # rospy.Subscriber('/estimate_single', Twist, estimate_callback)
-        # rospy.Subscriber('/filtered_estimate', Twist, estimate_callback)
         rospy.Subscriber('/estimate/dead_reckoning', Twist, estimate_callback)
+    else:
+        rospy.Subscriber('/drone_ground_truth', Twist, estimate_callback)
 
     
     # rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
