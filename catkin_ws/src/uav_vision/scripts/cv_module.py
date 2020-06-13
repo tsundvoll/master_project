@@ -1207,6 +1207,11 @@ def get_estimate(hsv, count, current_ground_truth):
         est_corners_x, est_corners_y, est_corners_z = calculate_position(center_px, radius_length_px)
         est_corners_angle = np.degrees(angle_rad)
 
+        if est_corners_angle < -90:
+            est_corners_angle += 180
+        elif est_corners_angle > 90:
+            est_corners_angle -= 180
+
         msg.linear.x = est_corners_x
         msg.linear.y = est_corners_y
         msg.linear.z = est_corners_z

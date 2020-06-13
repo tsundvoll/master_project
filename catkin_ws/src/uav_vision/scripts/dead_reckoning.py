@@ -12,6 +12,8 @@ import time
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
+import config as cfg
+
 ONE_G = 9.80665
 
 global_velocities = None
@@ -107,12 +109,16 @@ def navdata_callback(data):
     global global_yaw
     global_velocities = np.array([data.vx, data.vy, data.vz])
     global_acceleration = np.array([data.ax*ONE_G*1000, data.ay*ONE_G*1000, data.az*ONE_G*1000])
-    yaw = data.rotZ-90 # Rotation about the Z axis, measured in degrees
+    # yaw = data.rotZ-90 # Rotation about the Z axis, measured in degrees
 
-    if yaw < -180:
-        global_yaw = 360 + yaw
-    else:
-        global_yaw = yaw
+    # if yaw < -180:
+    #     global_yaw = 360 + yaw
+    # else:
+    #     global_yaw = yaw
+
+    global_yaw = data.rotZ
+
+    
 
 
 def estimate_callback(data):
@@ -125,6 +131,8 @@ def estimate_callback(data):
     if not np.array_equal(position, np.zeros(3)):
         # Only save last estimate, if there is an estimate available
         global_last_position_estimate = position      
+    
+    if yaw != 0:
         global_last_yaw_estimate = yaw      
 
 
@@ -187,6 +195,9 @@ def main():
     pos_prev = np.zeros(3)
     vel_prev = np.zeros(3)
     yaw_prev = 0.0
+    yaw_curr = 0.0
+
+    imu_yaw_prev = None
 
     # Set up filter
     median_filter_size = 1
@@ -198,15 +209,17 @@ def main():
 
     dead_reckoning_msg = Twist()
     
-    do_calibration_before_start = True
+    do_calibration_before_start = cfg.do_calibration_before_start
 
     rate = rospy.Rate(100) # Hz
     while not rospy.is_shutdown():
-        if global_velocities is not None:
-            new_vel = global_velocities
-            new_acc = global_acceleration
-            new_yaw = global_yaw
-            global_velocities, global_acceleration, global_yaw = None, None, None
+        if (global_velocities is not None) and (global_acceleration is not None) and (global_yaw is not None):
+            imu_vel_new = global_velocities
+            imu_acc_new = global_acceleration
+            imu_yaw_new = global_yaw
+            if imu_yaw_prev is None:
+                imu_yaw_prev = imu_yaw_new # Set prev value the first time
+            global_velocities, global_acceleration, global_yaw = None, None, None # Reset global variables to only use one measurement once
             if count == 0:
                 start_time = rospy.get_time()
                 prev_time = start_time
@@ -216,21 +229,18 @@ def main():
                     calibration_acc = np.array([0.0, 0.0, 9.81e+03])
 
             elif count < N_CALIBRATION_STEPS and do_calibration_before_start:
-                calibration_sum_vel += new_vel
-                calibration_sum_acc += new_acc
+                calibration_sum_vel += imu_vel_new
+                calibration_sum_acc += imu_acc_new
             elif count == N_CALIBRATION_STEPS and do_calibration_before_start:
                 calibration_vel = calibration_sum_vel / float(N_CALIBRATION_STEPS)
                 calibration_acc = calibration_sum_acc / float(N_CALIBRATION_STEPS)
                 
-            
-
                 end_time = rospy.get_time()
                 duration = end_time - start_time
                 rospy.loginfo("Calibration ready. Duration: " + str(duration))
                 prev_time = end_time
             else: # Perform dead reckoning
                 rospy.loginfo("Method: " + str(global_estimate_method))
-
 
                 # Get last estimate if available
                 if global_last_position_estimate is not None:
@@ -244,10 +254,15 @@ def main():
                     duration = curr_time - prev_time
                     prev_time = curr_time
 
-                    vel = new_vel - calibration_vel
-                    acc = new_acc - calibration_acc
-                    delta_yaw = new_yaw - yaw_prev
-                    yaw_prev = new_yaw
+                    vel = imu_vel_new - calibration_vel
+                    acc = imu_acc_new - calibration_acc
+
+                    delta_imu_yaw = imu_yaw_new - imu_yaw_prev
+                    if delta_imu_yaw > 180:
+                        delta_imu_yaw -= 360
+                    elif delta_imu_yaw < -180:
+                        delta_imu_yaw += 360
+                    imu_yaw_prev = imu_yaw_new
 
                     # vel, vel_history = filter_measurement(vel, vel_history, median_filter_size, average_filter_size)
                     # acc, acc_history = filter_measurement(acc, acc_history, median_filter_size, average_filter_size)
@@ -259,15 +274,23 @@ def main():
 
                     pos_curr = pos_prev + duration*vel + 0.5*acc*duration**2
 
-                    rotation = R.from_euler('z', -np.radians(delta_yaw))
+                    rotation = R.from_euler('z', -np.radians(delta_imu_yaw))
                     pos_curr = rotation.apply(pos_curr)
 
+                    yaw_curr = yaw_prev + delta_imu_yaw
+
+                    if yaw_curr > 180:
+                        yaw_curr -= 360
+                    elif yaw_curr < -180:
+                        yaw_curr += 360
+
                 pos_prev = pos_curr
+                yaw_prev = yaw_curr
 
                 dead_reckoning_x = pos_curr[0] / 1000
                 dead_reckoning_y = pos_curr[1] / 1000
                 dead_reckoning_z = pos_curr[2] / 1000
-                dead_reckoning_yaw = new_yaw
+                dead_reckoning_yaw = yaw_curr
 
                 dead_reckoning_msg.linear.x = dead_reckoning_x
                 dead_reckoning_msg.linear.y = dead_reckoning_y

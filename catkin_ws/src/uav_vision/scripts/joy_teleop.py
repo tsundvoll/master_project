@@ -79,6 +79,7 @@ def teleop_callback(data):
             set_point_control = False
             manual_control = True
             rospy.loginfo("Manual control on")
+            set_points = np.array([0.0, 0.0, 1.0, 0.0, 0.0, 0.0]) # Reset set point to hover at 1m
             pub_pid_on_off.publish(Bool(False))
 
     if buttons[5]:
@@ -149,6 +150,11 @@ def main():
     rospy.init_node('joy_teleop', anonymous=True)
     rospy.loginfo("Joystick teleoperation ready")
     
+
+    if choose_initial_controll_strategy == 0:
+        rospy.loginfo("Manual control on")
+    elif choose_initial_controll_strategy == 1:
+        rospy.loginfo("Set point controll on")
 
     rospy.spin()
 
