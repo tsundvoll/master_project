@@ -18,7 +18,8 @@ global_velocities = None
 global_acceleration = None
 global_yaw = None
 
-global_last_estimate = None
+global_last_position_estimate = None
+global_last_yaw_estimate = None
 
 global_estimate_method = 0
 
@@ -99,11 +100,6 @@ def estimate_method_callback(data):
     global_estimate_method = data.data
 
 
-cv_switch = True
-def cv_switch_callback(data):
-    global cv_switch
-    cv_switch = data
-
 
 def navdata_callback(data):
     global global_velocities
@@ -120,16 +116,17 @@ def navdata_callback(data):
 
 
 def estimate_callback(data):
-    global global_last_estimate
+    global global_last_position_estimate
+    global global_last_yaw_estimate
 
-    if cv_switch:
-        position = np.array([data.linear.x, data.linear.y, data.linear.z])*1000
+    position = np.array([data.linear.x, data.linear.y, data.linear.z])*1000
+    yaw = data.angular.z
 
-        if not np.array_equal(position, np.zeros(3)):
-            # Only save last estimate, if there is an estimate available
-            global_last_estimate = position      
-    else:
-        global_last_estimate = None
+    if not np.array_equal(position, np.zeros(3)):
+        # Only save last estimate, if there is an estimate available
+        global_last_position_estimate = position      
+        global_last_yaw_estimate = yaw      
+
 
 
 def filter_measurement(measurement, measurement_history, median_filter_size, average_filter_size):
@@ -150,7 +147,8 @@ def filter_measurement(measurement, measurement_history, median_filter_size, ave
 
 
 def main():
-    global global_last_estimate
+    global global_last_position_estimate
+    global global_last_yaw_estimate
     global global_velocities
     global global_acceleration
     global global_yaw
@@ -161,7 +159,6 @@ def main():
     rospy.Subscriber('/ground_truth/state', Odometry, gt_callback)
 
     rospy.Subscriber('/filtered_estimate', Twist, estimate_callback)
-    rospy.Subscriber('/switch_on_off_cv', Bool, cv_switch_callback)
     rospy.Subscriber('/estimate_method', Int8, estimate_method_callback)
 
 
@@ -236,11 +233,12 @@ def main():
 
 
                 # Get last estimate if available
-                # if cv_switch and (global_last_estimate is not None):
-                if global_last_estimate is not None:
-                    if cv_switch:
-                        pos_curr = global_last_estimate
-                    global_last_estimate = None
+                if global_last_position_estimate is not None:
+                    pos_curr = global_last_position_estimate
+                    global_last_position_estimate = None
+                    if global_last_yaw_estimate is not None:
+                        yaw_curr = global_last_yaw_estimate
+                        global_last_yaw_estimate = None
                 else:
                     curr_time = rospy.get_time()
                     duration = curr_time - prev_time
