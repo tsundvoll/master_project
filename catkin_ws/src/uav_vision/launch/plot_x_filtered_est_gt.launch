@@ -1,8 +1,0 @@
-<launch>
-
-    <node name="pos_x_plot"
-        pkg="rqt_plot"
-        type="rqt_plot"
-        args="/drone_pose/linear/x /estimate/ellipse/linear/x /estimate_filtered/ellipse/linear/x"/>
-
-</launch>
