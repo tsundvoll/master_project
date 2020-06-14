@@ -1,4 +1,4 @@
-# master_project
+# Master project
 This repository contains all the code for my master project, conducted the spring 2020.
 
 
@@ -18,7 +18,7 @@ sudo apt-get install ros-kinetic-gazebo-ros
 * uuv_simulator (https://github.com/uuvsimulator/uuv_simulator)
 sudo apt install ros-kinetic-uuv-simulator
 
-## Packages used:
+### Packages used:
 * ardrone_autonomy (https://ardrone-autonomy.readthedocs.io/en/latest/installation.html)
 ```
 sudo apt-get install ros-kinetic-ardrone-autonomy
@@ -28,167 +28,80 @@ sudo apt-get install ros-kinetic-ardrone-autonomy
     (Download files and place them in folder /ardrone_simulator_gazebo7)
 
 
+* Numpy 1.16.6
+* Scipy 1.2.2
 * Matplotlib 2.2.4
+Can be install using pip:
+```
+sudo apt-get install python-pip
+python -m pip install --user numpy==1.16.6 scipy==1.2.2 matplotlib==2.2.4
+```
 
-## Add the necessary models
+
+### Add the necessary models
 * Add models to the hidden folder .gazebo/models
 
 
-## Scipy
-Scipy 1.4.1 seems to be necessary to have to run pid_controller.py.
-However, it is a bit hard to install with python 2.7, and I have not yet solved this problem.
-Scipy 1.2.1 works
-
-
-## Connect to physical drone
-```
-roslaunch uav_vision ar2.launch
-rosservice call /ardrone/setcamchannel 1
-```
-
 ### Other useful things:
-```
-sudo apt-get install python-pip
-python -m pip install --user numpy scipy matplotlib 
-pip install tqdm
-
-pip install tensorflow
-pip install Keras
-```
-
-
-
-* Terminator
+* Terminator, for multiple pages in one window
 ```
 sudo apt-get install terminator
 ```
 
-## DDPG package
+### DDPG package
 The DDPG package made by Daniel Tavakoli is added in a separate package.
 
+### To run the DDPG model:
+* Tensorflow 1.15.0
+* Keras 2.2.4
+* tqdm 4.46.0
 
-
-
-## TO DO 14. February:
-* Collect a larger dataset:
-From 1m to 10m.
-
-Ascending 1 meter with speed 0.1 and step 0.1 takes approximately 709 s
-
-70s per runde 0.1 m/s = 7 meter per runde
-
-Speed 0.1
-Height 1.0 to 11.0
-
-At speed 100, estimated time was 18.488685s
-At speed 0.1, this becomes 18489s
-
-
-* Add extra setpoint before turning, to get smoother corners
-
-* Create an automatic report from the NN training over the architecture and the hyperparameters
-
-
-## Install Olympe
-Follow this guide: https://developer.parrot.com/docs/olympe/installation.html
-
-
-To investigate topics, use the command:
 ```
-parrot-gz topic
-```
-With these options:
-```
-Options:
-  -h [ --help ]           Print this help message
-  -w [ --world-name ] arg World name.
-  -l [ --list ]           List all topics.
-  -i [ --info ] arg       Get information about a topic.
-  -e [ --echo ] arg       Output topic data to screen.
-  -p [ --publish ] arg    Publish message on a topic.
-  -r [ --request ] arg    Send a request.
-  -v [ --view ] arg       View topic data using a QT widget.
-  -z [ --hz ] arg         Get publish frequency.
-  -b [ --bw ] arg         Get topic bandwidth.
-  -u [ --unformatted ]    Output data from echo without formatting.
-  -d [ --duration ] arg   Duration (seconds) to run. Applicable with echo, hz, 
-                          and bw
-  -m [ --msg ] arg        Message to send on topic. Applicable with publish and
-                          request
-  -f [ --file ] arg       Path to a file containing the message to send on 
-                          topic. Applicable with publish and request
+pip install tensorflow==1.15.0
+pip install Keras==2.2.4
+pip install tqdm==4.46.0
 ```
 
-Topics from the Sphinx simulator:
+## Running the system
 
-/gazebo/default/anafi4k/body/ultrasound/scan
+### Connect to physical quadcopter
+Turn the quadcopter on and connect to it over WiFI. Then run
+```
+roslaunch uav_vision real_ar2.launch
+```
 
+### Start simulator and connect to simulated quadcopter
+Run
+```
+roslaunch uav_vision sim_ar2.launch
+```
 
+### View the output from the quadcopters bottom camera
+Run
+```
+roslaunch uav_vision camera_view.launch
+```
 
-/gazebo/default/anafi4k/body/vertical_camera/image
-/gazebo/default/anafi4k/body/wrench
-/gazebo/default/anafi4k/gimbal_1/wrench
-/gazebo/default/anafi4k/gimbal_2/horizontal_camera/image
-/gazebo/default/anafi4k/gimbal_2/wrench
-/gazebo/default/anafi4k/joint_cmd
-/gazebo/default/animated_revolt/body/wrench
-/gazebo/default/animated_revolt/helipad_ar/link_01/wrench
-/gazebo/default/atmosphere
-/gazebo/default/default::ultrasound/cmd
-/gazebo/default/diagnostics
-/gazebo/default/factory
-/gazebo/default/factory/light
-/gazebo/default/gui
-/gazebo/default/gzclient_camera/cmd
-/gazebo/default/horizontal_camera/cmd
-/gazebo/default/joint
-/gazebo/default/light/modify
-/gazebo/default/log/control
-/gazebo/default/log/status
-/gazebo/default/marker
-/gazebo/default/model/info
-/gazebo/default/model/modify
-/gazebo/default/ocean/ocean_link/wrench
-/gazebo/default/omniscient_anafi4k/contacts
-/gazebo/default/physics
-/gazebo/default/physics/contacts
-/gazebo/default/playback_control
-/gazebo/default/pose/info
-/gazebo/default/pose/modify
-/gazebo/default/request
-/gazebo/default/response
-/gazebo/default/roads
-/gazebo/default/scene
-/gazebo/default/selection
-/gazebo/default/sensor
-/gazebo/default/skeleton_pose/info
-/gazebo/default/sky
-/gazebo/default/user_camera/joy_pose
-/gazebo/default/user_camera/joy_twist
-/gazebo/default/user_camera/pose
-/gazebo/default/vertical_camera/cmd
-/gazebo/default/visual
-/gazebo/default/wind
-/gazebo/default/world_control
-/gazebo/default/world_stats
-/gazebo/server/control
-/gazebo/world/modify
+### Start the position estimator
+Run
+```
+roslaunch uav_vision positon_estimator.launch
+```
 
-# Sensor msg imu
-# Accelerations should be in m/s^2 (not in g's), and rotational velocity should be in rad/sec
-Header header
+### Joystick:
+* Connect the PS4 controller to the computer via Bluetooth. Then run
+```
+roslaunch uav_vision joystick.launch
+```
 
-geometry_msgs/Quaternion orientation
-float64[9] orientation_covariance # Row major about x, y, z axes
+### Start the PID controller
+Run
+```
+rosrun uav_vision pid_controller.py
+```
 
-geometry_msgs/Vector3 angular_velocity
-float64[9] angular_velocity_covariance # Row major about x, y, z axes
-
-geometry_msgs/Vector3 linear_acceleration
-float64[9] linear_acceleration_covariance # Row major x, y z
-
-
-# Joystick:
-* Connect to PS4 controller via Bluetooth
-* run rosrun joy joy_node
-* run rosrun uav_vision joy_teleop.py
+### Start the Automated Landing Planner
+Run
+```
+rosrun uav_vision automated_landing.py
+```
