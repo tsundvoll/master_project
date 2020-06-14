@@ -95,7 +95,7 @@ def gt_callback(data):
         gt_yaw = yaw
     local_ground_truth[5] = gt_yaw
 
-    local_ground_truth
+    # local_ground_truth
 
 
     ground_truth_msg = Twist()

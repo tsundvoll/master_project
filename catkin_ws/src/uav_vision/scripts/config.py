@@ -7,8 +7,9 @@ is_simulator = True
 
 # CV module
 save_images = False
-draw_on_images = True
+draw_on_images = False
 use_test_image = False
+publish_processed_image = False
 
 # Dead reckoning
 do_calibration_before_start = False
