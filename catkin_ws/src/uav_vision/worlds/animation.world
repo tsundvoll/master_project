@@ -245,7 +245,7 @@
         </link>
       </model>
      
-      <plugin name="push_animate" filename="libanimated_ship.so"/>
+      <!-- <plugin name="push_animate" filename="libanimated_ship.so"/> -->
 
     </model>
 
