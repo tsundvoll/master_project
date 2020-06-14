@@ -19,21 +19,9 @@ set_point_angular_z = 0.0
 
 set_points = np.array([0.0, 0.0, 1.0, 0.0, 0.0, 0.0])
 
-# 0: Manual control, 1: Set point control
-choose_initial_controll_strategy = 0
-
-##################################
-manual_control = False
+# Start in manual control
+manual_control = True
 set_point_control = False
-if choose_initial_controll_strategy == 0:
-    manual_control = True
-elif choose_initial_controll_strategy == 1:
-    set_point_control = True
-else:    
-    manual_control = True
-    set_point_control = True
-##################################
-
 
 def teleop_callback(data):
     global set_points
@@ -86,6 +74,11 @@ def teleop_callback(data):
         # "R1"-button -> Emergency landing
         pub_emergency.publish(Empty())      
 
+    if buttons[10]:
+        # "Start"-button -> Initiate automated landing
+        rospy.loginfo("Automated landing command sent")
+
+        pub_initiate_automated_landing.publish(Empty())
 
     if manual_control:
         # Publish velocity command directly to the quadcopter
@@ -101,8 +94,8 @@ def teleop_callback(data):
         # Publish set point to the PID controller
 
         amplifier = 0.01
-        # yaw_amplifier = 1
-        yaw_amplifier = 0
+        yaw_amplifier = 1
+        # yaw_amplifier = 0
 
         set_points += np.array([amplifier*right_js_vertical*sensitivity_x_y,  amplifier*right_js_horizontal*sensitivity_x_y,   amplifier*left_js_vertical*sensitivity_z,
                                 0.0,                                0.0,                                    yaw_amplifier*left_js_horizontal*sensitivity_yaw])
@@ -128,6 +121,7 @@ def main():
     global pub_controller
     global pub_take_still_photo
     global pub_initiate_mission
+    global pub_initiate_automated_landing
 
     global pub_set_point
     global pub_pid_on_off
@@ -141,6 +135,7 @@ def main():
 
     pub_take_still_photo = rospy.Publisher("/take_still_photo", Empty, queue_size=10)
     pub_initiate_mission = rospy.Publisher("/initiate_mission", Empty, queue_size=10)
+    pub_initiate_automated_landing = rospy.Publisher("/initiate_automated_landing", Empty, queue_size=10)
 
     pub_pid_on_off = rospy.Publisher("/pid_on_off", Bool, queue_size=10)
 
@@ -151,10 +146,8 @@ def main():
     rospy.loginfo("Joystick teleoperation ready")
     
 
-    if choose_initial_controll_strategy == 0:
-        rospy.loginfo("Manual control on")
-    elif choose_initial_controll_strategy == 1:
-        rospy.loginfo("Set point controll on")
+    rospy.loginfo("Manual control on")
+    pub_pid_on_off.publish(Bool(False))
 
     rospy.spin()
 
