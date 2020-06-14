@@ -1,15 +1,5 @@
 # master_project
-
-
-ROS package names alternatives:
-* master
-* auto_lander
-* drone_vision
-* lander_vision
-* uav_lander
-
-* uav_vision!
-
+This repository contains all the code for my master project, conducted the spring 2020.
 
 
 ## Installation
