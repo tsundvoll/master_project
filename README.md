@@ -1,6 +1,5 @@
 # Master project
-This repository contains all the code for my master project, conducted the spring 2020.
-
+This repository contains all the code for my master project, conducted the spring 2020. The '/catkin_ws' folder contains the developed system and is the only relevant folder. The '/investiagation' folder contains investigations and various other code that was made along the way and is kept for personal reference.
 
 ## Installation
 
