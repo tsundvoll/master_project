@@ -997,28 +997,28 @@ def main():
     # data_yaw_test = np.load(path, allow_pickle=True)
 
     # Hold hover test
-    test_number = 24
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    data_hold_hover_test = np.load(path, allow_pickle=True)
+    # test_number = 24
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_hold_hover_test = np.load(path, allow_pickle=True)
 
-    # Outdoor test
-    test_number = 33
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    data_outside_test = np.load(path, allow_pickle=True)
+    # # Outdoor test
+    # test_number = 33
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_outside_test = np.load(path, allow_pickle=True)
 
-    # Simulator landing, automated landing
-    test_number = 41
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    data_simulator_landing_automated = np.load(path, allow_pickle=True)
+    # # Simulator landing, automated landing
+    # test_number = 41
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_simulator_landing_automated = np.load(path, allow_pickle=True)
 
-    # Simulator landing, ddpg
-    test_number = 42
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    data_simulator_landing_ddpg = np.load(path, allow_pickle=True)
+    # # Simulator landing, ddpg
+    # test_number = 42
+    # filename = 'test_'+str(test_number)+'.npy'
+    # path = folder + filename
+    # data_simulator_landing_ddpg = np.load(path, allow_pickle=True)
     
 
     #################

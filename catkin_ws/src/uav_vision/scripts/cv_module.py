@@ -32,7 +32,6 @@ save_images = cfg.save_images
 draw_on_images = cfg.draw_on_images
 use_test_image = cfg.use_test_image
 
-dont_use_arrow = cfg.dont_use_arrow
 
 if global_is_simulator:
     camera_offset_x = 150 # mm
@@ -960,8 +959,6 @@ def evaluate_arrow(hsv, hsv_inside_green):
     center_px = find_white_centroid(hsv_inside_green)
     arrowhead_px = find_orange_arrowhead(hsv)
 
-    if dont_use_arrow:
-        return None, None, None
 
     if (center_px is not None) and (arrowhead_px is not None):
 
