@@ -187,6 +187,9 @@ if __name__ == '__main__':
 
     # 41 New automated landing
     # 42 New DDPG landing
-    test_number = 51
+
+    # 52 New yaw test
+
+    test_number = 53
 
     main(test_number)

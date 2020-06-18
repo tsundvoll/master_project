@@ -247,18 +247,23 @@ def main():
                 rospy.loginfo("Calibration ready. Duration: " + str(duration))
                 prev_time = end_time
             else: # Perform dead reckoning
-                
-                # rospy.loginfo("Method: " + str(global_estimate_method))
                 rospy.loginfo("Method: " + string_methods[global_estimate_method])
                 
+                # Calculate delta yaw from IMU,
+                # convert large step in oppisite direction
+                # to a small step in same direction
+                delta_imu_yaw = imu_yaw_new - imu_yaw_prev
+                if delta_imu_yaw > 180:
+                    delta_imu_yaw -= 360
+                elif delta_imu_yaw < -180:
+                    delta_imu_yaw += 360
+                imu_yaw_prev = imu_yaw_new
 
-                # Get last estimate if available
+                # Position
                 if global_last_position_estimate is not None:
+                    # Use last estimate if available
                     pos_curr = global_last_position_estimate
                     global_last_position_estimate = None
-                    if global_last_yaw_estimate is not None:
-                        yaw_curr = global_last_yaw_estimate
-                        global_last_yaw_estimate = None
                 else:
                     curr_time = rospy.get_time()
                     duration = curr_time - prev_time
@@ -266,13 +271,6 @@ def main():
 
                     vel = imu_vel_new - calibration_vel
                     acc = imu_acc_new - calibration_acc
-
-                    delta_imu_yaw = imu_yaw_new - imu_yaw_prev
-                    if delta_imu_yaw > 180:
-                        delta_imu_yaw -= 360
-                    elif delta_imu_yaw < -180:
-                        delta_imu_yaw += 360
-                    imu_yaw_prev = imu_yaw_new
 
                     # vel, vel_history = filter_measurement(vel, vel_history, median_filter_size, average_filter_size)
                     # acc, acc_history = filter_measurement(acc, acc_history, median_filter_size, average_filter_size)
@@ -282,17 +280,26 @@ def main():
                     vel[small_values_filter_val] = 0.0
                     acc[small_values_filter_acc] = 0.0
 
-                    pos_curr = pos_prev + duration*vel + 0.5*acc*duration**2
-
                     rotation = R.from_euler('z', -np.radians(delta_imu_yaw))
-                    pos_curr = rotation.apply(pos_curr)
 
+                    delta_position = duration*vel + 0.5*acc*duration**2
+                    delta_position = rotation.apply(delta_position)
+
+                    pos_curr = pos_prev + delta_position
+
+
+                # Yaw
+                if global_last_yaw_estimate is not None:
+                    yaw_curr = global_last_yaw_estimate
+                    global_last_yaw_estimate = None
+                else:
                     yaw_curr = yaw_prev + delta_imu_yaw
 
                     if yaw_curr > 180:
                         yaw_curr -= 360
                     elif yaw_curr < -180:
                         yaw_curr += 360
+
 
                 pos_prev = pos_curr
                 yaw_prev = yaw_curr
