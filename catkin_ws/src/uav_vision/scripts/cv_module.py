@@ -32,6 +32,8 @@ save_images = cfg.save_images
 draw_on_images = cfg.draw_on_images
 use_test_image = cfg.use_test_image
 
+dont_use_arrow = cfg.dont_use_arrow
+
 if global_is_simulator:
     camera_offset_x = 150 # mm
     camera_offset_z = -45 # mm
@@ -958,6 +960,9 @@ def evaluate_arrow(hsv, hsv_inside_green):
     center_px = find_white_centroid(hsv_inside_green)
     arrowhead_px = find_orange_arrowhead(hsv)
 
+    if dont_use_arrow:
+        return None, None, None
+
     if (center_px is not None) and (arrowhead_px is not None):
 
         arrow_vector = np.array(arrowhead_px - center_px)
@@ -1159,7 +1164,7 @@ def get_estimate(hsv, count, current_ground_truth):
         msg.angular.z = est_ellipse_angle - current_ground_truth[5]
         pub_est_error_ellipse.publish(msg)
 
-        draw_dot(global_hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=5)
+        draw_dot(global_hsv_canvas_all, center_px, HSV_BLUE_COLOR, size=10)
     else:
         msg.linear.x = np.nan
         msg.linear.y = np.nan
@@ -1189,7 +1194,7 @@ def get_estimate(hsv, count, current_ground_truth):
         msg.angular.z = est_arrow_angle - current_ground_truth[5]
         pub_est_error_arrow.publish(msg)
 
-        draw_dot(global_hsv_canvas_all, center_px, HSV_RED_COLOR, size=5)
+        draw_dot(global_hsv_canvas_all, center_px, HSV_RED_COLOR, size=7)
     else:
         msg.linear.x = np.nan
         msg.linear.y = np.nan
@@ -1224,7 +1229,7 @@ def get_estimate(hsv, count, current_ground_truth):
         msg.angular.z = est_corners_angle - current_ground_truth[5]
         pub_est_error_corners.publish(msg)
 
-        draw_dot(global_hsv_canvas_all, center_px, HSV_YELLOW_COLOR, size=5)
+        draw_dot(global_hsv_canvas_all, center_px, HSV_YELLOW_COLOR, size=4)
     else:
         msg.linear.x = np.nan
         msg.linear.y = np.nan
@@ -1384,11 +1389,11 @@ def main():
     
     
     if use_test_image:
-        test_image_filepath = './image_40.png'
+        test_image_filepath = './image_36.png'
         # test_image_filepath = './0_hsv.png'
         global_image = load_bgr_image(test_image_filepath)
 
-        corner_test()
+        # corner_test()
 
 
     count = 0

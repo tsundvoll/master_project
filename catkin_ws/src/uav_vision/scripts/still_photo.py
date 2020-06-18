@@ -47,12 +47,13 @@ def main():
 def continous_images():
     rospy.init_node('still_photos_continous', anonymous=True)
 
-    rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
+    # rospy.Subscriber('/ardrone/bottom/image_raw', Image, image_callback)
+    rospy.Subscriber('/processed_image', Image, image_callback)
 
     rospy.loginfo("Starting still_photos_continous module")
 
     
-    rate = rospy.Rate(2) # Hz
+    rate = rospy.Rate(1) # Hz
     while not rospy.is_shutdown():
         take_still_photo_callback(None)
         rate.sleep()

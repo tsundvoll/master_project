@@ -25,6 +25,13 @@ global_last_yaw_estimate = None
 
 global_estimate_method = 0
 
+string_methods = [
+    "None",
+    "Ellipse",
+    "Arrow",
+    "Corners"
+]
+
 
 global_ground_truth = np.zeros(6)
 def gt_callback(data):
@@ -240,7 +247,10 @@ def main():
                 rospy.loginfo("Calibration ready. Duration: " + str(duration))
                 prev_time = end_time
             else: # Perform dead reckoning
-                rospy.loginfo("Method: " + str(global_estimate_method))
+                
+                # rospy.loginfo("Method: " + str(global_estimate_method))
+                rospy.loginfo("Method: " + string_methods[global_estimate_method])
+                
 
                 # Get last estimate if available
                 if global_last_position_estimate is not None:

@@ -537,7 +537,7 @@ def plot_dead_reckoning_test(data_dead_reckoning_test):
         plt.savefig(folder+file_title+'.svg')
 
 
-def plot_landing(data_landing, additional_title=''):
+def plot_landing(data_landing):
     """
     Generates a 3D plot of the trajectory while landing,
     and three 2D plots from each side of the 3D plot,
@@ -546,15 +546,13 @@ def plot_landing(data_landing, additional_title=''):
     ###########
     # 3D plot #
     ###########
-    file_title = 'Landing_3D'+additional_title
+    file_title = 'Landing_3D'
     fig = plt.figure()
     ax_3D = plt.axes(projection='3d')
 
     indices = [1, 55, 25]
     colors = ['green', 'grey', 'black']
     legends = ['ground truth', 'filtered estimate', 'dead reckoning']
-
-    data_landing[data_landing == 0] = np.nan
 
     for i in range(len(indices)):
         index = indices[i]
@@ -585,7 +583,7 @@ def plot_landing(data_landing, additional_title=''):
     ############
     # 2D plots #
     ############
-    file_title = 'Landing_2D'+additional_title
+    file_title = 'Landing_2D'
     fig = plt.figure(figsize=(7, 12))
 
     axes = [plt.subplot(3,1,1), plt.subplot(3,1,2), plt.subplot(3,1,3)]
@@ -633,7 +631,7 @@ def plot_landing(data_landing, additional_title=''):
     #################
     # Combine plots #
     #################
-    file_title = 'Landing_combined'+additional_title
+    file_title = 'Landing_combined'
     fig = plt.figure(figsize=(10,12))
     widths = [1.5, 1]
     heights = [1, 1.5, 1]
@@ -1007,18 +1005,6 @@ def main():
     filename = 'test_'+str(test_number)+'.npy'
     path = folder + filename
     data_outside_test = np.load(path, allow_pickle=True)
-
-    # Simulator landing, automated landing
-    test_number = 41
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    data_simulator_landing_automated = np.load(path, allow_pickle=True)
-
-    # Simulator landing, ddpg
-    test_number = 42
-    filename = 'test_'+str(test_number)+'.npy'
-    path = folder + filename
-    data_simulator_landing_ddpg = np.load(path, allow_pickle=True)
     
 
     #################
@@ -1036,16 +1022,13 @@ def main():
 
     # plot_landing(data_landing)
 
-    plot_landing(data_simulator_landing_automated, '_automated')
-    plot_landing(data_simulator_landing_ddpg, '_ddpg')
-
     # plot_yaw_test(data_yaw_test)
 
-    # plot_hold_hover(data_hold_hover_test)
+    plot_hold_hover(data_hold_hover_test)
     
     
 
-    # plot_outside_flight(data_outside_test)
+    plot_outside_flight(data_outside_test)
     
 
     #####################

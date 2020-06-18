@@ -180,6 +180,13 @@ def main(test_number):
     
     
 if __name__ == '__main__':
-    test_number = 27
+    # 31 Landing inside
+    # 33 Flying outside (stopped a bit late) second last video on mobile camera
+    #                (outdoor_04 film)
+    # 34 Flying outside no mobile camera (outdoor_06 screen capture)
+
+    # 41 New automated landing
+    # 42 New DDPG landing
+    test_number = 43
 
     main(test_number)
