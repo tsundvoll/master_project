@@ -537,6 +537,41 @@ def plot_dead_reckoning_test(data_dead_reckoning_test):
         plt.savefig(folder+file_title+'.svg')
 
 
+def plot_dead_reckoning_xy(data_dead_reckoning_test):
+    file_title = 'Dead_reckoning_xy'
+
+    index_values = [1, 55, 25]
+    color_values = ['green', 'grey', 'black']
+    legend_values = ['ground truth', 'filtered estimate', 'dead reckoning']
+
+    fig = plt.figure(figsize=(7,5))
+    ax = plt.subplot()
+    plt.grid()
+
+    for i in range(len(index_values)):
+        if i==0:
+            ax.set_xlabel('x-position [m]')
+            ax.set_ylabel('y-position [m]')
+
+        index = index_values[i]
+        color = color_values[i]
+        legend_text = legend_values[i]
+    
+        data_x = data_dead_reckoning_test[:, index:index+6][:,V_X]
+        data_y = data_dead_reckoning_test[:, index:index+6][:,V_Y]
+
+        line, = ax.plot(data_x, data_y)
+        line.set_color(color)
+        line.set_label(legend_text)
+
+    plt.legend()
+    
+    fig.tight_layout()
+
+    folder = './plots/'
+    plt.savefig(folder+file_title+'.svg')
+
+
 def plot_landing(data_landing, additional_title=''):
     """
     Generates a 3D plot of the trajectory while landing,
@@ -635,8 +670,23 @@ def plot_landing(data_landing, additional_title=''):
     #################
     file_title = 'Landing_combined'+additional_title
     fig = plt.figure(figsize=(10,12))
+
+    if additional_title == '':
+        aspect_xy = 1.5
+        aspect_xz = 0.2
+        aspect_yz = 0.4
+    elif additional_title == '_automated':
+        aspect_xy = 0.85
+        aspect_xz = 0.4
+        aspect_yz = 0.4 
+    elif additional_title == '_ddpg':
+        aspect_xy = 1.1
+        aspect_xz = 0.4
+        aspect_yz = 0.55
+
     widths = [1.5, 1]
     heights = [1, 1.5, 1]
+
     gs = gridspec.GridSpec(nrows=3, ncols=2, width_ratios=widths, height_ratios=heights)
 
     ax_3D = fig.add_subplot(gs[1, 0], projection='3d')
@@ -689,7 +739,7 @@ def plot_landing(data_landing, additional_title=''):
         xlim_left, xlim_right = ax.get_xlim()   # Invert x-axis
         ax.set_xlim(xlim_right, xlim_left)
 
-        ax.set_aspect(1.5)
+        ax.set_aspect(aspect_xy)
 
         # Plot xz
         ax = axes[1]
@@ -698,7 +748,7 @@ def plot_landing(data_landing, additional_title=''):
         ax.set_xlabel('x-position [m]')
         ax.set_ylabel('z-position [m]')
 
-        ax.set_aspect(0.2)
+        ax.set_aspect(aspect_xz)
 
         # Plot yz
         ax = axes[2]
@@ -710,7 +760,7 @@ def plot_landing(data_landing, additional_title=''):
         xlim_left, xlim_right = ax.get_xlim()   # Invert x-axis
         ax.set_xlim(xlim_right, xlim_left)
 
-        ax.set_aspect(0.4)
+        ax.set_aspect(aspect_yz)
 
 
     fig.legend(legend_lines, legends, bbox_to_anchor=(0.57, 0.47, 0.4, 0.77), loc='center')
@@ -725,9 +775,9 @@ def plot_yaw_test(data_yaw_test):
     file_title = 'Yaw_test'
 
     variables = [V_YAW]
-    index_values = [1, 13, 19, 55, 25]
-    color_values = ['green', 'red', 'orange', 'grey', 'black']
-    legend_values = ['ground truth', 'arrow', 'corners', 'filtered estimate', 'dead reckoning']
+    index_values = [1, 13, 19]#, 55, 25]
+    color_values = ['green', 'red', 'orange']#, 'grey', 'black']
+    legend_values = ['ground truth', 'arrow', 'corners']#, 'filtered estimate', 'dead reckoning']
 
     time_stamps = data_yaw_test[:, 0]
 
@@ -810,7 +860,7 @@ def plot_hold_hover(data_hold_hover_test):
 
 
 def plot_outside_flight(data_outside_test):
-    file_titles = ['Outdoor_x', 'Outdoor_y', 'Outdoor_z']
+    file_title = 'Outdoor'
     y_labels = ['x-position [m]', 'y-position [m]', 'z-position [m]']
 
     variables = [V_X, V_Y, V_Z]
@@ -821,11 +871,14 @@ def plot_outside_flight(data_outside_test):
 
     time_stamps = data_outside_test[:, 0]
 
+
+
+    fig = plt.figure(figsize=(8,10))
+
     for variable in variables:
-        file_title = file_titles[variable]
         y_label = y_labels[variable]
-        fig = plt.figure(figsize=(7,5))
-        ax = plt.subplot()
+        # fig = plt.figure(figsize=(7,5))
+        ax = plt.subplot(3,1,variable+1)
         plt.grid()
         plt.xlim(time_stamps[0], 100)
 
@@ -847,12 +900,13 @@ def plot_outside_flight(data_outside_test):
             line.set_color(color)
             line.set_label(legend_text)
 
-        plt.legend()
-        
-        fig.tight_layout()
+        if variable==V_X:
+            plt.legend()
+    
+    fig.tight_layout()
 
-        folder = './plots/'
-        plt.savefig(folder+file_title+'.svg')
+    folder = './plots/'
+    plt.savefig(folder+file_title+'.svg')
 
 
 
@@ -962,11 +1016,11 @@ def main():
     data_step_z = np.load(folder + filename, allow_pickle=True)
 
     # Dead reckoning test
-    filename = 'test_9_dead_reckoning.npy'
+    filename = 'test_54_dead_reckoning.npy'
     data_dead_reckoning_test = np.load(folder + filename, allow_pickle=True)
 
     # Yaw test
-    filename = 'test_52_yaw.npy'
+    filename = 'test_53_yaw.npy'
     data_yaw_test = np.load(folder + filename, allow_pickle=True)
 
     # Outdoor test
@@ -994,17 +1048,15 @@ def main():
     # plot_step_z(data_step_z)
 
     # plot_dead_reckoning_test(data_dead_reckoning_test)
+    # plot_dead_reckoning_xy(data_dead_reckoning_test)
 
-    # plot_landing(data_landing)
-
-    # plot_landing(data_simulator_landing_automated, '_automated')
-    # plot_landing(data_simulator_landing_ddpg, '_ddpg')
-
-    plot_yaw_test(data_yaw_test)
+    # plot_yaw_test(data_yaw_test)
 
     # plot_hold_hover(data_hold_hover_test)
     
     
+    plot_landing(data_simulator_landing_automated, '_automated')
+    plot_landing(data_simulator_landing_ddpg, '_ddpg')
 
     # plot_outside_flight(data_outside_test)
     

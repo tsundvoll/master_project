@@ -188,8 +188,10 @@ if __name__ == '__main__':
     # 41 New automated landing
     # 42 New DDPG landing
 
-    # 52 New yaw test
+    # 53 New yaw test
 
-    test_number = 53
+    # 54 New dead reckoning
+
+    test_number = 54
 
     main(test_number)

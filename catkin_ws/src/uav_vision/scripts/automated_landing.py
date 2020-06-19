@@ -30,11 +30,30 @@ STATE_TEXT = [
 
 global_state = S_INIT
 
+# global_mission = np.array([
+#     [0.0, 0.0, 2.0],
+#     [0.0, 0.0, 2.0],
+#     [0.0, 0.0, 0.2]
+# ])
+
+d_x = 2
+d_y = 3
+
 global_mission = np.array([
-    [0.0, 0.0, 2.0],
-    [0.0, 0.0, 2.0],
-    [0.0, 0.0, 0.2]
+    [0.0, 0.0, 1.0],
+    [d_x, 0.0, 1.0],
+    [d_x, d_y, 1.0],
+    [-d_x, d_y, 1.0],
+    [-d_x, -d_y, 1.0],
+    [0.0, -d_y, 1.0],
+    [0.0, 0.0, 1.0],
+    [0.0, 0.0, 0.9],
+    [0.0, 0.0, 0.8],
+    [0.0, 0.0, 0.7],
+    [0.0, 0.0, 0.6],
+    [0.0, 0.0, 0.5]
 ])
+
 
 #############
 # Callbacks #
@@ -94,10 +113,17 @@ def main():
 
     rospy.loginfo("Starting automated landing module")
 
-    mission_speed = 0.4 # m/s
     publish_rate = 10 # Hz
+
+    # mission_speed = 0.4 # m/s
+    # distance_margin = 0.01 # m
+    # distance_speed_reduction_margin = 1.0 # m
+
+    mission_speed = 0.6 # m/s
     distance_margin = 0.01 # m
-    distance_speed_reduction_margin = 1.0 # m
+    distance_speed_reduction_margin = 0.2 # m
+
+
 
     margin = np.array([distance_margin]*3)
     pre_mission_time = 1 # second(s)
